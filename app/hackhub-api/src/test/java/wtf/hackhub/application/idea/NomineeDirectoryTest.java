@@ -13,6 +13,35 @@ class NomineeDirectoryTest {
 	VotingParticipantRepository participants = mock(VotingParticipantRepository.class);
 	NomineeDirectory directory = new NomineeDirectory(profiles, participants);
 	@Test
+	void roster_lookup_does_not_use_the_profiles_org_code_as_membership() {
+		Profile profile = new Profile("outsider@bosch.com", "Outside Employee", "hash");
+		profile.syncSsoDepartment("BD/DPA-SRE3");
+		assertThat(directory.resolveRosterParticipant(profile)).isEmpty();
+		assertThat(directory.resolveParticipant(profile)).isPresent();
+	}
+
+	@Test
+	void roster_lookup_supports_fixed_term_email_and_name_fallback() {
+		var entry = new VotingParticipant("1", "BD/DPA-SRE3", "Alice Wang", "alicewang");
+		when(participants.findAllByNormalizedName("alicewang")).thenReturn(List.of(entry));
+		assertThat(directory
+				.resolveRosterParticipant(new Profile("fixed-term.Alice.Wang@cn.bosch.com", "Changed Name", "hash")))
+				.contains(entry);
+		assertThat(directory.resolveRosterParticipant(new Profile("employee123@bosch.com", "Ms. Alice Wang", "hash")))
+				.contains(entry);
+	}
+
+	@Test
+	void roster_lookup_rejects_ambiguous_names_even_with_an_org_code() {
+		Profile profile = new Profile("alice@bosch.com", "Alice", "hash");
+		profile.syncSsoDepartment("BD/DPA-SRE3");
+		when(participants.findAllByNormalizedName("alice"))
+				.thenReturn(List.of(new VotingParticipant("1", "BD/DPA", "Alice", "alice"),
+						new VotingParticipant("2", "BD/BA", "Alice", "alice")));
+		assertThat(directory.resolveRosterParticipant(profile)).isEmpty();
+	}
+
+	@Test
 	void resolves_email_before_an_edited_display_name() {
 		Profile profile = new Profile("alice.wang@bosch.com", "Other Person", "hash");
 		when(participants.findAllByNormalizedName("alicewang"))

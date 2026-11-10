@@ -52,6 +52,7 @@ public class VoteIdeaUseCase {
 		idea.requireApprovalPublished();
 		Profile voterProfile = profileRepository.findByIdForUpdate(userId)
 				.orElseThrow(() -> new ParticipantNotEligibleException(userId));
+		requireRosterMembership(voterProfile);
 
 		Optional<IdeaVote> existing = voteRepository.findByIdeaIdAndUserId(ideaId, userId);
 
@@ -62,28 +63,27 @@ public class VoteIdeaUseCase {
 			return new Result(false, voteRepository.countByIdeaId(ideaId));
 		}
 		List<IdeaVote> currentVotes = voteRepository.findAllByUserIdAndHackathonId(userId, idea.getHackathonId());
-		List<Idea> currentTrackIdeas = currentVotes.stream()
-				.map(IdeaVote::getIdeaId)
-				.map(ideaRepository::findById).flatMap(Optional::stream)
-				.filter(votedIdea -> track(idea).equals(track(votedIdea)))
+		List<Idea> currentTrackIdeas = currentVotes.stream().map(IdeaVote::getIdeaId).map(ideaRepository::findById)
+				.flatMap(Optional::stream).filter(votedIdea -> track(idea).equals(track(votedIdea)))
 				.filter(votedIdea -> (idea.getTeamId() != null) == (votedIdea.getTeamId() != null)).toList();
 		int limit = idea.getTeamId() == null ? maxVotesPerTrack : 3;
 		if (currentTrackIdeas.size() >= limit) {
 			throw new VoteLimitExceededException(limit);
 		}
 		if (idea.getTeamId() == null) {
-		String voterDepartment = departmentCode(voter.getOrganizationalUnit());
-		long ownVotes = currentTrackIdeas.stream().map(this::resolveProjectOwner)
-				.map(VotingParticipant::getOrganizationalUnit).map(VoteIdeaUseCase::departmentCode)
-				.filter(voterDepartment::equalsIgnoreCase).count();
-		boolean ownDepartment = voterDepartment
-				.equalsIgnoreCase(departmentCode(resolveProjectOwner(idea).getOrganizationalUnit()));
-		if (ownDepartment && ownVotes >= 2) {
-			throw new OwnDepartmentVoteLimitExceededException(voterDepartment, 2);
-		}
-		if (!ownDepartment && currentTrackIdeas.size() - ownVotes >= 2) {
-			throw new IllegalArgumentException("At most 2 votes per award category may go outside your department.");
-		}
+			String voterDepartment = departmentCode(voter.getOrganizationalUnit());
+			long ownVotes = currentTrackIdeas.stream().map(this::resolveProjectOwner)
+					.map(VotingParticipant::getOrganizationalUnit).map(VoteIdeaUseCase::departmentCode)
+					.filter(voterDepartment::equalsIgnoreCase).count();
+			boolean ownDepartment = voterDepartment
+					.equalsIgnoreCase(departmentCode(resolveProjectOwner(idea).getOrganizationalUnit()));
+			if (ownDepartment && ownVotes >= 2) {
+				throw new OwnDepartmentVoteLimitExceededException(voterDepartment, 2);
+			}
+			if (!ownDepartment && currentTrackIdeas.size() - ownVotes >= 2) {
+				throw new IllegalArgumentException(
+						"At most 2 votes per award category may go outside your department.");
+			}
 
 		}
 
@@ -92,7 +92,9 @@ public class VoteIdeaUseCase {
 		return new Result(true, count);
 	}
 
-	/** Record selected votes atomically. Retrying a click never toggles votes off. */
+	/**
+	 * Record selected votes atomically. Retrying a click never toggles votes off.
+	 */
 	@Transactional
 	public void submit(List<UUID> ideaIds, UUID userId) {
 		if (ideaIds == null || ideaIds.isEmpty() || ideaIds.stream().anyMatch(java.util.Objects::isNull))
@@ -100,14 +102,18 @@ public class VoteIdeaUseCase {
 		var ids = ideaIds.stream().distinct().sorted().toList();
 		// Match the nomination mutation lock order before taking the voter lock.
 		ids.forEach(mutationLock::acquire);
-		profileRepository.findByIdForUpdate(userId).orElseThrow(() -> new ParticipantNotEligibleException(userId));
+		Profile voterProfile = profileRepository.findByIdForUpdate(userId)
+				.orElseThrow(() -> new ParticipantNotEligibleException(userId));
+		requireRosterMembership(voterProfile);
 		for (UUID id : ids) {
 			if (voteRepository.findByIdeaIdAndUserId(id, userId).isEmpty())
 				execute(id, userId);
 		}
 	}
 
-	/** Delete only this user's record; repeating a deletion cannot create a vote. */
+	/**
+	 * Delete only this user's record; repeating a deletion cannot create a vote.
+	 */
 	@Transactional
 	public void deleteRecord(UUID ideaId, UUID userId) {
 		mutationLock.acquire(ideaId);
@@ -134,11 +140,20 @@ public class VoteIdeaUseCase {
 		voteRepository.deleteAll(selected);
 	}
 
-	/** Reset the signed-in user's entire ballot atomically, under the same voter lock as toggle. */
+	/**
+	 * Reset the signed-in user's entire ballot atomically, under the same voter
+	 * lock as toggle.
+	 */
 	@Transactional
 	public void clearAll(UUID userId) {
 		profileRepository.findByIdForUpdate(userId).orElseThrow(() -> new ParticipantNotEligibleException(userId));
 		voteRepository.deleteAll(voteRepository.findAllByUserId(userId));
+	}
+
+	private void requireRosterMembership(Profile profile) {
+		if (profile.getRole() != Profile.Role.ADMIN && directory.resolveRosterParticipant(profile).isEmpty()) {
+			throw new ParticipantNotEligibleException(profile.getId());
+		}
 	}
 
 	private static String track(Idea idea) {
@@ -183,7 +198,7 @@ public class VoteIdeaUseCase {
 
 	public static class ParticipantNotEligibleException extends RuntimeException {
 		public ParticipantNotEligibleException(UUID userId) {
-			super("User is not uniquely matched to the BD participant roster: " + userId);
+			super("Only folks from the BD department can vote.");
 		}
 	}
 

@@ -79,6 +79,14 @@ public class NomineeDirectory {
 			return Optional.of(new VotingParticipant("profile:" + profile.getId(), profile.getOrgCode().trim(),
 					profile.getName(), normalizeIdentity(profile.getName())));
 		}
+		return resolveRosterParticipant(profile);
+	}
+
+	/**
+	 * Resolve an actual roster entry, without treating an account department as
+	 * membership.
+	 */
+	public Optional<VotingParticipant> resolveRosterParticipant(Profile profile) {
 		String emailLocalPart = profile.getEmail().split("@", 2)[0].replaceFirst("(?i)^fixed-term[._-]*", "");
 		Optional<VotingParticipant> byEmail = uniqueParticipant(normalizeIdentity(emailLocalPart));
 		if (byEmail.isPresent())

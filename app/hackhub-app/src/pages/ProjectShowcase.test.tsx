@@ -5,6 +5,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { render as renderView, screen, waitFor, within, fireEvent, act } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MantineProvider } from '@mantine/core'
+import { Notifications, notifications } from '@mantine/notifications'
+import { ApiError } from '../lib/apiClient'
 import { MemoryRouter } from 'react-router-dom'
 import { ProjectShowcase } from './ProjectShowcase'
 import { ProfileService } from '../services/profileService'
@@ -136,7 +138,7 @@ describe('ProjectShowcase', () => {
     saveDraft.mockImplementation(async (_key: string, data: unknown) => ({ version: 1, savedAt: '2026-11-09T00:00:00Z', data }))
     removeDraft.mockResolvedValue(undefined)
   })
-  afterEach(() => { currentUser.role = 'participant' })
+  afterEach(() => { currentUser.role = 'participant'; act(() => notifications.clean()) })
   it('carries Team query selection into the matching criteria and team creation flow', async () => {
     render(<MantineProvider><MemoryRouter initialEntries={['/nominate?type=team']}><ProjectShowcase nominationMode /></MemoryRouter></MantineProvider>)
     expect(screen.getByRole('button', { name: 'Team', exact: true })).toHaveAttribute('aria-pressed', 'true')
@@ -408,6 +410,30 @@ describe('ProjectShowcase', () => {
     await waitFor(() => expect(document.getElementById('nominee-card-idea-1')).toHaveFocus())
     expect(Element.prototype.scrollIntoView).toHaveBeenCalled()
     expect(screen.queryByRole('dialog', { name: 'Nomination details' })).not.toBeInTheDocument()
+  })
+  it.each(['individual', 'team'])('shows the BD-only notification for a rejected %s vote and allows retry', async (type) => {
+    const message = 'Only folks from the BD department can vote.'
+    const show = vi.spyOn(notifications, 'show')
+    submitVotes.mockRejectedValueOnce(new ApiError(403, 'Not Eligible to Vote', message))
+    const page = await getIdeas.getMockImplementation()!()
+    getIdeas.mockResolvedValueOnce({ ...page, content: page.content.map((idea) => ({
+      ...idea, teamId: type === 'team' ? 'team-1' : null,
+    })) })
+    render(<MantineProvider env="test"><Notifications /><MemoryRouter initialEntries={[`/projects?type=${type}`]}><ProjectShowcase /></MemoryRouter></MantineProvider>)
+    try {
+      await userEvent.click(await screen.findByRole('button', { name: 'Vote, 2 votes' }))
+      expect(await screen.findByText(message)).toBeInTheDocument()
+      expect(show).toHaveBeenCalledWith({ message, color: 'orange', autoClose: 4000 })
+      expect(screen.queryByRole('dialog', { name: 'Vote Not Submitted' })).not.toBeInTheDocument()
+      const retry = screen.getByRole('button', { name: 'Vote, 2 votes' })
+      expect(retry).toBeEnabled()
+      expect(screen.queryByRole('button', { name: /Submitted, / })).not.toBeInTheDocument()
+      submitVotes.mockRejectedValueOnce(new ApiError(403, 'Not Eligible to Vote', message))
+      await userEvent.click(retry)
+      expect(submitVotes).toHaveBeenCalledTimes(2)
+    } finally {
+      show.mockRestore()
+    }
   })
   it('sends only one request for repeated clicks while saving', async () => {
     let resolve!: () => void

@@ -36,7 +36,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 		"app.cors.allowed-origins=http://localhost:5173", "app.minio.endpoint=http://localhost:9000",
 		"app.minio.access-key=test", "app.minio.secret-key=test"})
 class IdeaControllerTest {
-	@MockBean wtf.hackhub.presentation.websocket.HackathonEventPublisher events;
+	@MockBean
+	wtf.hackhub.presentation.websocket.HackathonEventPublisher events;
 
 	@Autowired
 	MockMvc mvc;
@@ -65,6 +66,22 @@ class IdeaControllerTest {
 
 	static Idea idea() {
 		return new Idea("My Idea", "Desc", HACKATHON_ID, null, USER_ID, "tech");
+	}
+
+	@Test
+	void both_voting_endpoints_return_the_bd_eligibility_message() throws Exception {
+		when(voteIdeaUseCase.execute(IDEA_ID, USER_ID))
+				.thenThrow(new VoteIdeaUseCase.ParticipantNotEligibleException(USER_ID));
+		doThrow(new VoteIdeaUseCase.ParticipantNotEligibleException(USER_ID)).when(voteIdeaUseCase)
+				.submit(List.of(IDEA_ID), USER_ID);
+		mvc.perform(post("/api/v1/ideas/" + IDEA_ID + "/votes").with(MockAuthHelper.asParticipant(USER_ID)))
+				.andExpect(status().isForbidden()).andExpect(jsonPath("$.type").value("/errors/not-voting-participant"))
+				.andExpect(jsonPath("$.detail").value("Only folks from the BD department can vote."));
+		mvc.perform(post("/api/v1/me/votes").with(MockAuthHelper.asParticipant(USER_ID))
+				.contentType(MediaType.APPLICATION_JSON).content("{\"ideaIds\":[\"" + IDEA_ID + "\"]}"))
+				.andExpect(status().isForbidden())
+				.andExpect(jsonPath("$.detail").value("Only folks from the BD department can vote."));
+		verifyNoInteractions(events);
 	}
 
 	@Test
@@ -134,7 +151,8 @@ class IdeaControllerTest {
 
 	@Test
 	void participant_can_submit_nomination_for_approval() throws Exception {
-		when(submitIdeaUseCase.executeNomination(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any())).thenReturn(idea());
+		when(submitIdeaUseCase.executeNomination(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(),
+				any())).thenReturn(idea());
 		mvc.perform(post("/api/v1/hackathons/" + HACKATHON_ID + "/ideas").with(MockAuthHelper.asParticipant(USER_ID))
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("{\"title\":\"My Idea\",\"description\":\"Desc\",\"category\":\"tech\"}"))

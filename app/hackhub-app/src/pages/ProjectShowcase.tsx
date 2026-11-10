@@ -75,6 +75,8 @@ import {
 import { AwardCriteriaList } from '../components/AwardCriteriaList'
 import './DigitalPioneer.css'
 
+const BD_VOTING_MESSAGE = 'Only folks from the BD department can vote.'
+
 interface Project {
   id: string
   title: string
@@ -867,7 +869,13 @@ export function ProjectShowcase({ nominationMode = false, managementMode = false
       setCartOpened(true)
       await refreshVoteState([projectId], sequence)
     } catch (error) {
-      if (sequence === loadSequence.current) setVoteError(error instanceof Error ? error.message : 'Unable to update your vote. Please try again.')
+      if (sequence === loadSequence.current) {
+        if (error instanceof ApiError && error.status === 403 && error.message === BD_VOTING_MESSAGE) {
+          notifications.show({ message: BD_VOTING_MESSAGE, color: 'orange', autoClose: 4000 })
+        } else {
+          setVoteError(error instanceof Error ? error.message : 'Unable to update your vote. Please try again.')
+        }
+      }
     } finally {
       ballotBusy.current = false
       setSubmitting(false)

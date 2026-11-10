@@ -69,6 +69,84 @@ class VoteIdeaUseCaseTest {
 		when(votes.countByIdeaId(any())).thenAnswer(c -> ballot.containsKey(c.getArgument(0)) ? 1L : 0L);
 	}
 	@Test
+	void org_code_does_not_allow_non_roster_participants_or_managers_to_vote() {
+		UUID outsider = person("outside.employee", null);
+		Profile profile = people.get(outsider);
+		profile.syncSsoDepartment("BD/DPA-SRE3");
+		for (Profile.Role role : List.of(Profile.Role.PARTICIPANT, Profile.Role.MANAGER)) {
+			ReflectionTestUtils.setField(profile, "role", role);
+			for (boolean team : List.of(false, true)) {
+				UUID target = nomination("BD/BA-AP", "Customer Values");
+				if (team)
+					ReflectionTestUtils.setField(nominations.get(target), "teamId", UUID.randomUUID());
+				assertThatThrownBy(() -> useCase.execute(target, outsider))
+						.isInstanceOf(VoteIdeaUseCase.ParticipantNotEligibleException.class)
+						.hasMessage("Only folks from the BD department can vote.");
+			}
+		}
+		assertThat(ballot).isEmpty();
+		verify(votes, never()).save(any());
+	}
+
+	@Test
+	void non_roster_batch_cannot_save_any_new_votes() {
+		UUID outsider = person("outside.employee", null);
+		people.get(outsider).syncSsoDepartment("BD/DPA-SRE3");
+		UUID first = nomination("BD/DPA-SRE1", "Customer Values");
+		UUID second = nomination("BD/BA-AP", "Customer Values");
+		assertThatThrownBy(() -> useCase.submit(List.of(first, second), outsider))
+				.isInstanceOf(VoteIdeaUseCase.ParticipantNotEligibleException.class);
+		verify(votes, never()).save(any());
+		assertThat(ballot).isEmpty();
+	}
+
+	@Test
+	void non_roster_batch_is_rejected_even_when_all_votes_already_exist() {
+		UUID target = nomination("BD/BA-AP", "Customer Values");
+		ballot.put(target, new IdeaVote(target, voter));
+		participants.remove(VoteIdeaUseCase.normalizeIdentity(people.get(voter).getName()));
+		people.get(voter).syncSsoDepartment("BD/DPA-SRE3");
+		assertThatThrownBy(() -> useCase.submit(List.of(target), voter))
+				.isInstanceOf(VoteIdeaUseCase.ParticipantNotEligibleException.class)
+				.hasMessage("Only folks from the BD department can vote.");
+		assertThat(ballot).containsOnlyKeys(target);
+	}
+
+	@Test
+	void admin_with_department_can_vote_without_roster_membership_but_keeps_vote_limits() {
+		UUID admin = person("platform.admin", null);
+		Profile profile = people.get(admin);
+		profile.syncSsoDepartment("BD/DPA-SRE3");
+		ReflectionTestUtils.setField(profile, "role", Profile.Role.ADMIN);
+		for (int i = 0; i < 3; i++) {
+			UUID target = nomination("BD/BA-AP", "Customer Values");
+			ReflectionTestUtils.setField(nominations.get(target), "teamId", UUID.randomUUID());
+			useCase.submit(List.of(target), admin);
+		}
+		UUID fourth = nomination("BD/BA-AP", "Customer Values");
+		ReflectionTestUtils.setField(nominations.get(fourth), "teamId", UUID.randomUUID());
+		assertThatThrownBy(() -> useCase.execute(fourth, admin))
+				.isInstanceOf(VoteIdeaUseCase.VoteLimitExceededException.class);
+		assertThat(ballot).hasSize(3);
+	}
+
+	@Test
+	void roster_user_with_org_code_can_still_vote_and_keep_existing_department_source() {
+		people.get(voter).syncSsoDepartment("BD/DPA-SRE3");
+		useCase.submit(List.of(nomination("BD/DPA-SRE1", "Customer Values")), voter);
+		assertThat(ballot).hasSize(1);
+	}
+
+	@Test
+	void voter_removed_from_roster_can_delete_an_existing_record() {
+		UUID target = nomination("BD/BA-AP", "Customer Values");
+		useCase.submit(List.of(target), voter);
+		participants.clear();
+		useCase.deleteRecord(target, voter);
+		assertThat(ballot).isEmpty();
+	}
+
+	@Test
 	void submitting_a_cart_is_idempotent_and_preserves_existing_votes() {
 		UUID first = nomination("BD/DPA-SRE3", "Customer Values");
 		UUID second = nomination("BD/BA-AP", "Customer Values");
@@ -81,8 +159,9 @@ class VoteIdeaUseCaseTest {
 
 	@Test
 	void submitted_votes_count_towards_subsequent_cart_limits() {
-		useCase.submit(List.of(nomination("BD/DPA-SRE3", "Customer Values"),
-				nomination("BD/DPA-SRE2", "Customer Values")), voter);
+		useCase.submit(
+				List.of(nomination("BD/DPA-SRE3", "Customer Values"), nomination("BD/DPA-SRE2", "Customer Values")),
+				voter);
 		assertThatThrownBy(() -> useCase.submit(List.of(nomination("BD/DPA-XYZ", "Customer Values")), voter))
 				.isInstanceOf(VoteIdeaUseCase.OwnDepartmentVoteLimitExceededException.class);
 		assertThat(ballot).hasSize(2);
@@ -140,8 +219,9 @@ class VoteIdeaUseCaseTest {
 			ballot.clear();
 			for (boolean sameDepartment : List.of(ownFirst, !ownFirst)) {
 				for (int i = 0; i < (sameDepartment ? own : outside); i++)
-					assertThat(useCase.execute(nomination(sameDepartment ? "BD/DPA-XYZ" : "BD/BA-AP",
-							"Customer Values"), voter).voted()).isTrue();
+					assertThat(useCase
+							.execute(nomination(sameDepartment ? "BD/DPA-XYZ" : "BD/BA-AP", "Customer Values"), voter)
+							.voted()).isTrue();
 			}
 			assertThat(ballot).hasSize(own + outside);
 		}
