@@ -47,8 +47,8 @@ function AwardVotingResults({ hackathonId }: { hackathonId: string }) {
   const error = nominations.error || scores.error
     ? (language === 'zh' ? '无法加载投票结果，请刷新重试。' : 'Unable to load voting results. Please refresh and try again.') : ''
 
-  return <Card ref={container} className="dp-form-shell" p={{ base: 'lg', md: 32 }}>
-    <Title order={3}>{language === 'zh' ? '各赛道投票结果' : 'Voting Results By Category'}</Title>
+  return <Card ref={container} className="dp-form-shell dp-light-surface" p={{ base: 'lg', md: 32 }}>
+    <Title order={3}>{language === 'zh' ? '各赛道投票结果' : 'Voting Results by Category'}</Title>
     {error ? <Alert mt="md" color="red">{error}</Alert> : !results ? <Text mt="md" role="status">{language === 'zh' ? '正在加载投票结果…' : 'Loading voting results…'}</Text> : (
       <Stack mt="lg" gap="xl">
         {DIGITAL_PIONEER_TRACKS.map((track) => {
@@ -175,7 +175,7 @@ export function AwardManagement() {
         <Group justify="space-between">
           <div>
             <Title order={1}>{canManage ? 'Award Management' : 'Committee Scoring'}</Title>
-            <Text c="white" mt="sm">{canManage ? 'Manage committee members, review case ratings, and track the final ranking.' : 'Open an assigned award to review nominations and submit your ratings.'}</Text>
+            <Text mt="sm">{canManage ? 'Manage committee members, review case ratings, and track the final ranking.' : 'Open an assigned award to review nominations and submit your ratings.'}</Text>
           </div>
           {canManage && <Button component={Link} to="/hackathons/create" className="dp-primary-button">Create award campaign</Button>}
         </Group>
@@ -184,15 +184,15 @@ export function AwardManagement() {
         {loading ? <Text role="status">Loading award campaigns…</Text> : !id ? (
           visibleCampaigns.length ? visibleCampaigns.map((item) => (
             <Stack key={item.id} gap="xl">
-              <Card className="dp-form-shell" p={{ base: 'lg', md: 32 }}>
+              <Card className="dp-form-shell dp-light-surface" p={{ base: 'lg', md: 32 }}>
                 <Group justify="space-between">
-                  <div><Title order={3}>{canManage ? <Link className="dp-award-title-link" to={`/awards/${item.id}`}>{item.title}</Link> : item.title}</Title><Text c="white" mt="xs">{canManage ? item.description : `${new Date(item.startDate).toLocaleDateString()} – ${new Date(item.endDate).toLocaleDateString()}`}</Text></div>
+                  <div><Title order={3}>{canManage ? <Link className="dp-award-title-link" to={`/awards/${item.id}`}>{item.title}</Link> : item.title}</Title><Text mt="xs">{canManage ? item.description : `${new Date(item.startDate).toLocaleDateString()} – ${new Date(item.endDate).toLocaleDateString()}`}</Text></div>
                   <Badge>{item.status.charAt(0).toUpperCase() + item.status.slice(1)}</Badge>
                 </Group>
                 <Group mt="lg">
                   <Button component={Link} to={`/hackathons/${item.id}/judge`}>Committee scoring</Button>
                   {canManage && <Button component={Link} to={`/hackathons/${item.id}/leaderboard`} variant="light">Scores & rankings</Button>}
-                  {isAdmin && <Button variant="subtle" color="red" c="#ffb1b1" onClick={() => requestDelete(item)}>Delete award</Button>}
+                  {isAdmin && <Button variant="subtle" color="red" onClick={() => requestDelete(item)}>Delete award</Button>}
                 </Group>
                 {canManage && <Select mt="lg" maw={520} size="md" label="Campaign status" description="Running campaigns accept associate votes; completed campaigns close voting." value={item.status} disabled={busy}
                   data={[{ value: 'draft', label: 'Draft' }, { value: 'open', label: 'Open' }, { value: 'running', label: 'Running' }, { value: 'completed', label: 'Completed' }].map((option) => ({ ...option, label: language === 'zh' ? translateUiText(option.label) : option.label }))}
@@ -206,13 +206,13 @@ export function AwardManagement() {
           )) : <Text>No award campaigns are available{canManage ? '.' : ' for your committee account.'}</Text>
         ) : !campaign ? <Alert color="orange">This award campaign is unavailable.</Alert> : (
           <>
-            <Card className="dp-form-shell" p={{ base: 'lg', md: 32 }}>
+            <Card className="dp-form-shell dp-light-surface" p={{ base: 'lg', md: 32 }}>
               <Group justify="space-between"><Title order={2}>{campaign.title}</Title><Badge>{campaign.status.charAt(0).toUpperCase() + campaign.status.slice(1)}</Badge></Group>
               <Text mt="md">{campaign.description}</Text>
               <Group mt="lg">
                 <Button component={Link} to={`/hackathons/${id}/judge`}>Committee scoring</Button>
                 {canManage && <Button component={Link} to={`/hackathons/${id}/leaderboard`} variant="light">Scores & rankings</Button>}
-                {isAdmin && <Button variant="subtle" color="red" c="#ffb1b1" onClick={() => requestDelete(campaign)}>Delete award</Button>}
+                {isAdmin && <Button variant="subtle" color="red" onClick={() => requestDelete(campaign)}>Delete award</Button>}
               </Group>
               {canManage && <Select mt="lg" maw={520} size="md" label="Campaign status" description="Running campaigns accept associate votes; completed campaigns close voting." value={campaign.status} disabled={busy}
                 data={[{ value: 'draft', label: 'Draft' }, { value: 'open', label: 'Open' }, { value: 'running', label: 'Running' }, { value: 'completed', label: 'Completed' }].map((option) => ({ ...option, label: language === 'zh' ? translateUiText(option.label) : option.label }))}
@@ -222,7 +222,7 @@ export function AwardManagement() {
                 }) }} />}
             </Card>
             {canManage && <AwardVotingResults key={campaign.id} hackathonId={campaign.id} />}
-            {canManage && <Card className="dp-form-shell" p={{ base: 'lg', md: 32 }}>
+            {canManage && <Card className="dp-form-shell dp-light-surface" p={{ base: 'lg', md: 32 }}>
               <Title order={3}>Committee Members</Title>
               <Stack mt="md">
                 {membersError && <Alert color="red">Unable to load associates for committee assignment. Refresh to retry.</Alert>}
@@ -231,16 +231,16 @@ export function AwardManagement() {
                   <Text>{judge.name ?? judge.userId} · {judge.email}</Text>
                   <Button size="sm" variant="subtle" color="red" disabled={busy} onClick={() => void mutate(async () => { await JudgingService.removeJudge(campaign.id, judge.userId); await setJudges((current) => current.filter((item) => item.userId !== judge.userId)) })}>Remove</Button>
                 </Group>)}
-                {!judgesLoading && !judgesError && !judges.length && <Text c="white">No committee members assigned yet.</Text>}
+                {!judgesLoading && !judgesError && !judges.length && <Text>No committee members assigned yet.</Text>}
                 <Select size="md" label="Assign an associate" searchable disabled={judgesLoading || !!judgesError} onDropdownOpen={() => setMembersOpened(true)} value={invitee} onChange={setInvitee} data={members.filter((member) => !judges.some((judge) => judge.userId === member.value))} />
                 <Button w="fit-content" loading={busy} disabled={!invitee || judgesLoading || !!judgesError} onClick={() => void mutate(async () => { if (!invitee) return; const added = await JudgingService.inviteJudge(campaign.id, invitee); await setJudges((current) => [...current, added]); setInvitee(null) })}>Assign committee member</Button>
               </Stack>
             </Card>}
             {canManage && <VotingCriteriaManager hackathonId={campaign.id} isManager />}
-            <Card className="dp-form-shell" p={{ base: 'lg', md: 32 }}>
+            <Card className="dp-form-shell dp-light-surface" p={{ base: 'lg', md: 32 }}>
               <Title order={3}>Evaluation Standard</Title>
               <Text mt="md">Individual and Team nominations use their category criteria: Customer Values / Innovation 40% / 30% / 30%; Collaboration 30% / 35% / 35%. All verified roster HoDs may score.</Text>
-              {canManage && <Text mt="lg" c="white">Associate voting: Team up to 3 votes per category without department restrictions. Individual up to 4 votes per category. Up to 2 votes may go to the voter's department and up to 2 to other departments. Both allowances are optional, with no voting or withdrawal order. Department is the Org.code prefix before “-”: BD/DPA-SRE3 → BD/DPA; BD/BA-AP → BD/BA. Committee rankings use the weighted evaluation score.</Text>}
+              {canManage && <Text mt="lg">Associate voting: Team up to 3 votes per category without department restrictions. Individual up to 4 votes per category. Up to 2 votes may go to the voter's department and up to 2 to other departments. Both allowances are optional, with no voting or withdrawal order. Department is the Org.code prefix before “-”: BD/DPA-SRE3 → BD/DPA; BD/BA-AP → BD/BA. Committee rankings use the weighted evaluation score.</Text>}
             </Card>
           </>
         )}

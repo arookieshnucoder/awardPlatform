@@ -432,7 +432,7 @@ export function AdminUsers() {
                     <Table.Th>Role</Table.Th>
                     <Table.Th>{PermissionService.isAdmin(user!) ? 'Department' : 'Organization'}</Table.Th>
                     <Table.Th>Created</Table.Th>
-                    <Table.Th>Last Sign In</Table.Th>
+                    <Table.Th>Last Sign-in</Table.Th>
                     <Table.Th>Actions</Table.Th>
                   </Table.Tr>
                 </Table.Thead>

@@ -98,7 +98,7 @@ describe('AwardManagement', () => {
       expect(within(values).getByText('Value nominee')).toBeInTheDocument()
       expect(within(values).getByText('3')).toBeInTheDocument()
       expect(within(values).getByText('8.00')).toBeInTheDocument()
-      for (const track of ['Innovation Breakthrough', 'Collaboration To Win']) {
+      for (const track of ['Innovation Breakthrough', 'Collaboration to Win']) {
         const results = screen.getByRole('region', { name: `${track} voting results` })
         expect(within(results).queryByText('Value nominee')).not.toBeInTheDocument()
         expect(within(results).getByText('No nominations in this category yet.')).toBeInTheDocument()

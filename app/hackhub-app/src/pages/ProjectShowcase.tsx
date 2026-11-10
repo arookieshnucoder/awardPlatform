@@ -142,9 +142,9 @@ const parseNominationTags = (value: string): string[] =>
 const tagHint = 'Add up to 5 tags, separated by 、, ， or commas (,).'
 
 const nominationHeadings = [
-  'Executive Summary (The Elevator Pitch)',
-  'Details Of Your Core Achievement In 2026 And Business Impact (Including Financial Figures)',
-  'How You Demonstrate BD China Culture (Especially On You Applied Category) ?',
+  'Executive Summary (the Elevator Pitch)',
+  'Details of Your Core Achievement in 2026 and Business Impact (Including Financial Figures)',
+  'How You Demonstrate BD China Culture (Especially in Your Applied Category)',
 ]
 
 function parseNominationDescription(description: string, nominationType: 'individual' | 'team' = 'individual') {
@@ -160,7 +160,7 @@ function parseNominationDescription(description: string, nominationType: 'indivi
     // 团队历史提交使用不同的固定标题，仅在详情中规范显示，不改写保存的正文。
     const teamHeading = nominationType === 'team'
       ? /^Achievement Summary$/i.test(label) ? 'Achievement Summary'
-        : /^Details of Your Team Achievement in 2026 and Business Impact$/i.test(label) ? 'Details Of Your Team Achievement In 2026 And Business Impact'
+        : /^Details of Your Team Achievement in 2026 and Business Impact$/i.test(label) ? 'Details of Your Team Achievement in 2026 and Business Impact'
         : /^How you demonstrate (?:Bosch|BD) China culture(?: \(especially (?:in your|on you) applied category\))?\s*\??$/i.test(label) ? 'How You Demonstrate BD China Culture'
         : ''
       : ''
@@ -1031,11 +1031,11 @@ export function ProjectShowcase({ nominationMode = false, managementMode = false
           onConfirm={(file) => { setProjectImage(file); setPhotoToCrop(null) }} />}
         <Modal opened={individualPreviewOpened} className="dp-nomination-review" onClose={() => { if (!uploading) setIndividualPreviewOpened(false) }}
           title="Review Individual Nomination" size="lg" centered closeOnClickOutside={!uploading} closeOnEscape={!uploading}
-          withCloseButton={!uploading} styles={{ content: { background: '#071b3b', color: 'white' }, header: { background: '#071b3b', color: 'white' }, title: { color: 'white' }, close: { color: 'white' } }}>
-          <Stack gap="lg" c="white" style={{ minWidth: 0, overflowWrap: 'anywhere' }}>
+          withCloseButton={!uploading}>
+          <Stack gap="lg" style={{ minWidth: 0, overflowWrap: 'anywhere' }}>
             <Title order={3}>{selectedNominationTrack?.label}</Title>
-            <Text c="white"><strong>Name:</strong> {user?.email}</Text>
-            <Text c="white"><strong>Nomination Type:</strong> Individual</Text>
+            <Text><strong>Name:</strong> {user?.email}</Text>
+            <Text><strong>Nomination Type:</strong> Individual</Text>
             {photoPreview ? <Image src={photoPreview} alt="Nomination Review Photo" fit="contain" w="100%" h={280} />
               : editingNomination?.projectAttachments?.filter((item) => item.type === 'screenshot').map((item) => <RetainedNominationPhoto key={item.storageKey ?? item.url} attachment={item} />)}
             {[
@@ -1043,16 +1043,16 @@ export function ProjectShowcase({ nominationMode = false, managementMode = false
               { heading: nominationHeadings[1], body: uploadForm.achievementImpact },
               { heading: nominationHeadings[2], body: uploadForm.cultureDemonstration },
             ].map((section) => <section key={section.heading}>
-              <Title order={4} c="white">{section.heading}</Title>
-              <Text c="white" mt="xs" style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{section.body}</Text>
+              <Title order={4}>{section.heading}</Title>
+              <Text mt="xs" style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{section.body}</Text>
             </section>)}
-            {nominationTags.length > 0 && <div><Title order={4} c="white">Tags</Title><Text c="white">{nominationTags.join(', ')}</Text></div>}
+            {nominationTags.length > 0 && <div><Title order={4}>Tags</Title><Text>{nominationTags.join(', ')}</Text></div>}
             {individualDocument ? <LocalNominationAttachment file={individualDocument} />
               : editingNomination?.projectAttachments?.filter((item) => item.type === 'document').map((item) => <NominationEvidence key={item.storageKey ?? item.url} attachment={item} />)}
-            <Text c="white">Please confirm the information above. Your nomination will then be sent to your assigned HoD for review.</Text>
+            <Text>Please confirm the information above. Your nomination will then be sent to your assigned HoD for review.</Text>
             <Group justify="flex-end">
-              <Button variant="light" c="white" disabled={uploading} onClick={() => setIndividualPreviewOpened(false)}>Back To Edit</Button>
-              <Button loading={uploading} disabled={!canNominate} onClick={() => void handleProjectUpload(true)}>Confirm And Submit</Button>
+              <Button variant="light" disabled={uploading} onClick={() => setIndividualPreviewOpened(false)}>Back to Edit</Button>
+              <Button loading={uploading} disabled={!canNominate} onClick={() => void handleProjectUpload(true)}>Confirm and Submit</Button>
             </Group>
           </Stack>
         </Modal>
@@ -1064,10 +1064,10 @@ export function ProjectShowcase({ nominationMode = false, managementMode = false
           {editingNomination?.approvalReason && <Alert color="orange" title="Requested Changes">{editingNomination.approvalReason}</Alert>}
           <div className="dp-flow-heading">
             <div>
-              <Title id="track-choice-title" order={2}>Start You Nomation</Title>
+              <Title id="track-choice-title" order={2}>Start Your Nomination</Title>
             </div>
             <Button.Group className="dp-type-switch" aria-label="Nomination type">
-              {(['individual', 'team'] as const).map((type) => <Button key={type} radius="xl"
+              {(['team', 'individual'] as const).map((type) => <Button key={type} radius="xl"
                 variant={nominationType === type ? 'filled' : 'outline'} aria-pressed={nominationType === type}
                 disabled={Boolean(editId) || uploading} onClick={() => setNominationType(type)}>
                 {type === 'individual' ? 'Individual' : 'Team'}
@@ -1169,7 +1169,7 @@ export function ProjectShowcase({ nominationMode = false, managementMode = false
                           required
                         />
                         <Input.Label id="personal-photo-label" htmlFor="personal-photo" required mt="xs">
-                          <strong>Personal Photo</strong><span style={{ fontWeight: 400 }}>(JG, PNG or WebP; up to 50 MB per photo)</span>
+                          <strong>Personal Photo</strong><span style={{ fontWeight: 400 }}>(JPG, PNG or WebP; up to 50 MB per photo)</span>
                         </Input.Label>
                         {editingNomination?.projectAttachments?.some((item) => item.type === 'screenshot') && <Text size="sm">Your submitted photo is retained unless you upload a replacement.</Text>}
                       </Grid.Col>
@@ -1227,7 +1227,7 @@ export function ProjectShowcase({ nominationMode = false, managementMode = false
                     <div className="dp-nomination-question">
                       <div style={{ minWidth: 0 }}>
                         <Textarea
-                          label={<><span className="dp-question-number" aria-hidden="true">01</span><span>Executive Summary (The Elevator Pitch)</span></>}
+                          label={<><span className="dp-question-number" aria-hidden="true">01</span><span>Executive Summary (the Elevator Pitch)</span></>}
                           required
                           minRows={4}
                           maxLength={1200}
@@ -1278,7 +1278,7 @@ export function ProjectShowcase({ nominationMode = false, managementMode = false
                     <div className="dp-nomination-question">
                       <div style={{ minWidth: 0 }}>
                         <TextInput
-                          label={<><span className="dp-question-number" aria-hidden="true">04</span><span>Tags You Want To Add (Add Up To 5 Tags: 、 , ，)</span></>}
+                          label={<><span className="dp-question-number" aria-hidden="true">04</span><span>Tags You Want to Add (Add up to 5 Tags: 、 , ，)</span></>}
                           styles={{ label: { whiteSpace: 'nowrap' } }}
                           error={tooManyTags ? tagHint : undefined}
                           placeholder="中英文输入都可"
@@ -1324,7 +1324,7 @@ export function ProjectShowcase({ nominationMode = false, managementMode = false
   return (
     <Container size={1240} pt={{ base: 'sm', md: 'lg' }} className={`dp-page dp-voting-page${cartOpened ? ' dp-voting-page--cart-open' : ''}`}>
       <Stack gap="lg">
-        {loadError && <Alert color="red" title="Unable To Load Nominations"><Button variant="subtle" onClick={() => void loadProjects()}>Retry</Button></Alert>}
+        {loadError && <Alert color="red" title="Unable to Load Nominations"><Button variant="subtle" onClick={() => void loadProjects()}>Retry</Button></Alert>}
         <div className="dp-selection-header">
           <div className="dp-category-heading">
             <div>
@@ -1614,7 +1614,7 @@ export function ProjectShowcase({ nominationMode = false, managementMode = false
           <Stack>
             {!user ? <Text>Sign in to view your voting records.</Text>
               : loading ? <Text role="status">Loading voting records…</Text>
-              : loadError ? <Alert color="red" title="Unable To Load Voting Records">
+              : loadError ? <Alert color="red" title="Unable to Load Voting Records">
                 <Button variant="subtle" onClick={() => void loadProjects()}>Retry</Button>
               </Alert>
               : <>

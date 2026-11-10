@@ -66,7 +66,7 @@ it('keeps each track separate with independent ranks, ties and unscored nominati
   expect(within(values).getByText('Value nominee')).toBeInTheDocument()
   expect(within(values).queryByText('Innovation nominee')).not.toBeInTheDocument()
   expect(within(values).getByText('—')).toBeInTheDocument()
-  for (const [track, title] of [['Innovation Breakthrough', 'Innovation nominee'], ['Collaboration To Win', 'Collaboration nominee']]) {
+  for (const [track, title] of [['Innovation Breakthrough', 'Innovation nominee'], ['Collaboration to Win', 'Collaboration nominee']]) {
     const region = screen.getByRole('region', { name: track })
     expect(within(region).getByText('#1')).toBeInTheDocument()
     expect(within(region).getByText(title)).toBeInTheDocument()

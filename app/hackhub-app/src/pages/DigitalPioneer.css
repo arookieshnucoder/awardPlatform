@@ -945,15 +945,14 @@
 /* 标题仅调整展示大小写，保留赛道原始值和审核数据。 */
 .dp-track-title,
 .dp-nomination-track__name,
-.dp-approval-shell .mantine-Title-root { text-transform: capitalize; }
-.dp-approval-shell .mantine-Table-root { --table-highlight-on-hover-color: rgb(255 255 255 / 8%); }
-.dp-approval-shell :is(.mantine-Table-th, .mantine-Tabs-tab, .mantine-Stepper-stepLabel) { color: #fff; }
+.dp-approval-shell .mantine-Title-root { text-transform: none; }
 
 /* 提交确认预览独立于旧详情布局，照片和文字按文档顺序展示。 */
 .dp-nomination-review .mantine-Modal-content,
-.dp-nomination-review .mantine-Modal-header { background: #071b3b; color: #fff; }
+.dp-nomination-review .mantine-Modal-header { background: #fff; color: #111; }
 .dp-nomination-review .mantine-Modal-body { overflow-wrap: anywhere; }
-.dp-nomination-review :is(.mantine-Text-root, .mantine-Title-root, .mantine-Modal-title, .mantine-Button-root, .mantine-CloseButton-root) { color: #fff; }
+.dp-nomination-review :is(.mantine-Text-root, .mantine-Title-root, .mantine-Modal-title, .mantine-CloseButton-root),
+.dp-nomination-review .mantine-Button-root[data-variant='light'] { color: #111 !important; }
 /* 个人、团队的预览和详情使用同一正文、标题字号与行距。 */
 .dp-nomination-review .mantine-Text-root,
 .dp-detail-modal .mantine-Text-root { font-family: var(--app-font-body); font-size: 1rem; font-weight: 400; line-height: 1.8; }
@@ -1787,6 +1786,31 @@
 .dp-submit-check { stroke: currentColor; stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 48; stroke-dashoffset: 48; animation: dp-submit-check 360ms cubic-bezier(.2, .8, .2, 1) forwards; }
 @keyframes dp-submit-spin { to { transform: rotate(360deg); } }
 @keyframes dp-submit-check { to { stroke-dashoffset: 0; } }
+
+/* Keep nomination reviews and award result tables readable on light surfaces. */
+.dp-page .dp-light-surface {
+  --mantine-color-text: #111;
+  --mantine-color-dimmed: #111;
+  --mantine-color-body: #fff;
+  background: #fff;
+  color: #111;
+  border-color: #ddd;
+}
+.dp-light-surface :is(.mantine-Text-root, .mantine-Title-root, .mantine-Table-th, .mantine-Table-td,
+  .mantine-Tabs-tab, .mantine-Stepper-stepLabel, .mantine-InputWrapper-label, .mantine-InputWrapper-description) {
+  color: #111;
+}
+.dp-light-surface .mantine-Table-root {
+  --table-highlight-on-hover-color: #f3f4f6;
+  background: #fff;
+  color: #111;
+}
+.dp-light-surface .mantine-Button-root[data-variant='light'] { color: #6f2b91; }
+.dp-nomination-review .dp-attachment :is(.mantine-Text-root, .mantine-Button-root, .mantine-Anchor-root),
+.dp-light-surface .dp-attachment :is(.mantine-Text-root, .mantine-Button-root, .mantine-Anchor-root) {
+  color: #fff !important;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .dp-submit-ring, .dp-submit-check { animation: none; }
   .dp-submit-check { stroke-dashoffset: 0; }

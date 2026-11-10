@@ -81,7 +81,7 @@ describe('Team nomination form', () => {
     expect(await screen.findByRole('dialog', { name: 'Review Team Nomination' })).toHaveTextContent('Measurable test impact')
     expect(StorageService.uploadFile).not.toHaveBeenCalled()
     expect(IdeaService.createIdea).not.toHaveBeenCalled()
-    fireEvent.click(screen.getByRole('button', { name: 'Confirm And Submit' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm and Submit' }))
     await waitFor(() => expect(IdeaService.createIdea).toHaveBeenCalledOnce())
     expect(StorageService.uploadFile).toHaveBeenCalledWith(expect.objectContaining({ name: 'team.png' }), 'project-attachments', 'nominations/campaign/captain')
     expect(IdeaService.createIdea).toHaveBeenCalledWith(expect.objectContaining({ teamId: undefined,
@@ -117,7 +117,7 @@ describe('Team nomination form', () => {
     fireEvent.change(screen.getByRole('textbox', { name: /Achievement Summary/ }), { target: { value: 'Revised actual summary' } })
     fireEvent.click(screen.getByRole('button', { name: 'Resubmit nomination' }))
     expect(IdeaService.updateIdea).not.toHaveBeenCalled()
-    fireEvent.click(await screen.findByRole('button', { name: 'Confirm And Submit' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Confirm and Submit' }))
     await waitFor(() => expect(IdeaService.updateIdea).toHaveBeenCalledWith(existing.id, expect.objectContaining({
       approvalVersion: 4, projectAttachments: expect.arrayContaining([existing.projectAttachments![1], existing.projectAttachments![2], expect.objectContaining({ achievementSummary: 'Revised actual summary' })]),
     })))
@@ -152,7 +152,7 @@ describe('Team nomination form', () => {
     const view = show()
     await fill(view)
     fireEvent.click(screen.getByRole('button', { name: 'Submit nomination' }))
-    fireEvent.click(await screen.findByRole('button', { name: 'Back To Edit' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Back to Edit' }))
     await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Review Team Nomination' })).not.toBeInTheDocument())
     expect(screen.getByRole('textbox', { name: /Achievement Summary/ })).toHaveValue('Test-only achievement summary')
     expect(StorageService.uploadFile).not.toHaveBeenCalled()

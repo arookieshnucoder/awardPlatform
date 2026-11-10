@@ -180,7 +180,7 @@ export function TeamNominationForm({ user, hackathonId, category, onCategoryChan
         description: [
           `Achievement Summary\n${achievementSummary.trim()}`,
           `Details of Your Team Achievement in 2026 and Business Impact\n${teamAchievementImpact.trim()}`,
-          `How you demonstrate BD China culture (especially on you applied category) ?\n${cultureDemonstration.trim()}`,
+          `How You Demonstrate BD China Culture (Especially in Your Applied Category)\n${cultureDemonstration.trim()}`,
         ].join('\n\n'),
         projectAttachments: attachments,
       }
@@ -236,7 +236,7 @@ export function TeamNominationForm({ user, hackathonId, category, onCategoryChan
       <div className="dp-fieldset" translate="no"><Textarea label="Details of Your Team Achievement in 2026 and Business Impact" required autosize minRows={4} resize="vertical" disabled={busy}
         placeholder="What were the measurable outcomes in 2026? including financial figures"
         value={teamAchievementImpact} onChange={(event) => setTeamAchievementImpact(event.currentTarget.value)} /></div>
-      <div className="dp-fieldset" translate="no"><Textarea label="How You Demonstrate BD China Culture (Especially On You Applied Category)?" required autosize minRows={4} resize="vertical" disabled={busy}
+      <div className="dp-fieldset" translate="no"><Textarea label="How You Demonstrate BD China Culture (Especially in Your Applied Category)" required autosize minRows={4} resize="vertical" disabled={busy}
         placeholder="Describe how the /team demonstrated the culture pillar of this track."
         value={cultureDemonstration} onChange={(event) => setCultureDemonstration(event.currentTarget.value)} /></div>
       <div className="dp-fieldset" translate="no"><FileInput className="dp-team-file-input dp-team-attachment" label="Attachment" clearable disabled={busy} accept={documentAccept}
@@ -251,24 +251,23 @@ export function TeamNominationForm({ user, hackathonId, category, onCategoryChan
         {editing ? 'Resubmit nomination' : 'Submit nomination'}
       </Button></Group>
       <Modal opened={reviewOpened} onClose={() => { if (!busy) setReviewOpened(false) }} title="Review Team Nomination" size="lg" centered
-        closeOnClickOutside={!busy} closeOnEscape={!busy} withCloseButton={!busy} className="dp-nomination-review"
-        styles={{ content: { background: '#071b3b', color: '#fff' }, header: { background: '#071b3b', color: '#fff' }, title: { color: '#fff' } }}>
+        closeOnClickOutside={!busy} closeOnEscape={!busy} withCloseButton={!busy} className="dp-nomination-review">
         <Stack gap="lg" style={{ minWidth: 0 }}>
-          <Text c="white">Review all information below. Confirm to submit it to your Nominating HoD.</Text>
-          {error && <Alert color="red" c="white" role="alert" styles={{ message: { color: '#fff' } }}>{error}</Alert>}
-          <Title order={3} c="white">{getDigitalPioneerTracks('team').find((track) => track.value === category)?.label ?? category}</Title>
-          <Text c="white"><strong>Name:</strong> {metadata?.nominatorName ?? user.name}</Text>
-          <Text c="white" style={{ overflowWrap: 'anywhere' }}><strong>Project Name:</strong> {projectName}</Text>
+          <Text>Review all information below. Confirm to submit it to your Nominating HoD.</Text>
+          {error && <Alert color="red" role="alert">{error}</Alert>}
+          <Title order={3}>{getDigitalPioneerTracks('team').find((track) => track.value === category)?.label ?? category}</Title>
+          <Text><strong>Name:</strong> {metadata?.nominatorName ?? user.name}</Text>
+          <Text style={{ overflowWrap: 'anywhere' }}><strong>Project Name:</strong> {projectName}</Text>
           {photoPreview && <Image src={photoPreview} alt="Team nomination photo" fit="contain" w="100%" h={280} style={{ display: 'block', position: 'static', maxWidth: '100%' }} />}
           {[
             ['Core Team Member', coreTeamMembers],
             ['Achievement Summary', achievementSummary],
-            ['Details Of Your Team Achievement In 2026 And Business Impact', teamAchievementImpact],
+            ['Details of Your Team Achievement in 2026 and Business Impact', teamAchievementImpact],
             ['How You Demonstrate BD China Culture', cultureDemonstration],
-          ].map(([label, value]) => <Stack gap="xs" key={label} style={{ minWidth: 0 }}><Title order={4} c="white">{label}</Title><Text c="white" style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{value}</Text></Stack>)}
+          ].map(([label, value]) => <Stack gap="xs" key={label} style={{ minWidth: 0 }}><Title order={4}>{label}</Title><Text style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{value}</Text></Stack>)}
           {document ? <LocalNominationAttachment file={document} /> : savedDocuments.map((item) => <NominationEvidence key={item.storageKey ?? item.url} attachment={item} />)}
-          <Group justify="flex-end"><Button variant="light" c="white" disabled={busy} onClick={() => setReviewOpened(false)}>Back To Edit</Button>
-            <Button loading={busy} disabled={!canSubmit || busy} onClick={() => void submit(true)}>Confirm And Submit</Button></Group>
+          <Group justify="flex-end"><Button variant="light" disabled={busy} onClick={() => setReviewOpened(false)}>Back to Edit</Button>
+            <Button loading={busy} disabled={!canSubmit || busy} onClick={() => void submit(true)}>Confirm and Submit</Button></Group>
         </Stack>
       </Modal>
   </Stack></Card>

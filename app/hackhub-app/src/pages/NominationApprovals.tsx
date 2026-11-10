@@ -68,14 +68,14 @@ export function NominationApprovals({ reviewMode = false }: { reviewMode?: boole
   if (reviewMode && !eligibility.data?.canReview) return <Container py="xl"><Alert color="orange">{eligibility.isError ? 'Unable to verify approval access. Please refresh.' : 'Your signed-in account is not assigned as a Nominating HoD.'}</Alert></Container>
 
   return <Container size={1240} py="xl" className="dp-page">
-    <Card className="dp-form-shell dp-approval-shell" c="white" p={{ base: 'md', md: 'xl' }} radius="lg">
+    <Card className="dp-form-shell dp-approval-shell dp-light-surface" p={{ base: 'md', md: 'xl' }} radius="lg">
     <Stack>
       <Group justify="space-between"><Title order={2}>{reviewMode ? 'Nominating HoD Approvals' : 'My Nominations'}</Title><Button variant="light" onClick={() => void nominations.refetch()} loading={nominations.isFetching}>Refresh</Button></Group>
       {notice && <Alert color="green" role="status">{notice}</Alert>}
       {error && <Alert color="red" role="alert">{error}</Alert>}
       {nominations.isError ? <Alert color="red">Unable to load nominations. Please refresh.</Alert>
         : nominations.isPending ? <Loader aria-label="Loading nominations" />
-          : current ? <Card bg="transparent" c="white" p={0}>
+          : current ? <Card bg="transparent" p={0}>
             <Stack gap="xl">
               <Button variant="outline" radius="xl" w="fit-content" styles={{ root: { backgroundColor: 'transparent' } }} onClick={() => open()}>Go back</Button>
               <Title order={2}>{trackName(current)}</Title>
@@ -93,7 +93,7 @@ export function NominationApprovals({ reviewMode = false }: { reviewMode?: boole
                   {current.projectAttachments?.filter((item) => item.type === 'nomination').map((item, index) => <Stack gap="xs" key={index}>
                     <Text><strong>{item.nominationType === 'team' ? 'Project Name: ' : 'Name: '}</strong>{item.name}</Text>
                     {item.nominationType === 'team' && <>
-                      <Text><strong>NominatorName: </strong>{item.nominatorName}</Text>
+                      <Text><strong>Nominator Name: </strong>{item.nominatorName}</Text>
                       <Text style={{ whiteSpace: 'pre-wrap' }}><strong>Core Team Member: </strong>{item.coreTeamMembers}</Text>
                     </>}
                     {item.employeeEmail && <Text><strong>Email: </strong>{item.employeeEmail}</Text>}
@@ -123,7 +123,7 @@ export function NominationApprovals({ reviewMode = false }: { reviewMode?: boole
               <Table.Thead><Table.Tr>{reviewMode && <Table.Th>Select</Table.Th>}<Table.Th>Nomination</Table.Th><Table.Th>Created</Table.Th><Table.Th>State</Table.Th></Table.Tr></Table.Thead>
               <Table.Tbody>{ideas.map((idea) => <Table.Tr key={idea.id}>
                 {reviewMode && <Table.Td><Checkbox aria-label={`Select ${idea.title}`} disabled={idea.approvalStatus !== 'pending' || busy} checked={selected.includes(idea.id)} onChange={(event) => { const checked = event.currentTarget.checked; setSelected((ids) => checked ? [...ids, idea.id] : ids.filter((id) => id !== idea.id)) }} /></Table.Td>}
-                <Table.Td><Anchor component="button" onClick={() => open(idea.id)} ta="left" c="white"><Text fw={700}>{trackName(idea)}</Text><Text>{idea.projectAttachments?.find((item) => item.type === 'nomination')?.name || idea.title}</Text></Anchor></Table.Td>
+                <Table.Td><Anchor component="button" onClick={() => open(idea.id)} ta="left" c="inherit"><Text fw={700}>{trackName(idea)}</Text><Text>{idea.projectAttachments?.find((item) => item.type === 'nomination')?.name || idea.title}</Text></Anchor></Table.Td>
                 <Table.Td>{new Date(idea.createdAt).toLocaleString()}</Table.Td><Table.Td>{nominationState(idea)}</Table.Td>
               </Table.Tr>)}</Table.Tbody>
             </Table></Table.ScrollContainer>
@@ -131,7 +131,7 @@ export function NominationApprovals({ reviewMode = false }: { reviewMode?: boole
           </>}
     </Stack>
     </Card>
-    <Modal opened={decision !== null} onClose={() => { if (!busy) setDecision(null) }} title={decision === 'approved' ? 'Approve Nominations' : 'Reject For Revision'} centered closeOnClickOutside={!busy} closeOnEscape={!busy} withCloseButton={!busy}>
+    <Modal opened={decision !== null} onClose={() => { if (!busy) setDecision(null) }} title={decision === 'approved' ? 'Approve Nominations' : 'Reject for Revision'} centered closeOnClickOutside={!busy} closeOnEscape={!busy} withCloseButton={!busy}>
       <Stack><Text>{decisionItems.length} nomination(s) selected.</Text><Textarea label={decision === 'rejected' ? 'Reason for revision' : 'Comment'} required={decision === 'rejected'} value={reason} onChange={(event) => setReason(event.currentTarget.value)} maxLength={2000} disabled={busy} />
         {error && <Alert color="red">{error}</Alert>}
         <Button onClick={() => void submitDecision()} loading={busy} disabled={decisionItems.length === 0 || (decision === 'rejected' && !reason.trim())}>Confirm</Button>

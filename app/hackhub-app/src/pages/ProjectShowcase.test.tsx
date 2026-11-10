@@ -142,7 +142,9 @@ describe('ProjectShowcase', () => {
   it('carries Team query selection into the matching criteria and team creation flow', async () => {
     render(<MantineProvider><MemoryRouter initialEntries={['/nominate?type=team']}><ProjectShowcase nominationMode /></MemoryRouter></MantineProvider>)
     expect(screen.getByRole('button', { name: 'Team', exact: true })).toHaveAttribute('aria-pressed', 'true')
-    fireEvent.click(screen.getByRole('radio', { name: /Collaboration To Win/ }))
+    const switchBar = screen.getByRole('button', { name: 'Team', exact: true }).parentElement!
+    expect(within(switchBar).getAllByRole('button').map((button) => button.textContent)).toEqual(['Team', 'Individual'])
+    fireEvent.click(screen.getByRole('radio', { name: /Collaboration to Win/ }))
     expect(document.getElementById('nomination-track-description')).toHaveTextContent('Cross-Functional Synergy (30%)')
     await screen.findByRole('button', { name: 'Submit nomination' })
     expect(screen.queryByRole('textbox', { name: /Executive Summary/ })).not.toBeInTheDocument()
@@ -263,7 +265,7 @@ describe('ProjectShowcase', () => {
     expect(screen.queryByText(/votes available/)).not.toBeInTheDocument()
     expect(screen.getAllByText('Customer Values').length).toBeGreaterThan(0)
     expect(screen.getAllByText('Innovation Breakthrough').length).toBeGreaterThan(0)
-    expect(screen.getAllByText('Collaboration To Win').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('Collaboration to Win').length).toBeGreaterThan(0)
     expect(screen.getByRole('button', { name: /All nominees\s*1/ })).toBeInTheDocument()
     expect(screen.queryByText('Spring 2026 Hackathon')).not.toBeInTheDocument()
     expect(screen.queryByText('Winners Only')).not.toBeInTheDocument()
@@ -311,8 +313,8 @@ describe('ProjectShowcase', () => {
     expect(document.getElementById('nomination-track-description')).toHaveTextContent('Customer Impact (40%)')
     await user.type(screen.getByRole('textbox', { name: /Executive Summary/ }), 'Keep this contribution when switching categories.')
     await user.click(screen.getByRole('textbox', { name: 'Award Category' }))
-    await user.click(await screen.findByRole('option', { name: 'Collaboration To Win' }))
-    expect(screen.getByRole('radio', { name: /Collaboration To Win/ })).toHaveAttribute('aria-checked', 'true')
+    await user.click(await screen.findByRole('option', { name: 'Collaboration to Win' }))
+    expect(screen.getByRole('radio', { name: /Collaboration to Win/ })).toHaveAttribute('aria-checked', 'true')
     expect(document.getElementById('nomination-track-description')).toHaveTextContent('Shared-Goal Ownership (35%)')
     expect(screen.getByRole('textbox', { name: /Executive Summary/ })).toHaveValue('Keep this contribution when switching categories.')
   })
@@ -512,8 +514,8 @@ describe('ProjectShowcase', () => {
     const dialog = within(screen.getByRole('dialog'))
     expect(dialog.queryByText('Department')).not.toBeInTheDocument()
     expect(dialog.getByText('Org. Code').parentElement).toHaveTextContent('HRL-CN C/HRR-JMPCN')
-    expect(dialog.getByRole('heading', { name: 'Executive Summary (The Elevator Pitch)' })).toBeInTheDocument()
-    expect(dialog.getByRole('heading', { name: /Details Of Your Core Achievement/ })).toBeInTheDocument()
+    expect(dialog.getByRole('heading', { name: 'Executive Summary (the Elevator Pitch)' })).toBeInTheDocument()
+    expect(dialog.getByRole('heading', { name: /Details of Your Core Achievement/ })).toBeInTheDocument()
     expect(dialog.getByRole('heading', { name: /How You Demonstrate BD China Culture/ })).toBeInTheDocument()
     for (const answer of ['Summary first paragraph.', 'Summary second paragraph.', 'Saved RMB 200,000.', 'Worked across departments.']) {
       expect(dialog.getByText(answer)).toBeInTheDocument()
@@ -536,7 +538,7 @@ describe('ProjectShowcase', () => {
     await screen.findByText('Original Team Name')
     await userEvent.click(screen.getByRole('button', { name: 'View details' }))
     const dialog = within(screen.getByRole('dialog'))
-    for (const heading of ['Achievement Summary', 'Details Of Your Team Achievement In 2026 And Business Impact', 'How You Demonstrate BD China Culture']) {
+    for (const heading of ['Achievement Summary', 'Details of Your Team Achievement in 2026 and Business Impact', 'How You Demonstrate BD China Culture']) {
       expect(dialog.getByRole('heading', { name: heading, exact: true })).toBeInTheDocument()
     }
     for (const answer of ['Team summary in original case.', 'Saved RMB 300,000.', 'Worked with other teams.']) {
@@ -563,14 +565,14 @@ describe('ProjectShowcase', () => {
       </MantineProvider>
     )
 
-    expect(await screen.findByRole('heading', { name: 'Start You Nomation' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Start Your Nomination' })).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: /Nominate a Digital Pioneer/ })).not.toBeInTheDocument()
     expect(screen.queryByRole('textbox', { name: /Executive Summary/ })).not.toBeInTheDocument()
     await user.click(screen.getByRole('radio', { name: /Innovation Breakthrough/ }))
-    expect(screen.getByRole('textbox', { name: /Executive Summary \(The Elevator Pitch\)/ })).toBeInTheDocument()
-    expect(screen.getByRole('textbox', { name: /Details Of Your Core Achievement In 2026 And Business Impact/ })).toBeInTheDocument()
+    expect(screen.getByRole('textbox', { name: /Executive Summary \(the Elevator Pitch\)/ })).toBeInTheDocument()
+    expect(screen.getByRole('textbox', { name: /Details of Your Core Achievement in 2026 and Business Impact/ })).toBeInTheDocument()
     expect(screen.getByRole('textbox', { name: /How You Demonstrate BD China Culture/ })).toBeInTheDocument()
-    expect(screen.getByRole('textbox', { name: /Tags You Want To Add/ })).toBeInTheDocument()
+    expect(screen.getByRole('textbox', { name: /Tags You Want to Add/ })).toBeInTheDocument()
     expect(screen.getByRole('textbox', { name: /Award Category/ })).toHaveValue('Innovation Breakthrough')
     expect(screen.getByRole('button', { name: 'Submit nomination' })).toBeEnabled()
     expect(screen.getByRole('button', { name: 'Team', exact: true })).toHaveAttribute('aria-pressed', 'false')
@@ -614,7 +616,7 @@ describe('ProjectShowcase', () => {
     updateIdea.mockResolvedValueOnce({ id: 'rejected-1', category: 'Customer Values', approvalStatus: 'pending' })
     const user = userEvent.setup()
     render(<MantineProvider env="test"><MemoryRouter initialEntries={['/nominate?edit=rejected-1']}><ProjectShowcase nominationMode /></MemoryRouter></MantineProvider>)
-    const impact = await screen.findByRole('textbox', { name: /Details Of Your Core Achievement/ })
+    const impact = await screen.findByRole('textbox', { name: /Details of Your Core Achievement/ })
     expect(impact).toHaveValue('Original impact')
     expect(screen.getByText('Explain the measured savings.')).toBeInTheDocument()
     await user.clear(impact)
@@ -624,7 +626,7 @@ describe('ProjectShowcase', () => {
     const review = await screen.findByRole('dialog', { name: 'Review Individual Nomination' })
     expect(within(review).getByText('Measured savings from the submitted report.')).toBeInTheDocument()
     expect(await within(review).findByRole('img', { name: 'Retained Nomination Photo' })).toHaveAttribute('src', '/storage/retained-photo.png')
-    await user.click(within(review).getByRole('button', { name: 'Confirm And Submit' }))
+    await user.click(within(review).getByRole('button', { name: 'Confirm and Submit' }))
     await waitFor(() => expect(updateIdea).toHaveBeenCalledWith('rejected-1', expect.objectContaining({
       approvalVersion: 4,
       description: expect.stringContaining('Measured savings from the submitted report.'),
@@ -651,7 +653,7 @@ describe('ProjectShowcase', () => {
     const user = userEvent.setup()
     render(<MantineProvider env="test"><MemoryRouter initialEntries={['/nominate?edit=rejected-team']}><ProjectShowcase nominationMode /></MemoryRouter></MantineProvider>)
     await user.click(await screen.findByRole('button', { name: 'Resubmit nomination' }))
-    await user.click(await screen.findByRole('button', { name: 'Confirm And Submit' }))
+    await user.click(await screen.findByRole('button', { name: 'Confirm and Submit' }))
     expect(await screen.findByRole('heading', { name: 'Nomination Submitted Successfully' })).toBeInTheDocument()
     expect(screen.getByRole('status')).toHaveTextContent('Your nomination was submitted, but its saved draft could not be removed.')
     expect(updateIdea).toHaveBeenCalledOnce()
@@ -689,10 +691,10 @@ describe('ProjectShowcase', () => {
     await user.click(within(review).getByRole('button', { name: 'Preview Attachment' }))
     expect(await within(review).findByTitle('Selected PDF preview: saved-evidence.pdf')).toBeInTheDocument()
     expect(within(review).getByText('Saved impact')).toBeInTheDocument()
-    await user.click(within(review).getByRole('button', { name: 'Back To Edit' }))
+    await user.click(within(review).getByRole('button', { name: 'Back to Edit' }))
     expect(screen.getByRole('textbox', { name: /Executive Summary/ })).toHaveValue('Saved summary')
     await user.click(screen.getByRole('button', { name: 'Submit nomination' }))
-    await user.click(within(await screen.findByRole('dialog', { name: 'Review Individual Nomination' })).getByRole('button', { name: 'Confirm And Submit' }))
+    await user.click(within(await screen.findByRole('dialog', { name: 'Review Individual Nomination' })).getByRole('button', { name: 'Confirm and Submit' }))
     await waitFor(() => expect(createIdea).toHaveBeenCalledTimes(1))
     expect(uploadFile).toHaveBeenCalledWith(documentFile, 'project-attachments', 'nominations/hackathon-1/user-1')
     expect(removeDraft).toHaveBeenCalledWith('["user-1","hackathon-1","individual","new"]')
@@ -725,7 +727,7 @@ describe('ProjectShowcase', () => {
 
     await user.click(await screen.findByRole('radio', { name: /Customer Values/ }))
     await user.type(screen.getByRole('textbox', { name: /Executive Summary/ }), 'A better customer experience in four clear sentences.')
-    await user.type(screen.getByRole('textbox', { name: /Details Of Your Core Achievement In 2026 And Business Impact/ }), 'Reduced service time by 30% and saved RMB 200,000.')
+    await user.type(screen.getByRole('textbox', { name: /Details of Your Core Achievement in 2026 and Business Impact/ }), 'Reduced service time by 30% and saved RMB 200,000.')
     await user.type(screen.getByRole('textbox', { name: /How You Demonstrate BD China Culture/ }), 'Listened to users and delivered an end-to-end solution.')
     const fileInput = document.querySelector<HTMLInputElement>('input[type="file"]')
     expect(fileInput).not.toBeNull()
@@ -754,7 +756,7 @@ describe('ProjectShowcase', () => {
       toBlob.mockRestore()
     }
     expect(screen.queryByText('Photo exceeds 50 MB. Please choose a smaller photo.')).not.toBeInTheDocument()
-    const tagsInput = screen.getByRole('textbox', { name: /Tags You Want To Add/ })
+    const tagsInput = screen.getByRole('textbox', { name: /Tags You Want to Add/ })
     await user.type(tagsInput, 'Customer、Innovation，Collaboration, Impact、Digital、Sixth、')
     expect(screen.getByRole('button', { name: 'Submit nomination' })).toBeDisabled()
     expect(createIdea).not.toHaveBeenCalled()
@@ -766,7 +768,7 @@ describe('ProjectShowcase', () => {
     expect(createIdea).not.toHaveBeenCalled()
     expect(uploadFile).not.toHaveBeenCalled()
     expect(within(review).getByText('Reduced service time by 30% and saved RMB 200,000.')).toBeInTheDocument()
-    await user.click(within(review).getByRole('button', { name: 'Confirm And Submit' }))
+    await user.click(within(review).getByRole('button', { name: 'Confirm and Submit' }))
 
     await waitFor(() => expect(createIdea).toHaveBeenCalled())
     expect(getOrCreateNominationTeam).not.toHaveBeenCalled()

@@ -138,7 +138,7 @@ export function AcceptInvitation() {
 
             <Stack align="center" gap="xs">
               <Title order={2} ta="center">
-                You've Been Invited To Join
+                You've Been Invited to Join
               </Title>
               <Title order={1} ta="center">
                 {preview!.organizationName}

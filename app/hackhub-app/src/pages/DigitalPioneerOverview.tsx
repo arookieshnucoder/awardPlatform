@@ -11,9 +11,9 @@ import './DigitalPioneer.css'
 
 const copy = {
   en: {
-    nominate: 'Start A Nomination',
+    nominate: 'Start a Nomination',
     browse: 'Browse & Vote',
-    categoriesTitle: 'Award Categories And Criteria',
+    categoriesTitle: 'Award Categories and Criteria',
     timelineTitle: '2026 Timeline',
   },
   zh: {
@@ -56,7 +56,7 @@ export function DigitalPioneerOverview(): ReactElement {
         <div className="dp-category-heading">
           <h2 id="award-categories-title" className="dp-section-title dp-categories-title" style={{ marginBottom: 0 }}>{text.categoriesTitle}</h2>
           <Button.Group className="dp-type-switch" aria-label="Nomination type">
-            {(['individual', 'team'] as const).map((type) => <Button key={type} variant={nominationType === type ? 'filled' : 'outline'} radius="xl" aria-pressed={nominationType === type} onClick={() => setNominationType(type)}>{type === 'individual' ? 'Individual' : 'Team'}</Button>)}
+            {(['team', 'individual'] as const).map((type) => <Button key={type} variant={nominationType === type ? 'filled' : 'outline'} radius="xl" aria-pressed={nominationType === type} onClick={() => setNominationType(type)}>{type === 'individual' ? 'Individual' : 'Team'}</Button>)}
           </Button.Group>
         </div>
 

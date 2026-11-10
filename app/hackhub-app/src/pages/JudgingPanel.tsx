@@ -215,7 +215,7 @@ function IdeaJudgingCard({
           <Stack gap="xl">
             <Group justify="space-between" align="flex-end">
               <div>
-                <Title order={3}>Score The Evidence</Title>
+                <Title order={3}>Score the Evidence</Title>
               </div>
               <div style={{ textAlign: 'right' }}>
                 <Text className="dp-utility" size="sm" c="dimmed">Weighted total</Text>
