@@ -1,0 +1,774 @@
+[
+  {
+    "synthetic": true,
+    "campaigns": 1,
+    "judgeDelayMs": 0,
+    "readyMs": 502,
+    "judgeRequests": 1,
+    "beforeResize": {
+      "canvas": [
+        {
+          "w": 1440,
+          "h": 900,
+          "cssH": 900
+        }
+      ],
+      "pageHeight": 900,
+      "video": [
+        {
+          "width": 1920,
+          "height": 1080,
+          "paused": false
+        }
+      ],
+      "longTasks": [
+        {
+          "start": 128.8999999910593,
+          "duration": 63
+        }
+      ]
+    },
+    "afterResize": {
+      "canvas": [
+        {
+          "w": 1439,
+          "h": 900,
+          "rgbaMiB": 5
+        }
+      ],
+      "longTasks": [
+        {
+          "start": 128.8999999910593,
+          "duration": 63
+        }
+      ]
+    },
+    "pageErrors": [],
+    "resources": [
+      {
+        "path": "/media/tech-blue-poster.jpg",
+        "bytes": 266057,
+        "decoded": 265757,
+        "duration": 8
+      },
+      {
+        "path": "/assets/index-B17jl_zN.js",
+        "bytes": 209801,
+        "decoded": 571810,
+        "duration": 11
+      },
+      {
+        "path": "/assets/index-BWW_K4Yd.css",
+        "bytes": 56406,
+        "decoded": 263266,
+        "duration": 7
+      },
+      {
+        "path": "/fonts/award-sans-regular.woff2",
+        "bytes": 2359596,
+        "decoded": 2359296,
+        "duration": 28
+      },
+      {
+        "path": "/assets/green_logo-JANtPeK2.svg",
+        "bytes": 3720,
+        "decoded": 3420,
+        "duration": 8
+      },
+      {
+        "path": "/assets/AwardManagement-D0tM74o4.js",
+        "bytes": 7216,
+        "decoded": 18108,
+        "duration": 54
+      },
+      {
+        "path": "/assets/hackathonService-COLzDUm6.js",
+        "bytes": 1006,
+        "decoded": 1407,
+        "duration": 55
+      },
+      {
+        "path": "/assets/judgingService-DwJauApp.js",
+        "bytes": 658,
+        "decoded": 1186,
+        "duration": 55
+      },
+      {
+        "path": "/assets/organizationService-DSY97Mep.js",
+        "bytes": 842,
+        "decoded": 1586,
+        "duration": 55
+      },
+      {
+        "path": "/assets/pagination-DwHsShgu.js",
+        "bytes": 537,
+        "decoded": 237,
+        "duration": 55
+      },
+      {
+        "path": "/assets/committeeScoring-DZqfnt9j.js",
+        "bytes": 1092,
+        "decoded": 1618,
+        "duration": 55
+      },
+      {
+        "path": "/assets/ideaService-C0DzASBo.js",
+        "bytes": 1084,
+        "decoded": 2018,
+        "duration": 57
+      },
+      {
+        "path": "/assets/Card-D0QT2ZXn.js",
+        "bytes": 979,
+        "decoded": 1247,
+        "duration": 57
+      },
+      {
+        "path": "/assets/use-form-DEg9af17.js",
+        "bytes": 6201,
+        "decoded": 15528,
+        "duration": 62
+      },
+      {
+        "path": "/assets/Title-CLQT4YLw.js",
+        "bytes": 990,
+        "decoded": 1420,
+        "duration": 57
+      },
+      {
+        "path": "/assets/IconPlus-BktXwgu_.js",
+        "bytes": 473,
+        "decoded": 173,
+        "duration": 61
+      },
+      {
+        "path": "/assets/Progress-CY5XMLx9.js",
+        "bytes": 1365,
+        "decoded": 2387,
+        "duration": 61
+      },
+      {
+        "path": "/assets/get-auto-contrast-value-Da6zqqWm.js",
+        "bytes": 376,
+        "decoded": 76,
+        "duration": 63
+      },
+      {
+        "path": "/assets/Badge-iHcfSSWL.js",
+        "bytes": 1042,
+        "decoded": 1459,
+        "duration": 63
+      },
+      {
+        "path": "/assets/IconCheck-D1IPSiHk.js",
+        "bytes": 438,
+        "decoded": 138,
+        "duration": 63
+      },
+      {
+        "path": "/assets/IconAlertCircle-Cfo9_E_0.js",
+        "bytes": 549,
+        "decoded": 249,
+        "duration": 64
+      },
+      {
+        "path": "/assets/Alert-D7Y9H1BF.js",
+        "bytes": 1151,
+        "decoded": 1613,
+        "duration": 64
+      },
+      {
+        "path": "/assets/Table-DBK4cxwV.js",
+        "bytes": 2033,
+        "decoded": 4204,
+        "duration": 64
+      },
+      {
+        "path": "/assets/InputBase-DWoSqHPE.js",
+        "bytes": 3492,
+        "decoded": 9298,
+        "duration": 64
+      },
+      {
+        "path": "/assets/Textarea-Dm_BZP0g.js",
+        "bytes": 2202,
+        "decoded": 4058,
+        "duration": 65
+      },
+      {
+        "path": "/assets/ActionIcon-CHnw6Wfl.js",
+        "bytes": 1573,
+        "decoded": 3181,
+        "duration": 65
+      },
+      {
+        "path": "/assets/NumberInput-BuFyKsxX.js",
+        "bytes": 9226,
+        "decoded": 21131,
+        "duration": 65
+      },
+      {
+        "path": "/assets/IconEdit-tCfQXt4X.js",
+        "bytes": 618,
+        "decoded": 318,
+        "duration": 65
+      },
+      {
+        "path": "/assets/IconTrash-DTgqAMyd.js",
+        "bytes": 654,
+        "decoded": 354,
+        "duration": 65
+      },
+      {
+        "path": "/assets/Divider-CaGQP6lP.js",
+        "bytes": 1164,
+        "decoded": 864,
+        "duration": 65
+      },
+      {
+        "path": "/assets/TextInput-c3KmyTbE.js",
+        "bytes": 600,
+        "decoded": 300,
+        "duration": 69
+      },
+      {
+        "path": "/assets/CheckIcon-qbcjeetf.js",
+        "bytes": 1000,
+        "decoded": 700,
+        "duration": 70
+      },
+      {
+        "path": "/assets/Select-8ou4p7qK.js",
+        "bytes": 7549,
+        "decoded": 20357,
+        "duration": 71
+      },
+      {
+        "path": "/assets/uiTranslations-CVPLELB2.js",
+        "bytes": 27056,
+        "decoded": 64777,
+        "duration": 71
+      },
+      {
+        "path": "/fonts/award-sans-bold.woff2",
+        "bytes": 2359596,
+        "decoded": 2359296,
+        "duration": 53
+      },
+      {
+        "path": "/media/tech-blue-loop.mp4",
+        "bytes": 2359596,
+        "decoded": 2359296,
+        "duration": 17
+      }
+    ]
+  },
+  {
+    "synthetic": true,
+    "campaigns": 1,
+    "judgeDelayMs": 1500,
+    "readyMs": 2361,
+    "judgeRequests": 1,
+    "beforeResize": {
+      "canvas": [
+        {
+          "w": 1440,
+          "h": 900,
+          "cssH": 900
+        }
+      ],
+      "pageHeight": 900,
+      "video": [
+        {
+          "width": 1920,
+          "height": 1080,
+          "paused": false
+        }
+      ],
+      "longTasks": []
+    },
+    "afterResize": {
+      "canvas": [
+        {
+          "w": 1439,
+          "h": 900,
+          "rgbaMiB": 5
+        }
+      ],
+      "longTasks": []
+    },
+    "pageErrors": [],
+    "resources": [
+      {
+        "path": "/media/tech-blue-poster.jpg",
+        "bytes": 266057,
+        "decoded": 265757,
+        "duration": 6
+      },
+      {
+        "path": "/assets/index-B17jl_zN.js",
+        "bytes": 209801,
+        "decoded": 571810,
+        "duration": 10
+      },
+      {
+        "path": "/assets/index-BWW_K4Yd.css",
+        "bytes": 56406,
+        "decoded": 263266,
+        "duration": 8
+      },
+      {
+        "path": "/assets/green_logo-JANtPeK2.svg",
+        "bytes": 3720,
+        "decoded": 3420,
+        "duration": 2
+      },
+      {
+        "path": "/fonts/award-sans-regular.woff2",
+        "bytes": 2359596,
+        "decoded": 2359296,
+        "duration": 10
+      },
+      {
+        "path": "/assets/AwardManagement-D0tM74o4.js",
+        "bytes": 7216,
+        "decoded": 18108,
+        "duration": 15
+      },
+      {
+        "path": "/assets/hackathonService-COLzDUm6.js",
+        "bytes": 1006,
+        "decoded": 1407,
+        "duration": 14
+      },
+      {
+        "path": "/assets/judgingService-DwJauApp.js",
+        "bytes": 658,
+        "decoded": 1186,
+        "duration": 15
+      },
+      {
+        "path": "/assets/organizationService-DSY97Mep.js",
+        "bytes": 842,
+        "decoded": 1586,
+        "duration": 23
+      },
+      {
+        "path": "/assets/pagination-DwHsShgu.js",
+        "bytes": 537,
+        "decoded": 237,
+        "duration": 23
+      },
+      {
+        "path": "/assets/committeeScoring-DZqfnt9j.js",
+        "bytes": 1092,
+        "decoded": 1618,
+        "duration": 23
+      },
+      {
+        "path": "/assets/ideaService-C0DzASBo.js",
+        "bytes": 1084,
+        "decoded": 2018,
+        "duration": 25
+      },
+      {
+        "path": "/assets/Card-D0QT2ZXn.js",
+        "bytes": 979,
+        "decoded": 1247,
+        "duration": 26
+      },
+      {
+        "path": "/assets/use-form-DEg9af17.js",
+        "bytes": 6201,
+        "decoded": 15528,
+        "duration": 27
+      },
+      {
+        "path": "/assets/IconPlus-BktXwgu_.js",
+        "bytes": 473,
+        "decoded": 173,
+        "duration": 25
+      },
+      {
+        "path": "/assets/Progress-CY5XMLx9.js",
+        "bytes": 1365,
+        "decoded": 2387,
+        "duration": 26
+      },
+      {
+        "path": "/assets/Title-CLQT4YLw.js",
+        "bytes": 990,
+        "decoded": 1420,
+        "duration": 26
+      },
+      {
+        "path": "/assets/get-auto-contrast-value-Da6zqqWm.js",
+        "bytes": 376,
+        "decoded": 76,
+        "duration": 28
+      },
+      {
+        "path": "/assets/Badge-iHcfSSWL.js",
+        "bytes": 1042,
+        "decoded": 1459,
+        "duration": 28
+      },
+      {
+        "path": "/assets/IconCheck-D1IPSiHk.js",
+        "bytes": 438,
+        "decoded": 138,
+        "duration": 28
+      },
+      {
+        "path": "/assets/IconAlertCircle-Cfo9_E_0.js",
+        "bytes": 549,
+        "decoded": 249,
+        "duration": 29
+      },
+      {
+        "path": "/assets/Alert-D7Y9H1BF.js",
+        "bytes": 1151,
+        "decoded": 1613,
+        "duration": 29
+      },
+      {
+        "path": "/assets/Table-DBK4cxwV.js",
+        "bytes": 2033,
+        "decoded": 4204,
+        "duration": 29
+      },
+      {
+        "path": "/assets/NumberInput-BuFyKsxX.js",
+        "bytes": 9226,
+        "decoded": 21131,
+        "duration": 30
+      },
+      {
+        "path": "/assets/InputBase-DWoSqHPE.js",
+        "bytes": 3492,
+        "decoded": 9298,
+        "duration": 31
+      },
+      {
+        "path": "/assets/Textarea-Dm_BZP0g.js",
+        "bytes": 2202,
+        "decoded": 4058,
+        "duration": 31
+      },
+      {
+        "path": "/assets/ActionIcon-CHnw6Wfl.js",
+        "bytes": 1573,
+        "decoded": 3181,
+        "duration": 31
+      },
+      {
+        "path": "/assets/IconTrash-DTgqAMyd.js",
+        "bytes": 654,
+        "decoded": 354,
+        "duration": 31
+      },
+      {
+        "path": "/assets/IconEdit-tCfQXt4X.js",
+        "bytes": 618,
+        "decoded": 318,
+        "duration": 31
+      },
+      {
+        "path": "/assets/Divider-CaGQP6lP.js",
+        "bytes": 1164,
+        "decoded": 864,
+        "duration": 32
+      },
+      {
+        "path": "/assets/TextInput-c3KmyTbE.js",
+        "bytes": 600,
+        "decoded": 300,
+        "duration": 33
+      },
+      {
+        "path": "/assets/CheckIcon-qbcjeetf.js",
+        "bytes": 1000,
+        "decoded": 700,
+        "duration": 33
+      },
+      {
+        "path": "/assets/Select-8ou4p7qK.js",
+        "bytes": 7549,
+        "decoded": 20357,
+        "duration": 34
+      },
+      {
+        "path": "/assets/uiTranslations-CVPLELB2.js",
+        "bytes": 27056,
+        "decoded": 64777,
+        "duration": 34
+      },
+      {
+        "path": "/fonts/award-sans-bold.woff2",
+        "bytes": 2359596,
+        "decoded": 2359296,
+        "duration": 19
+      },
+      {
+        "path": "/media/tech-blue-loop.mp4",
+        "bytes": 2359596,
+        "decoded": 2359296,
+        "duration": 29
+      }
+    ]
+  },
+  {
+    "synthetic": true,
+    "campaigns": 100,
+    "judgeDelayMs": 0,
+    "readyMs": 851,
+    "judgeRequests": 100,
+    "beforeResize": {
+      "canvas": [
+        {
+          "w": 1440,
+          "h": 900,
+          "cssH": 900
+        }
+      ],
+      "pageHeight": 22687,
+      "video": [
+        {
+          "width": 1920,
+          "height": 1080,
+          "paused": false
+        }
+      ],
+      "longTasks": []
+    },
+    "afterResize": {
+      "canvas": [
+        {
+          "w": 1439,
+          "h": 900,
+          "rgbaMiB": 5
+        }
+      ],
+      "longTasks": []
+    },
+    "pageErrors": [],
+    "resources": [
+      {
+        "path": "/media/tech-blue-poster.jpg",
+        "bytes": 266057,
+        "decoded": 265757,
+        "duration": 7
+      },
+      {
+        "path": "/assets/index-BWW_K4Yd.css",
+        "bytes": 56406,
+        "decoded": 263266,
+        "duration": 8
+      },
+      {
+        "path": "/assets/index-B17jl_zN.js",
+        "bytes": 209801,
+        "decoded": 571810,
+        "duration": 14
+      },
+      {
+        "path": "/fonts/award-sans-regular.woff2",
+        "bytes": 2359596,
+        "decoded": 2359296,
+        "duration": 9
+      },
+      {
+        "path": "/assets/green_logo-JANtPeK2.svg",
+        "bytes": 3720,
+        "decoded": 3420,
+        "duration": 8
+      },
+      {
+        "path": "/assets/AwardManagement-D0tM74o4.js",
+        "bytes": 7216,
+        "decoded": 18108,
+        "duration": 18
+      },
+      {
+        "path": "/assets/hackathonService-COLzDUm6.js",
+        "bytes": 1006,
+        "decoded": 1407,
+        "duration": 17
+      },
+      {
+        "path": "/assets/judgingService-DwJauApp.js",
+        "bytes": 658,
+        "decoded": 1186,
+        "duration": 17
+      },
+      {
+        "path": "/assets/organizationService-DSY97Mep.js",
+        "bytes": 842,
+        "decoded": 1586,
+        "duration": 18
+      },
+      {
+        "path": "/assets/pagination-DwHsShgu.js",
+        "bytes": 537,
+        "decoded": 237,
+        "duration": 18
+      },
+      {
+        "path": "/assets/committeeScoring-DZqfnt9j.js",
+        "bytes": 1092,
+        "decoded": 1618,
+        "duration": 25
+      },
+      {
+        "path": "/assets/ideaService-C0DzASBo.js",
+        "bytes": 1084,
+        "decoded": 2018,
+        "duration": 25
+      },
+      {
+        "path": "/assets/Card-D0QT2ZXn.js",
+        "bytes": 979,
+        "decoded": 1247,
+        "duration": 27
+      },
+      {
+        "path": "/assets/use-form-DEg9af17.js",
+        "bytes": 6201,
+        "decoded": 15528,
+        "duration": 28
+      },
+      {
+        "path": "/assets/Title-CLQT4YLw.js",
+        "bytes": 990,
+        "decoded": 1420,
+        "duration": 27
+      },
+      {
+        "path": "/assets/IconPlus-BktXwgu_.js",
+        "bytes": 473,
+        "decoded": 173,
+        "duration": 27
+      },
+      {
+        "path": "/assets/Progress-CY5XMLx9.js",
+        "bytes": 1365,
+        "decoded": 2387,
+        "duration": 27
+      },
+      {
+        "path": "/assets/get-auto-contrast-value-Da6zqqWm.js",
+        "bytes": 376,
+        "decoded": 76,
+        "duration": 28
+      },
+      {
+        "path": "/assets/Badge-iHcfSSWL.js",
+        "bytes": 1042,
+        "decoded": 1459,
+        "duration": 29
+      },
+      {
+        "path": "/assets/IconCheck-D1IPSiHk.js",
+        "bytes": 438,
+        "decoded": 138,
+        "duration": 30
+      },
+      {
+        "path": "/assets/IconAlertCircle-Cfo9_E_0.js",
+        "bytes": 549,
+        "decoded": 249,
+        "duration": 30
+      },
+      {
+        "path": "/assets/Alert-D7Y9H1BF.js",
+        "bytes": 1151,
+        "decoded": 1613,
+        "duration": 30
+      },
+      {
+        "path": "/assets/Table-DBK4cxwV.js",
+        "bytes": 2033,
+        "decoded": 4204,
+        "duration": 30
+      },
+      {
+        "path": "/assets/NumberInput-BuFyKsxX.js",
+        "bytes": 9226,
+        "decoded": 21131,
+        "duration": 30
+      },
+      {
+        "path": "/assets/InputBase-DWoSqHPE.js",
+        "bytes": 3492,
+        "decoded": 9298,
+        "duration": 31
+      },
+      {
+        "path": "/assets/Textarea-Dm_BZP0g.js",
+        "bytes": 2202,
+        "decoded": 4058,
+        "duration": 31
+      },
+      {
+        "path": "/assets/IconEdit-tCfQXt4X.js",
+        "bytes": 618,
+        "decoded": 318,
+        "duration": 32
+      },
+      {
+        "path": "/assets/ActionIcon-CHnw6Wfl.js",
+        "bytes": 1573,
+        "decoded": 3181,
+        "duration": 32
+      },
+      {
+        "path": "/assets/IconTrash-DTgqAMyd.js",
+        "bytes": 654,
+        "decoded": 354,
+        "duration": 32
+      },
+      {
+        "path": "/assets/Divider-CaGQP6lP.js",
+        "bytes": 1164,
+        "decoded": 864,
+        "duration": 32
+      },
+      {
+        "path": "/assets/TextInput-c3KmyTbE.js",
+        "bytes": 600,
+        "decoded": 300,
+        "duration": 32
+      },
+      {
+        "path": "/assets/CheckIcon-qbcjeetf.js",
+        "bytes": 1000,
+        "decoded": 700,
+        "duration": 34
+      },
+      {
+        "path": "/assets/Select-8ou4p7qK.js",
+        "bytes": 7549,
+        "decoded": 20357,
+        "duration": 34
+      },
+      {
+        "path": "/assets/uiTranslations-CVPLELB2.js",
+        "bytes": 27056,
+        "decoded": 64777,
+        "duration": 34
+      },
+      {
+        "path": "/fonts/award-sans-bold.woff2",
+        "bytes": 2359596,
+        "decoded": 2359296,
+        "duration": 19
+      },
+      {
+        "path": "/media/tech-blue-loop.mp4",
+        "bytes": 2359596,
+        "decoded": 2359296,
+        "duration": 31
+      }
+    ]
+  }
+]

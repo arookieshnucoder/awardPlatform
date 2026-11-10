@@ -1,0 +1,34 @@
+{
+  "fonts": [
+    {
+      "name": "award-sans-regular.woff2",
+      "actualBytes": 2359296,
+      "declaredBytes": 2477912,
+      "browserStatus": "error"
+    },
+    {
+      "name": "award-sans-bold.woff2",
+      "actualBytes": 2359296,
+      "declaredBytes": 2585300,
+      "browserStatus": "error"
+    }
+  ],
+  "fontErrors": [
+    "Failed to decode downloaded font",
+    "OTS parsing error: Failed to convert WOFF 2.0 font to SFNT"
+  ],
+  "video": {
+    "name": "tech-blue-loop.mp4",
+    "actualBytes": 2359296,
+    "width": 1920,
+    "height": 1080,
+    "fps": 30,
+    "declaredDurationSeconds": 16,
+    "decodeErrors": [
+      "Invalid NAL unit size",
+      "partial file",
+      "Invalid data found when processing input"
+    ]
+  },
+  "deployedMatchesSource": true
+}

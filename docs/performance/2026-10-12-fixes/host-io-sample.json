@@ -1,0 +1,62 @@
+[
+  {
+    "group": "user.slice",
+    "writeMiBs": 68.978
+  },
+  {
+    "group": ".",
+    "writeMiBs": 62.508
+  },
+  {
+    "group": "system.slice",
+    "writeMiBs": 0.001
+  },
+  {
+    "group": "system.slice/docker-9dce665345711622713666c59734575eafe52bcd7afc641d33b7b5fbe6ab8a83.scope",
+    "writeMiBs": 0.001
+  },
+  {
+    "group": "mde",
+    "writeMiBs": 0.0
+  },
+  {
+    "group": "init.scope",
+    "writeMiBs": 0.0
+  },
+  {
+    "group": "dev-hugepages.mount",
+    "writeMiBs": 0.0
+  },
+  {
+    "group": "system.slice/irqbalance.service",
+    "writeMiBs": 0.0
+  },
+  {
+    "group": "system.slice/system-systemd\\x2dfsck.slice",
+    "writeMiBs": 0.0
+  },
+  {
+    "group": "system.slice/snap-core20-2922.mount",
+    "writeMiBs": 0.0
+  },
+  {
+    "group": "system.slice/containerd.service",
+    "writeMiBs": 0.0
+  },
+  {
+    "group": "system.slice/docker-5a1080c65619370b0879360decb8411c63f302b634ae46dc141bf86fe55bf2da.scope",
+    "writeMiBs": 0.0
+  },
+  {
+    "group": "system.slice/packagekit.service",
+    "writeMiBs": 0.0
+  },
+  {
+    "group": "system.slice/docker-be542a71e4895181aa8261d6fabe8bc11268efe50bbc11be055dc5093216fef2.scope",
+    "writeMiBs": 0.0
+  },
+  {
+    "group": "system.slice/systemd-networkd.service",
+    "writeMiBs": 0.0
+  }
+]

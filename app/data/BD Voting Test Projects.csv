@@ -1,0 +1,8 @@
+序号,项目名称,项目部门,组织单元,项目负责人,人员编号,测试账号,测试密码,团队,分类,技术标签,图片文件,管理员测试用途
+1,智能代码审查平台,BD/SWD,BD/SWD-WDE1,ZOU Yi,85161177,bd-test.zou.yi@bosch.com,BDVoteTest@2026,BD SWD Code Pioneers,AI & Software,JAVA|AI|REACT,project-01.svg,外部门项目；ADMIN 可投
+2,数字孪生工厂,BD/SWD,BD/SWD-FSB2,LUO Joya,85177507,bd-test.luo.joya@bosch.com,BDVoteTest@2026,BD SWD Twin Makers,Industry 4.0,IOT|DIGITAL TWIN|VUE.JS,project-02.svg,外部门项目；ADMIN 可投
+3,AI 测试用例生成器,BD/SWD,BD/SWD-BEA5,LI Yangchun Ted,85230815,bd-test.li.yangchun@bosch.com,BDVoteTest@2026,BD SWD Quality AI,Developer Tools,AI|PYTHON|TEST AUTOMATION,project-03.svg,外部门项目；ADMIN 可投
+4,碳足迹驾驶舱,BD/PTD,BD/PTD-S2P3,WANG Nick,85033734,bd-test.wang.nick@bosch.com,BDVoteTest@2026,BD PTD Green Trackers,Sustainability,DATA|POSTGRESQL|REACT,project-04.svg,外部门项目；ADMIN 可投
+5,企业知识安全助手,BD/ISA,BD/ISA-SSP7,CHEN Xingxing,85056709,bd-test.chen.xingxing@bosch.com,BDVoteTest@2026,BD ISA Knowledge Guard,Knowledge Management,RAG|SECURITY|JAVA,project-05.svg,外部门项目；ADMIN 可投
+6,流程挖掘优化器,BD/DPA,BD/DPA-SRE3,XIE Barrie,85020668,bd-test.xie.barrie@bosch.com,BDVoteTest@2026,BD DPA Flow Optimizers,Process Intelligence,PROCESS MINING|PYTHON|DATA,project-06.svg,外部门项目；ADMIN 可投
+

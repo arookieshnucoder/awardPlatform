@@ -1,0 +1,72 @@
+[
+  {
+    "role": "admin",
+    "visibleAwards": 2,
+    "judgeRequests": 0,
+    "fonts": [
+      {
+        "family": "Award Sans",
+        "weight": "100 500",
+        "status": "loaded"
+      },
+      {
+        "family": "Award Sans",
+        "weight": "501 900",
+        "status": "loaded"
+      },
+      {
+        "family": "Award Sans",
+        "weight": "100 500",
+        "status": "loaded"
+      },
+      {
+        "family": "Award Sans",
+        "weight": "501 900",
+        "status": "loaded"
+      }
+    ],
+    "video": {
+      "width": 1920,
+      "height": 1080,
+      "duration": 16,
+      "error": null,
+      "loop": true
+    },
+    "errors": []
+  },
+  {
+    "role": "participant",
+    "visibleAwards": 1,
+    "judgeRequests": 0,
+    "fonts": [
+      {
+        "family": "Award Sans",
+        "weight": "100 500",
+        "status": "loaded"
+      },
+      {
+        "family": "Award Sans",
+        "weight": "501 900",
+        "status": "loaded"
+      },
+      {
+        "family": "Award Sans",
+        "weight": "100 500",
+        "status": "loaded"
+      },
+      {
+        "family": "Award Sans",
+        "weight": "501 900",
+        "status": "loaded"
+      }
+    ],
+    "video": {
+      "width": 1920,
+      "height": 1080,
+      "duration": 16,
+      "error": null,
+      "loop": true
+    },
+    "errors": []
+  }
+]

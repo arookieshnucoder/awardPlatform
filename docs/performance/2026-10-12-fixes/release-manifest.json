@@ -1,0 +1,8 @@
+{
+  "src/pages/AwardManagement.tsx": "48782f6a5c131fceda94de8d21e7adbdd35d83b6c745e8d1ef320e65d187e6fc",
+  "src/pages/DigitalPioneer.css": "70edbd1c0f840a13c051aabe224635f470f4068f1465ff0a8e723675c4a7fee1",
+  "src/lib/apiClient.ts": "d58d52b7335b83bb6600ab35320eaabceae10f82a5295cbe2552d2884a538b7c",
+  "src/index.css": "92f3b2eacd108e9d066cf7bcf21a18617b8ec97c374111d3be683f808fcbf47b",
+  "nginx.conf": "215afa55feb2219a7ea08bdc3ec6c9e911b8ed56c8d8352abe591975b54c3f81",
+  "public/media/tech-blue-loop.mp4": "5796d95090a65e4f2b93c394b6e73e2e244b66f1af0a1ab9ed68f4c41c193f60"
+}

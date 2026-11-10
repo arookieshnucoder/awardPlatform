@@ -1,0 +1,3048 @@
+{
+  "db": [
+    {
+      "at": 1791784106.346787,
+      "ms": 55.88,
+      "waits": [
+        {
+          "state": "idle",
+          "wait_event_type": "Client",
+          "wait_event": "ClientRead",
+          "count": 4
+        }
+      ]
+    },
+    {
+      "at": 1791784106.6528416,
+      "ms": 1.39,
+      "waits": [
+        {
+          "state": "idle",
+          "wait_event_type": "Client",
+          "wait_event": "ClientRead",
+          "count": 5
+        }
+      ]
+    },
+    {
+      "at": 1791784106.9044256,
+      "ms": 1.29,
+      "waits": [
+        {
+          "state": "idle",
+          "wait_event_type": "Client",
+          "wait_event": "ClientRead",
+          "count": 5
+        }
+      ]
+    },
+    {
+      "at": 1791784107.1558988,
+      "ms": 1.42,
+      "waits": [
+        {
+          "state": "idle",
+          "wait_event_type": "Client",
+          "wait_event": "ClientRead",
+          "count": 5
+        }
+      ]
+    },
+    {
+      "at": 1791784107.4075012,
+      "ms": 1.16,
+      "waits": [
+        {
+          "state": "idle",
+          "wait_event_type": "Client",
+          "wait_event": "ClientRead",
+          "count": 6
+        }
+      ]
+    },
+    {
+      "at": 1791784107.658782,
+      "ms": 1.19,
+      "waits": [
+        {
+          "state": "idle",
+          "wait_event_type": "Client",
+          "wait_event": "ClientRead",
+          "count": 6
+        }
+      ]
+    },
+    {
+      "at": 1791784107.910086,
+      "ms": 1.04,
+      "waits": [
+        {
+          "state": "idle",
+          "wait_event_type": "Client",
+          "wait_event": "ClientRead",
+          "count": 6
+        }
+      ]
+    },
+    {
+      "at": 1791784108.161235,
+      "ms": 1.04,
+      "waits": [
+        {
+          "state": "idle",
+          "wait_event_type": "Client",
+          "wait_event": "ClientRead",
+          "count": 6
+        }
+      ]
+    },
+    {
+      "at": 1791784108.4123762,
+      "ms": 1.26,
+      "waits": [
+        {
+          "state": "idle",
+          "wait_event_type": "Client",
+          "wait_event": "ClientRead",
+          "count": 7
+        }
+      ]
+    },
+    {
+      "at": 1791784108.6638205,
+      "ms": 1.47,
+      "waits": [
+        {
+          "state": "idle",
+          "wait_event_type": "Client",
+          "wait_event": "ClientRead",
+          "count": 7
+        }
+      ]
+    },
+    {
+      "at": 1791784108.9154046,
+      "ms": 1.22,
+      "waits": [
+        {
+          "state": "idle",
+          "wait_event_type": "Client",
+          "wait_event": "ClientRead",
+          "count": 7
+        }
+      ]
+    },
+    {
+      "at": 1791784109.1667342,
+      "ms": 1.27,
+      "waits": [
+        {
+          "state": "idle",
+          "wait_event_type": "Client",
+          "wait_event": "ClientRead",
+          "count": 7
+        }
+      ]
+    },
+    {
+      "at": 1791784109.418152,
+      "ms": 1.29,
+      "waits": [
+        {
+          "state": "idle",
+          "wait_event_type": "Client",
+          "wait_event": "ClientRead",
+          "count": 8
+        }
+      ]
+    },
+    {
+      "at": 1791784109.6696188,
+      "ms": 1.27,
+      "waits": [
+        {
+          "state": "idle",
+          "wait_event_type": "Client",
+          "wait_event": "ClientRead",
+          "count": 8
+        }
+      ]
+    },
+    {
+      "at": 1791784109.9210093,
+      "ms": 1.02,
+      "waits": [
+        {
+          "state": "idle",
+          "wait_event_type": "Client",
+          "wait_event": "ClientRead",
+          "count": 8
+        }
+      ]
+    },
+    {
+      "at": 1791784110.1721404,
+      "ms": 1.06,
+      "waits": [
+        {
+          "state": "idle",
+          "wait_event_type": "Client",
+          "wait_event": "ClientRead",
+          "count": 8
+        }
+      ]
+    },
+    {
+      "at": 1791784110.4234319,
+      "ms": 1.62,
+      "waits": [
+        {
+          "state": "idle",
+          "wait_event_type": "Client",
+          "wait_event": "ClientRead",
+          "count": 9
+        }
+      ]
+    },
+    {
+      "at": 1791784110.675177,
+      "ms": 1.07,
+      "waits": [
+        {
+          "state": "idle",
+          "wait_event_type": "Client",
+          "wait_event": "ClientRead",
+          "count": 9
+        }
+      ]
+    },
+    {
+      "at": 1791784110.926372,
+      "ms": 1.22,
+      "waits": [
+        {
+          "state": "idle",
+          "wait_event_type": "Client",
+          "wait_event": "ClientRead",
+          "count": 9
+        }
+      ]
+    },
+    {
+      "at": 1791784111.1777828,
+      "ms": 1.55,
+      "waits": [
+        {
+          "state": "idle",
+          "wait_event_type": "Client",
+          "wait_event": "ClientRead",
+          "count": 9
+        }
+      ]
+    },
+    {
+      "at": 1791784111.4295123,
+      "ms": 1.6,
+      "waits": [
+        {
+          "state": "idle",
+          "wait_event_type": "Client",
+          "wait_event": "ClientRead",
+          "count": 10
+        }
+      ]
+    },
+    {
+      "at": 1791784111.6812997,
+      "ms": 1.48,
+      "waits": [
+        {
+          "state": "idle",
+          "wait_event_type": "Client",
+          "wait_event": "ClientRead",
+          "count": 10
+        }
+      ]
+    },
+    {
+      "at": 1791784111.932974,
+      "ms": 1.54,
+      "waits": [
+        {
+          "state": "idle",
+          "wait_event_type": "Client",
+          "wait_event": "ClientRead",
+          "count": 10
+        }
+      ]
+    },
+    {
+      "at": 1791784112.1846137,
+      "ms": 1.38,
+      "waits": [
+        {
+          "state": "idle",
+          "wait_event_type": "Client",
+          "wait_event": "ClientRead",
+          "count": 10
+        }
+      ]
+    },
+    {
+      "at": 1791784112.436162,
+      "ms": 1.24,
+      "waits": [
+        {
+          "state": "idle",
+          "wait_event_type": "Client",
+          "wait_event": "ClientRead",
+          "count": 10
+        }
+      ]
+    },
+    {
+      "at": 1791784112.6875525,
+      "ms": 1.2,
+      "waits": [
+        {
+          "state": "idle",
+          "wait_event_type": "Client",
+          "wait_event": "ClientRead",
+          "count": 10
+        }
+      ]
+    },
+    {
+      "at": 1791784112.9389062,
+      "ms": 1.59,
+      "waits": [
+        {
+          "state": "idle",
+          "wait_event_type": "Client",
+          "wait_event": "ClientRead",
+          "count": 10
+        }
+      ]
+    },
+    {
+      "at": 1791784113.1906424,
+      "ms": 1.33,
+      "waits": [
+        {
+          "state": "idle",
+          "wait_event_type": "Client",
+          "wait_event": "ClientRead",
+          "count": 10
+        }
+      ]
+    },
+    {
+      "at": 1791784113.4420865,
+      "ms": 1.11,
+      "waits": [
+        {
+          "state": "idle",
+          "wait_event_type": "Client",
+          "wait_event": "ClientRead",
+          "count": 10
+        }
+      ]
+    },
+    {
+      "at": 1791784113.6933138,
+      "ms": 1.1,
+      "waits": [
+        {
+          "state": "idle",
+          "wait_event_type": "Client",
+          "wait_event": "ClientRead",
+          "count": 10
+        }
+      ]
+    },
+    {
+      "at": 1791784113.9446256,
+      "ms": 1.3,
+      "waits": [
+        {
+          "state": "idle",
+          "wait_event_type": "Client",
+          "wait_event": "ClientRead",
+          "count": 10
+        }
+      ]
+    },
+    {
+      "at": 1791784114.1960926,
+      "ms": 1.53,
+      "waits": [
+        {
+          "state": "idle",
+          "wait_event_type": "Client",
+          "wait_event": "ClientRead",
+          "count": 10
+        }
+      ]
+    },
+    {
+      "at": 1791784114.4478064,
+      "ms": 1.54,
+      "waits": [
+        {
+          "state": "idle",
+          "wait_event_type": "Client",
+          "wait_event": "ClientRead",
+          "count": 10
+        }
+      ]
+    },
+    {
+      "at": 1791784114.6995347,
+      "ms": 1.03,
+      "waits": [
+        {
+          "state": "idle",
+          "wait_event_type": "Client",
+          "wait_event": "ClientRead",
+          "count": 10
+        }
+      ]
+    },
+    {
+      "at": 1791784114.950683,
+      "ms": 1.07,
+      "waits": [
+        {
+          "state": "idle",
+          "wait_event_type": "Client",
+          "wait_event": "ClientRead",
+          "count": 10
+        }
+      ]
+    },
+    {
+      "at": 1791784115.2018683,
+      "ms": 1.11,
+      "waits": [
+        {
+          "state": "idle",
+          "wait_event_type": "Client",
+          "wait_event": "ClientRead",
+          "count": 10
+        }
+      ]
+    },
+    {
+      "at": 1791784115.453161,
+      "ms": 1.37,
+      "waits": [
+        {
+          "state": "idle",
+          "wait_event_type": "Client",
+          "wait_event": "ClientRead",
+          "count": 10
+        }
+      ]
+    },
+    {
+      "at": 1791784115.704652,
+      "ms": 1.11,
+      "waits": [
+        {
+          "state": "idle",
+          "wait_event_type": "Client",
+          "wait_event": "ClientRead",
+          "count": 10
+        }
+      ]
+    },
+    {
+      "at": 1791784115.9559813,
+      "ms": 1.03,
+      "waits": [
+        {
+          "state": "idle",
+          "wait_event_type": "Client",
+          "wait_event": "ClientRead",
+          "count": 10
+        }
+      ]
+    },
+    {
+      "at": 1791784116.2071314,
+      "ms": 1.03,
+      "waits": [
+        {
+          "state": "idle",
+          "wait_event_type": "Client",
+          "wait_event": "ClientRead",
+          "count": 10
+        }
+      ]
+    },
+    {
+      "at": 1791784116.4583406,
+      "ms": 1.46,
+      "waits": [
+        {
+          "state": "idle",
+          "wait_event_type": "Client",
+          "wait_event": "ClientRead",
+          "count": 10
+        }
+      ]
+    },
+    {
+      "at": 1791784116.7099984,
+      "ms": 1.31,
+      "waits": [
+        {
+          "state": "idle",
+          "wait_event_type": "Client",
+          "wait_event": "ClientRead",
+          "count": 10
+        }
+      ]
+    },
+    {
+      "at": 1791784116.961426,
+      "ms": 1.27,
+      "waits": [
+        {
+          "state": "idle",
+          "wait_event_type": "Client",
+          "wait_event": "ClientRead",
+          "count": 10
+        }
+      ]
+    },
+    {
+      "at": 1791784117.212875,
+      "ms": 1.41,
+      "waits": [
+        {
+          "state": "idle",
+          "wait_event_type": "Client",
+          "wait_event": "ClientRead",
+          "count": 10
+        }
+      ]
+    },
+    {
+      "at": 1791784117.4643962,
+      "ms": 1.16,
+      "waits": [
+        {
+          "state": "idle",
+          "wait_event_type": "Client",
+          "wait_event": "ClientRead",
+          "count": 10
+        }
+      ]
+    },
+    {
+      "at": 1791784117.715737,
+      "ms": 1.71,
+      "waits": [
+        {
+          "state": "idle",
+          "wait_event_type": "Client",
+          "wait_event": "ClientRead",
+          "count": 10
+        }
+      ]
+    },
+    {
+      "at": 1791784117.967559,
+      "ms": 1.08,
+      "waits": [
+        {
+          "state": "idle",
+          "wait_event_type": "Client",
+          "wait_event": "ClientRead",
+          "count": 10
+        }
+      ]
+    },
+    {
+      "at": 1791784118.2187536,
+      "ms": 1.07,
+      "waits": [
+        {
+          "state": "idle",
+          "wait_event_type": "Client",
+          "wait_event": "ClientRead",
+          "count": 10
+        }
+      ]
+    },
+    {
+      "at": 1791784118.469926,
+      "ms": 1.12,
+      "waits": [
+        {
+          "state": "idle",
+          "wait_event_type": "Client",
+          "wait_event": "ClientRead",
+          "count": 10
+        }
+      ]
+    },
+    {
+      "at": 1791784118.7211654,
+      "ms": 1.54,
+      "waits": [
+        {
+          "state": "idle",
+          "wait_event_type": "Client",
+          "wait_event": "ClientRead",
+          "count": 10
+        }
+      ]
+    },
+    {
+      "at": 1791784118.9728148,
+      "ms": 1.04,
+      "waits": [
+        {
+          "state": "idle",
+          "wait_event_type": "Client",
+          "wait_event": "ClientRead",
+          "count": 10
+        }
+      ]
+    },
+    {
+      "at": 1791784119.2240038,
+      "ms": 1.42,
+      "waits": [
+        {
+          "state": "idle",
+          "wait_event_type": "Client",
+          "wait_event": "ClientRead",
+          "count": 10
+        }
+      ]
+    },
+    {
+      "at": 1791784119.4755297,
+      "ms": 0.95,
+      "waits": [
+        {
+          "state": "idle",
+          "wait_event_type": "Client",
+          "wait_event": "ClientRead",
+          "count": 10
+        }
+      ]
+    },
+    {
+      "at": 1791784119.7265897,
+      "ms": 1.06,
+      "waits": [
+        {
+          "state": "idle",
+          "wait_event_type": "Client",
+          "wait_event": "ClientRead",
+          "count": 10
+        }
+      ]
+    },
+    {
+      "at": 1791784119.9777627,
+      "ms": 1.14,
+      "waits": [
+        {
+          "state": "idle",
+          "wait_event_type": "Client",
+          "wait_event": "ClientRead",
+          "count": 10
+        }
+      ]
+    },
+    {
+      "at": 1791784120.2289987,
+      "ms": 1.7,
+      "waits": [
+        {
+          "state": "idle",
+          "wait_event_type": "Client",
+          "wait_event": "ClientRead",
+          "count": 10
+        }
+      ]
+    },
+    {
+      "at": 1791784120.4808207,
+      "ms": 1.3,
+      "waits": [
+        {
+          "state": "idle",
+          "wait_event_type": "Client",
+          "wait_event": "ClientRead",
+          "count": 10
+        }
+      ]
+    },
+    {
+      "at": 1791784120.7322302,
+      "ms": 1.59,
+      "waits": [
+        {
+          "state": "idle",
+          "wait_event_type": "Client",
+          "wait_event": "ClientRead",
+          "count": 10
+        }
+      ]
+    },
+    {
+      "at": 1791784120.983924,
+      "ms": 1.14,
+      "waits": [
+        {
+          "state": "idle",
+          "wait_event_type": "Client",
+          "wait_event": "ClientRead",
+          "count": 10
+        }
+      ]
+    },
+    {
+      "at": 1791784121.2351809,
+      "ms": 1.21,
+      "waits": [
+        {
+          "state": "idle",
+          "wait_event_type": "Client",
+          "wait_event": "ClientRead",
+          "count": 10
+        }
+      ]
+    },
+    {
+      "at": 1791784121.486499,
+      "ms": 1.31,
+      "waits": [
+        {
+          "state": "idle",
+          "wait_event_type": "Client",
+          "wait_event": "ClientRead",
+          "count": 10
+        }
+      ]
+    },
+    {
+      "at": 1791784121.7379298,
+      "ms": 1.21,
+      "waits": [
+        {
+          "state": "idle",
+          "wait_event_type": "Client",
+          "wait_event": "ClientRead",
+          "count": 10
+        }
+      ]
+    },
+    {
+      "at": 1791784121.9892612,
+      "ms": 1.5,
+      "waits": [
+        {
+          "state": "idle",
+          "wait_event_type": "Client",
+          "wait_event": "ClientRead",
+          "count": 10
+        }
+      ]
+    },
+    {
+      "at": 1791784122.2409353,
+      "ms": 1.2,
+      "waits": [
+        {
+          "state": "idle",
+          "wait_event_type": "Client",
+          "wait_event": "ClientRead",
+          "count": 10
+        }
+      ]
+    },
+    {
+      "at": 1791784122.4922473,
+      "ms": 1.14,
+      "waits": [
+        {
+          "state": "idle",
+          "wait_event_type": "Client",
+          "wait_event": "ClientRead",
+          "count": 10
+        }
+      ]
+    },
+    {
+      "at": 1791784122.743555,
+      "ms": 1.16,
+      "waits": [
+        {
+          "state": "idle",
+          "wait_event_type": "Client",
+          "wait_event": "ClientRead",
+          "count": 10
+        }
+      ]
+    },
+    {
+      "at": 1791784122.9948273,
+      "ms": 0.81,
+      "waits": [
+        {
+          "state": "idle",
+          "wait_event_type": "Client",
+          "wait_event": "ClientRead",
+          "count": 10
+        }
+      ]
+    },
+    {
+      "at": 1791784123.2457454,
+      "ms": 1.09,
+      "waits": [
+        {
+          "state": "idle",
+          "wait_event_type": "Client",
+          "wait_event": "ClientRead",
+          "count": 10
+        }
+      ]
+    },
+    {
+      "at": 1791784123.4969916,
+      "ms": 1.34,
+      "waits": [
+        {
+          "state": "idle",
+          "wait_event_type": "Client",
+          "wait_event": "ClientRead",
+          "count": 10
+        }
+      ]
+    },
+    {
+      "at": 1791784123.7484398,
+      "ms": 1.03,
+      "waits": [
+        {
+          "state": "idle",
+          "wait_event_type": "Client",
+          "wait_event": "ClientRead",
+          "count": 10
+        }
+      ]
+    },
+    {
+      "at": 1791784123.999615,
+      "ms": 0.8,
+      "waits": [
+        {
+          "state": "idle",
+          "wait_event_type": "Client",
+          "wait_event": "ClientRead",
+          "count": 10
+        }
+      ]
+    },
+    {
+      "at": 1791784124.2505293,
+      "ms": 0.9,
+      "waits": [
+        {
+          "state": "idle",
+          "wait_event_type": "Client",
+          "wait_event": "ClientRead",
+          "count": 10
+        }
+      ]
+    },
+    {
+      "at": 1791784124.5015416,
+      "ms": 1.46,
+      "waits": [
+        {
+          "state": "idle",
+          "wait_event_type": "Client",
+          "wait_event": "ClientRead",
+          "count": 10
+        }
+      ]
+    },
+    {
+      "at": 1791784124.7531161,
+      "ms": 1.02,
+      "waits": [
+        {
+          "state": "idle",
+          "wait_event_type": "Client",
+          "wait_event": "ClientRead",
+          "count": 10
+        }
+      ]
+    },
+    {
+      "at": 1791784125.0043347,
+      "ms": 1.25,
+      "waits": [
+        {
+          "state": "idle",
+          "wait_event_type": "Client",
+          "wait_event": "ClientRead",
+          "count": 10
+        }
+      ]
+    },
+    {
+      "at": 1791784125.2556825,
+      "ms": 1.08,
+      "waits": [
+        {
+          "state": "idle",
+          "wait_event_type": "Client",
+          "wait_event": "ClientRead",
+          "count": 10
+        }
+      ]
+    },
+    {
+      "at": 1791784125.5068746,
+      "ms": 1.21,
+      "waits": [
+        {
+          "state": "idle",
+          "wait_event_type": "Client",
+          "wait_event": "ClientRead",
+          "count": 10
+        }
+      ]
+    },
+    {
+      "at": 1791784125.758189,
+      "ms": 1.06,
+      "waits": [
+        {
+          "state": "idle",
+          "wait_event_type": "Client",
+          "wait_event": "ClientRead",
+          "count": 10
+        }
+      ]
+    },
+    {
+      "at": 1791784126.0093608,
+      "ms": 1.15,
+      "waits": [
+        {
+          "state": "idle",
+          "wait_event_type": "Client",
+          "wait_event": "ClientRead",
+          "count": 10
+        }
+      ]
+    },
+    {
+      "at": 1791784126.260683,
+      "ms": 1.2,
+      "waits": [
+        {
+          "state": "idle",
+          "wait_event_type": "Client",
+          "wait_event": "ClientRead",
+          "count": 10
+        }
+      ]
+    }
+  ],
+  "io": [
+    {
+      "at": 1791784106.3468685,
+      "tickMs": 0.0,
+      "pressure": "some avg10=15.85 avg60=52.02 avg300=59.15 total=5440383357\nfull avg10=14.63 avg60=49.98 avg300=57.81 total=5352543119"
+    },
+    {
+      "at": 1791784106.597257,
+      "tickMs": 250.39,
+      "pressure": "some avg10=15.85 avg60=52.02 avg300=59.15 total=5440383357\nfull avg10=14.63 avg60=49.98 avg300=57.81 total=5352543119"
+    },
+    {
+      "at": 1791784106.8475213,
+      "tickMs": 250.26,
+      "pressure": "some avg10=15.85 avg60=52.02 avg300=59.15 total=5440383357\nfull avg10=14.63 avg60=49.98 avg300=57.81 total=5352543119"
+    },
+    {
+      "at": 1791784107.0977995,
+      "tickMs": 250.28,
+      "pressure": "some avg10=15.85 avg60=52.02 avg300=59.15 total=5440383357\nfull avg10=14.63 avg60=49.98 avg300=57.81 total=5352543119"
+    },
+    {
+      "at": 1791784107.3480868,
+      "tickMs": 250.29,
+      "pressure": "some avg10=15.85 avg60=52.02 avg300=59.15 total=5440383357\nfull avg10=14.63 avg60=49.98 avg300=57.81 total=5352543119"
+    },
+    {
+      "at": 1791784107.5987809,
+      "tickMs": 250.69,
+      "pressure": "some avg10=12.98 avg60=50.32 avg300=58.74 total=5440383357\nfull avg10=11.98 avg60=48.34 avg300=57.41 total=5352543119"
+    },
+    {
+      "at": 1791784107.8489869,
+      "tickMs": 250.21,
+      "pressure": "some avg10=12.98 avg60=50.32 avg300=58.74 total=5440383357\nfull avg10=11.98 avg60=48.34 avg300=57.41 total=5352543119"
+    },
+    {
+      "at": 1791784108.09916,
+      "tickMs": 250.17,
+      "pressure": "some avg10=12.98 avg60=50.32 avg300=58.74 total=5440383365\nfull avg10=11.98 avg60=48.34 avg300=57.41 total=5352543125"
+    },
+    {
+      "at": 1791784108.3493137,
+      "tickMs": 250.15,
+      "pressure": "some avg10=12.98 avg60=50.32 avg300=58.74 total=5440383365\nfull avg10=11.98 avg60=48.34 avg300=57.41 total=5352543125"
+    },
+    {
+      "at": 1791784108.599534,
+      "tickMs": 250.22,
+      "pressure": "some avg10=12.98 avg60=50.32 avg300=58.74 total=5440383365\nfull avg10=11.98 avg60=48.34 avg300=57.41 total=5352543125"
+    },
+    {
+      "at": 1791784108.8497784,
+      "tickMs": 250.24,
+      "pressure": "some avg10=12.98 avg60=50.32 avg300=58.74 total=5440383365\nfull avg10=11.98 avg60=48.34 avg300=57.41 total=5352543125"
+    },
+    {
+      "at": 1791784109.1000412,
+      "tickMs": 250.26,
+      "pressure": "some avg10=12.98 avg60=50.32 avg300=58.74 total=5440383365\nfull avg10=11.98 avg60=48.34 avg300=57.41 total=5352543125"
+    },
+    {
+      "at": 1791784109.350234,
+      "tickMs": 250.19,
+      "pressure": "some avg10=12.98 avg60=50.32 avg300=58.74 total=5440383381\nfull avg10=11.98 avg60=48.34 avg300=57.41 total=5352543138"
+    },
+    {
+      "at": 1791784109.6005085,
+      "tickMs": 250.27,
+      "pressure": "some avg10=10.63 avg60=48.67 avg300=58.34 total=5440383381\nfull avg10=9.81 avg60=46.76 avg300=57.02 total=5352543138"
+    },
+    {
+      "at": 1791784109.8507557,
+      "tickMs": 250.25,
+      "pressure": "some avg10=10.63 avg60=48.67 avg300=58.34 total=5440383381\nfull avg10=9.81 avg60=46.76 avg300=57.02 total=5352543138"
+    },
+    {
+      "at": 1791784110.1009336,
+      "tickMs": 250.18,
+      "pressure": "some avg10=10.63 avg60=48.67 avg300=58.34 total=5440383483\nfull avg10=9.81 avg60=46.76 avg300=57.02 total=5352543231"
+    },
+    {
+      "at": 1791784110.3512225,
+      "tickMs": 250.29,
+      "pressure": "some avg10=10.63 avg60=48.67 avg300=58.34 total=5440383483\nfull avg10=9.81 avg60=46.76 avg300=57.02 total=5352543231"
+    },
+    {
+      "at": 1791784110.6015422,
+      "tickMs": 250.32,
+      "pressure": "some avg10=10.63 avg60=48.67 avg300=58.34 total=5440383547\nfull avg10=9.81 avg60=46.76 avg300=57.02 total=5352543289"
+    },
+    {
+      "at": 1791784110.8517644,
+      "tickMs": 250.22,
+      "pressure": "some avg10=10.63 avg60=48.67 avg300=58.34 total=5440383550\nfull avg10=9.81 avg60=46.76 avg300=57.02 total=5352543293"
+    },
+    {
+      "at": 1791784111.1020534,
+      "tickMs": 250.29,
+      "pressure": "some avg10=10.63 avg60=48.67 avg300=58.34 total=5440383550\nfull avg10=9.81 avg60=46.76 avg300=57.02 total=5352543293"
+    },
+    {
+      "at": 1791784111.3522646,
+      "tickMs": 250.21,
+      "pressure": "some avg10=10.63 avg60=48.67 avg300=58.34 total=5440383572\nfull avg10=9.81 avg60=46.76 avg300=57.02 total=5352543312"
+    },
+    {
+      "at": 1791784111.6024835,
+      "tickMs": 250.22,
+      "pressure": "some avg10=8.70 avg60=47.08 avg300=57.94 total=5440383572\nfull avg10=8.03 avg60=45.23 avg300=56.63 total=5352543312"
+    },
+    {
+      "at": 1791784111.8527713,
+      "tickMs": 250.29,
+      "pressure": "some avg10=8.70 avg60=47.08 avg300=57.94 total=5440383572\nfull avg10=8.03 avg60=45.23 avg300=56.63 total=5352543312"
+    },
+    {
+      "at": 1791784112.1029987,
+      "tickMs": 250.23,
+      "pressure": "some avg10=8.70 avg60=47.08 avg300=57.94 total=5440383572\nfull avg10=8.03 avg60=45.23 avg300=56.63 total=5352543312"
+    },
+    {
+      "at": 1791784112.3531933,
+      "tickMs": 250.2,
+      "pressure": "some avg10=8.70 avg60=47.08 avg300=57.94 total=5440383572\nfull avg10=8.03 avg60=45.23 avg300=56.63 total=5352543312"
+    },
+    {
+      "at": 1791784112.603358,
+      "tickMs": 250.16,
+      "pressure": "some avg10=8.70 avg60=47.08 avg300=57.94 total=5440383572\nfull avg10=8.03 avg60=45.23 avg300=56.63 total=5352543312"
+    },
+    {
+      "at": 1791784112.8535295,
+      "tickMs": 250.17,
+      "pressure": "some avg10=8.70 avg60=47.08 avg300=57.94 total=5440383572\nfull avg10=8.03 avg60=45.23 avg300=56.63 total=5352543312"
+    },
+    {
+      "at": 1791784113.1037192,
+      "tickMs": 250.19,
+      "pressure": "some avg10=8.70 avg60=47.08 avg300=57.94 total=5440383572\nfull avg10=8.03 avg60=45.23 avg300=56.63 total=5352543312"
+    },
+    {
+      "at": 1791784113.3542206,
+      "tickMs": 250.5,
+      "pressure": "some avg10=8.70 avg60=47.08 avg300=57.94 total=5440383572\nfull avg10=8.03 avg60=45.23 avg300=56.63 total=5352543312"
+    },
+    {
+      "at": 1791784113.6044095,
+      "tickMs": 250.19,
+      "pressure": "some avg10=7.12 avg60=45.54 avg300=57.55 total=5440383572\nfull avg10=6.57 avg60=43.75 avg300=56.24 total=5352543312"
+    },
+    {
+      "at": 1791784113.8546793,
+      "tickMs": 250.27,
+      "pressure": "some avg10=7.12 avg60=45.54 avg300=57.55 total=5440383572\nfull avg10=6.57 avg60=43.75 avg300=56.24 total=5352543312"
+    },
+    {
+      "at": 1791784114.1049528,
+      "tickMs": 250.27,
+      "pressure": "some avg10=7.12 avg60=45.54 avg300=57.55 total=5440383572\nfull avg10=6.57 avg60=43.75 avg300=56.24 total=5352543312"
+    },
+    {
+      "at": 1791784114.3552556,
+      "tickMs": 250.3,
+      "pressure": "some avg10=7.12 avg60=45.54 avg300=57.55 total=5440383603\nfull avg10=6.57 avg60=43.75 avg300=56.24 total=5352543344"
+    },
+    {
+      "at": 1791784114.605515,
+      "tickMs": 250.26,
+      "pressure": "some avg10=7.12 avg60=45.54 avg300=57.55 total=5440383603\nfull avg10=6.57 avg60=43.75 avg300=56.24 total=5352543344"
+    },
+    {
+      "at": 1791784114.8557177,
+      "tickMs": 250.2,
+      "pressure": "some avg10=7.12 avg60=45.54 avg300=57.55 total=5440384353\nfull avg10=6.57 avg60=43.75 avg300=56.24 total=5352544051"
+    },
+    {
+      "at": 1791784115.1059284,
+      "tickMs": 250.21,
+      "pressure": "some avg10=7.12 avg60=45.54 avg300=57.55 total=5440384485\nfull avg10=6.57 avg60=43.75 avg300=56.24 total=5352544173"
+    },
+    {
+      "at": 1791784115.3561277,
+      "tickMs": 250.2,
+      "pressure": "some avg10=7.12 avg60=45.54 avg300=57.55 total=5440384485\nfull avg10=6.57 avg60=43.75 avg300=56.24 total=5352544173"
+    },
+    {
+      "at": 1791784115.6063025,
+      "tickMs": 250.17,
+      "pressure": "some avg10=5.83 avg60=44.05 avg300=57.15 total=5440384496\nfull avg10=5.38 avg60=42.32 avg300=55.86 total=5352544183"
+    },
+    {
+      "at": 1791784115.856511,
+      "tickMs": 250.21,
+      "pressure": "some avg10=5.83 avg60=44.05 avg300=57.15 total=5440384496\nfull avg10=5.38 avg60=42.32 avg300=55.86 total=5352544183"
+    },
+    {
+      "at": 1791784116.106728,
+      "tickMs": 250.22,
+      "pressure": "some avg10=5.83 avg60=44.05 avg300=57.15 total=5440388574\nfull avg10=5.38 avg60=42.32 avg300=55.86 total=5352547997"
+    },
+    {
+      "at": 1791784116.3569112,
+      "tickMs": 250.18,
+      "pressure": "some avg10=5.83 avg60=44.05 avg300=57.15 total=5440388586\nfull avg10=5.38 avg60=42.32 avg300=55.86 total=5352548009"
+    },
+    {
+      "at": 1791784116.607082,
+      "tickMs": 250.17,
+      "pressure": "some avg10=5.83 avg60=44.05 avg300=57.15 total=5440388586\nfull avg10=5.38 avg60=42.32 avg300=55.86 total=5352548009"
+    },
+    {
+      "at": 1791784116.857305,
+      "tickMs": 250.22,
+      "pressure": "some avg10=5.83 avg60=44.05 avg300=57.15 total=5440388586\nfull avg10=5.38 avg60=42.32 avg300=55.86 total=5352548009"
+    },
+    {
+      "at": 1791784117.1075056,
+      "tickMs": 250.2,
+      "pressure": "some avg10=5.83 avg60=44.05 avg300=57.15 total=5440388601\nfull avg10=5.38 avg60=42.32 avg300=55.86 total=5352548023"
+    },
+    {
+      "at": 1791784117.3577094,
+      "tickMs": 250.21,
+      "pressure": "some avg10=5.83 avg60=44.05 avg300=57.15 total=5440388601\nfull avg10=5.38 avg60=42.32 avg300=55.86 total=5352548023"
+    },
+    {
+      "at": 1791784117.607905,
+      "tickMs": 250.19,
+      "pressure": "some avg10=4.77 avg60=42.61 avg300=56.76 total=5440388620\nfull avg10=4.40 avg60=40.93 avg300=55.48 total=5352548042"
+    },
+    {
+      "at": 1791784117.8581142,
+      "tickMs": 250.21,
+      "pressure": "some avg10=4.77 avg60=42.61 avg300=56.76 total=5440388620\nfull avg10=4.40 avg60=40.93 avg300=55.48 total=5352548042"
+    },
+    {
+      "at": 1791784118.1083245,
+      "tickMs": 250.21,
+      "pressure": "some avg10=4.77 avg60=42.61 avg300=56.76 total=5440388620\nfull avg10=4.40 avg60=40.93 avg300=55.48 total=5352548042"
+    },
+    {
+      "at": 1791784118.3585176,
+      "tickMs": 250.19,
+      "pressure": "some avg10=4.77 avg60=42.61 avg300=56.76 total=5440388629\nfull avg10=4.40 avg60=40.93 avg300=55.48 total=5352548050"
+    },
+    {
+      "at": 1791784118.6087568,
+      "tickMs": 250.24,
+      "pressure": "some avg10=4.77 avg60=42.61 avg300=56.76 total=5440388629\nfull avg10=4.40 avg60=40.93 avg300=55.48 total=5352548050"
+    },
+    {
+      "at": 1791784118.8589253,
+      "tickMs": 250.17,
+      "pressure": "some avg10=4.77 avg60=42.61 avg300=56.76 total=5440388629\nfull avg10=4.40 avg60=40.93 avg300=55.48 total=5352548050"
+    },
+    {
+      "at": 1791784119.1091354,
+      "tickMs": 250.21,
+      "pressure": "some avg10=4.77 avg60=42.61 avg300=56.76 total=5440388629\nfull avg10=4.40 avg60=40.93 avg300=55.48 total=5352548050"
+    },
+    {
+      "at": 1791784119.3593357,
+      "tickMs": 250.2,
+      "pressure": "some avg10=4.77 avg60=42.61 avg300=56.76 total=5440388645\nfull avg10=4.40 avg60=40.93 avg300=55.48 total=5352548066"
+    },
+    {
+      "at": 1791784119.609518,
+      "tickMs": 250.18,
+      "pressure": "some avg10=3.91 avg60=41.22 avg300=56.37 total=5440388645\nfull avg10=3.61 avg60=39.59 avg300=55.10 total=5352548066"
+    },
+    {
+      "at": 1791784119.8597314,
+      "tickMs": 250.21,
+      "pressure": "some avg10=3.91 avg60=41.22 avg300=56.37 total=5440388645\nfull avg10=3.61 avg60=39.59 avg300=55.10 total=5352548066"
+    },
+    {
+      "at": 1791784120.1099365,
+      "tickMs": 250.21,
+      "pressure": "some avg10=3.91 avg60=41.22 avg300=56.37 total=5440388697\nfull avg10=3.61 avg60=39.59 avg300=55.10 total=5352548117"
+    },
+    {
+      "at": 1791784120.36012,
+      "tickMs": 250.19,
+      "pressure": "some avg10=3.91 avg60=41.22 avg300=56.37 total=5440388697\nfull avg10=3.61 avg60=39.59 avg300=55.10 total=5352548117"
+    },
+    {
+      "at": 1791784120.6103146,
+      "tickMs": 250.19,
+      "pressure": "some avg10=3.91 avg60=41.22 avg300=56.37 total=5440388697\nfull avg10=3.61 avg60=39.59 avg300=55.10 total=5352548117"
+    },
+    {
+      "at": 1791784120.8605642,
+      "tickMs": 250.25,
+      "pressure": "some avg10=3.91 avg60=41.22 avg300=56.37 total=5440388697\nfull avg10=3.61 avg60=39.59 avg300=55.10 total=5352548117"
+    },
+    {
+      "at": 1791784121.110817,
+      "tickMs": 250.25,
+      "pressure": "some avg10=3.91 avg60=41.22 avg300=56.37 total=5440388715\nfull avg10=3.61 avg60=39.59 avg300=55.10 total=5352548135"
+    },
+    {
+      "at": 1791784121.3610144,
+      "tickMs": 250.2,
+      "pressure": "some avg10=3.91 avg60=41.22 avg300=56.37 total=5440388730\nfull avg10=3.61 avg60=39.59 avg300=55.10 total=5352548148"
+    },
+    {
+      "at": 1791784121.6112514,
+      "tickMs": 250.24,
+      "pressure": "some avg10=3.20 avg60=39.87 avg300=55.99 total=5440388730\nfull avg10=2.95 avg60=38.30 avg300=54.72 total=5352548148"
+    },
+    {
+      "at": 1791784121.8614597,
+      "tickMs": 250.21,
+      "pressure": "some avg10=3.20 avg60=39.87 avg300=55.99 total=5440388730\nfull avg10=2.95 avg60=38.30 avg300=54.72 total=5352548148"
+    },
+    {
+      "at": 1791784122.1116676,
+      "tickMs": 250.21,
+      "pressure": "some avg10=3.20 avg60=39.87 avg300=55.99 total=5440388730\nfull avg10=2.95 avg60=38.30 avg300=54.72 total=5352548148"
+    },
+    {
+      "at": 1791784122.3618665,
+      "tickMs": 250.2,
+      "pressure": "some avg10=3.20 avg60=39.87 avg300=55.99 total=5440388730\nfull avg10=2.95 avg60=38.30 avg300=54.72 total=5352548148"
+    },
+    {
+      "at": 1791784122.6120768,
+      "tickMs": 250.21,
+      "pressure": "some avg10=3.20 avg60=39.87 avg300=55.99 total=5440388730\nfull avg10=2.95 avg60=38.30 avg300=54.72 total=5352548148"
+    },
+    {
+      "at": 1791784122.8622854,
+      "tickMs": 250.21,
+      "pressure": "some avg10=3.20 avg60=39.87 avg300=55.99 total=5440389658\nfull avg10=2.95 avg60=38.30 avg300=54.72 total=5352549034"
+    },
+    {
+      "at": 1791784123.1125047,
+      "tickMs": 250.22,
+      "pressure": "some avg10=3.20 avg60=39.87 avg300=55.99 total=5440390540\nfull avg10=2.95 avg60=38.30 avg300=54.72 total=5352549051"
+    },
+    {
+      "at": 1791784123.3627687,
+      "tickMs": 250.26,
+      "pressure": "some avg10=3.20 avg60=39.87 avg300=55.99 total=5440407059\nfull avg10=2.95 avg60=38.30 avg300=54.72 total=5352559271"
+    },
+    {
+      "at": 1791784123.613003,
+      "tickMs": 250.23,
+      "pressure": "some avg10=4.07 avg60=38.82 avg300=55.66 total=5440554702\nfull avg10=3.50 avg60=37.24 avg300=54.39 total=5352686922"
+    },
+    {
+      "at": 1791784123.8631861,
+      "tickMs": 250.18,
+      "pressure": "some avg10=4.07 avg60=38.82 avg300=55.66 total=5440740705\nfull avg10=3.50 avg60=37.24 avg300=54.39 total=5352857044"
+    },
+    {
+      "at": 1791784124.1133494,
+      "tickMs": 250.16,
+      "pressure": "some avg10=4.07 avg60=38.82 avg300=55.66 total=5440891978\nfull avg10=3.50 avg60=37.24 avg300=54.39 total=5352975257"
+    },
+    {
+      "at": 1791784124.3634973,
+      "tickMs": 250.15,
+      "pressure": "some avg10=4.07 avg60=38.82 avg300=55.66 total=5441068045\nfull avg10=3.50 avg60=37.24 avg300=54.39 total=5353123876"
+    },
+    {
+      "at": 1791784124.6136527,
+      "tickMs": 250.15,
+      "pressure": "some avg10=4.07 avg60=38.82 avg300=55.66 total=5441303818\nfull avg10=3.50 avg60=37.24 avg300=54.39 total=5353351371"
+    },
+    {
+      "at": 1791784124.8638196,
+      "tickMs": 250.17,
+      "pressure": "some avg10=4.07 avg60=38.82 avg300=55.66 total=5441516284\nfull avg10=3.50 avg60=37.24 avg300=54.39 total=5353539227"
+    },
+    {
+      "at": 1791784125.113972,
+      "tickMs": 250.15,
+      "pressure": "some avg10=4.07 avg60=38.82 avg300=55.66 total=5441755191\nfull avg10=3.50 avg60=37.24 avg300=54.39 total=5353754763"
+    },
+    {
+      "at": 1791784125.3641136,
+      "tickMs": 250.14,
+      "pressure": "some avg10=4.07 avg60=38.82 avg300=55.66 total=5441968968\nfull avg10=3.50 avg60=37.24 avg300=54.39 total=5353938905"
+    },
+    {
+      "at": 1791784125.6142457,
+      "tickMs": 250.13,
+      "pressure": "some avg10=18.00 avg60=40.20 avg300=55.83 total=5442181282\nfull avg10=15.91 avg60=38.38 avg300=54.51 total=5354145853"
+    },
+    {
+      "at": 1791784125.864396,
+      "tickMs": 250.15,
+      "pressure": "some avg10=18.00 avg60=40.20 avg300=55.83 total=5442420082\nfull avg10=15.91 avg60=38.38 avg300=54.51 total=5354374485"
+    },
+    {
+      "at": 1791784126.1145525,
+      "tickMs": 250.16,
+      "pressure": "some avg10=18.00 avg60=40.20 avg300=55.83 total=5442649581\nfull avg10=15.91 avg60=38.38 avg300=54.51 total=5354593909"
+    }
+  ],
+  "requests": [
+    {
+      "at": 1791784106.3507545,
+      "label": "static",
+      "ms": 0.56,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784106.3504567,
+      "label": "proxy",
+      "ms": 92.65,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784106.3499575,
+      "label": "proxy",
+      "ms": 93.19,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784106.3480234,
+      "label": "proxy",
+      "ms": 95.14,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784106.348984,
+      "label": "proxy",
+      "ms": 94.18,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784106.3500822,
+      "label": "proxy",
+      "ms": 95.97,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784106.3477232,
+      "label": "proxy",
+      "ms": 98.34,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784106.350233,
+      "label": "proxy",
+      "ms": 95.84,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784106.3491328,
+      "label": "proxy",
+      "ms": 96.95,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784106.3475153,
+      "label": "proxy",
+      "ms": 99.48,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784106.3482785,
+      "label": "proxy",
+      "ms": 99.18,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784106.3508673,
+      "label": "direct",
+      "ms": 97.8,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784107.3508267,
+      "label": "static",
+      "ms": 0.85,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784107.3490446,
+      "label": "proxy",
+      "ms": 6.65,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784107.3476284,
+      "label": "proxy",
+      "ms": 8.07,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784107.34841,
+      "label": "proxy",
+      "ms": 7.44,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784107.3478348,
+      "label": "proxy",
+      "ms": 8.03,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784107.3481312,
+      "label": "proxy",
+      "ms": 7.77,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784107.3509111,
+      "label": "direct",
+      "ms": 7.51,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784107.3494241,
+      "label": "proxy",
+      "ms": 9.01,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784107.3500187,
+      "label": "proxy",
+      "ms": 8.42,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784107.3501527,
+      "label": "proxy",
+      "ms": 8.32,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784107.3505266,
+      "label": "proxy",
+      "ms": 7.95,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784107.3502932,
+      "label": "proxy",
+      "ms": 12.07,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784108.3509045,
+      "label": "static",
+      "ms": 0.4,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784108.3484697,
+      "label": "proxy",
+      "ms": 5.33,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784108.349486,
+      "label": "proxy",
+      "ms": 4.38,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784108.3479028,
+      "label": "proxy",
+      "ms": 5.97,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784108.3481617,
+      "label": "proxy",
+      "ms": 5.73,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784108.347698,
+      "label": "proxy",
+      "ms": 6.23,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784108.349115,
+      "label": "proxy",
+      "ms": 4.85,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784108.3502107,
+      "label": "proxy",
+      "ms": 6.21,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784108.3500786,
+      "label": "proxy",
+      "ms": 6.35,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784108.350978,
+      "label": "direct",
+      "ms": 5.46,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784108.3505886,
+      "label": "proxy",
+      "ms": 5.9,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784108.350354,
+      "label": "proxy",
+      "ms": 6.14,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784109.350973,
+      "label": "static",
+      "ms": 0.49,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784109.3482406,
+      "label": "proxy",
+      "ms": 5.62,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784109.3479648,
+      "label": "proxy",
+      "ms": 5.95,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784109.3477662,
+      "label": "proxy",
+      "ms": 6.16,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784109.3491752,
+      "label": "proxy",
+      "ms": 4.93,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784109.348534,
+      "label": "proxy",
+      "ms": 5.59,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784109.3495505,
+      "label": "proxy",
+      "ms": 4.62,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784109.350143,
+      "label": "proxy",
+      "ms": 5.96,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784109.351046,
+      "label": "direct",
+      "ms": 5.06,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784109.35065,
+      "label": "proxy",
+      "ms": 5.47,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784109.3502746,
+      "label": "proxy",
+      "ms": 5.88,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784109.350417,
+      "label": "proxy",
+      "ms": 6.8,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784110.351164,
+      "label": "static",
+      "ms": 0.6,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784110.3492405,
+      "label": "proxy",
+      "ms": 5.5,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784110.3480394,
+      "label": "proxy",
+      "ms": 6.72,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784110.3486001,
+      "label": "proxy",
+      "ms": 6.17,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784110.3496158,
+      "label": "proxy",
+      "ms": 5.16,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784110.3479345,
+      "label": "proxy",
+      "ms": 7.0,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784110.3483047,
+      "label": "proxy",
+      "ms": 6.67,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784110.3502064,
+      "label": "proxy",
+      "ms": 4.86,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784110.3507123,
+      "label": "proxy",
+      "ms": 5.62,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784110.3504827,
+      "label": "proxy",
+      "ms": 5.86,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784110.351112,
+      "label": "direct",
+      "ms": 5.29,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784110.3503366,
+      "label": "proxy",
+      "ms": 9.08,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784111.351242,
+      "label": "static",
+      "ms": 0.47,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784111.3486614,
+      "label": "proxy",
+      "ms": 4.63,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784111.3481019,
+      "label": "proxy",
+      "ms": 5.31,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784111.348366,
+      "label": "proxy",
+      "ms": 5.2,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784111.3496768,
+      "label": "proxy",
+      "ms": 3.9,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784111.3493106,
+      "label": "proxy",
+      "ms": 4.28,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784111.3502676,
+      "label": "proxy",
+      "ms": 4.39,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784111.3480072,
+      "label": "proxy",
+      "ms": 6.66,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784111.3507774,
+      "label": "proxy",
+      "ms": 4.03,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784111.3504024,
+      "label": "proxy",
+      "ms": 4.63,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784111.3511786,
+      "label": "direct",
+      "ms": 4.19,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784111.3505476,
+      "label": "proxy",
+      "ms": 6.48,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784112.3513138,
+      "label": "static",
+      "ms": 0.47,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784112.348491,
+      "label": "proxy",
+      "ms": 5.92,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784112.3504655,
+      "label": "proxy",
+      "ms": 4.1,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784112.348149,
+      "label": "proxy",
+      "ms": 6.42,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784112.348258,
+      "label": "proxy",
+      "ms": 6.31,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784112.3487267,
+      "label": "proxy",
+      "ms": 5.96,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784112.3497472,
+      "label": "proxy",
+      "ms": 5.03,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784112.3494382,
+      "label": "proxy",
+      "ms": 5.34,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784112.3506064,
+      "label": "proxy",
+      "ms": 4.21,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784112.3503313,
+      "label": "proxy",
+      "ms": 4.5,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784112.35211,
+      "label": "proxy",
+      "ms": 4.58,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784112.3512447,
+      "label": "direct",
+      "ms": 9.63,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784113.3513846,
+      "label": "static",
+      "ms": 0.46,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784113.3494964,
+      "label": "proxy",
+      "ms": 4.51,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784113.3483174,
+      "label": "proxy",
+      "ms": 5.76,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784113.348782,
+      "label": "proxy",
+      "ms": 5.39,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784113.3482134,
+      "label": "proxy",
+      "ms": 5.96,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784113.349802,
+      "label": "proxy",
+      "ms": 4.39,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784113.3485556,
+      "label": "proxy",
+      "ms": 5.64,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784113.3503983,
+      "label": "proxy",
+      "ms": 3.87,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784113.3505254,
+      "label": "proxy",
+      "ms": 4.57,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784113.350671,
+      "label": "proxy",
+      "ms": 4.58,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784113.3513134,
+      "label": "direct",
+      "ms": 6.47,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784113.3521762,
+      "label": "proxy",
+      "ms": 5.66,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784114.3514545,
+      "label": "static",
+      "ms": 0.59,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784114.3505895,
+      "label": "proxy",
+      "ms": 4.39,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784114.348844,
+      "label": "proxy",
+      "ms": 6.15,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784114.3498664,
+      "label": "proxy",
+      "ms": 5.33,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784114.3486226,
+      "label": "proxy",
+      "ms": 6.6,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784114.3495615,
+      "label": "proxy",
+      "ms": 5.67,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784114.3482873,
+      "label": "proxy",
+      "ms": 6.95,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784114.348392,
+      "label": "proxy",
+      "ms": 6.91,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784114.3507514,
+      "label": "proxy",
+      "ms": 4.56,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784114.3504634,
+      "label": "proxy",
+      "ms": 4.85,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784114.3513818,
+      "label": "direct",
+      "ms": 4.85,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784114.352244,
+      "label": "proxy",
+      "ms": 4.4,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784115.3515208,
+      "label": "static",
+      "ms": 0.33,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784115.3489044,
+      "label": "proxy",
+      "ms": 4.69,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784115.3485155,
+      "label": "proxy",
+      "ms": 5.18,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784115.3483553,
+      "label": "proxy",
+      "ms": 5.35,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784115.349626,
+      "label": "proxy",
+      "ms": 4.09,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784115.3486855,
+      "label": "proxy",
+      "ms": 5.04,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784115.351445,
+      "label": "direct",
+      "ms": 3.38,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784115.349904,
+      "label": "proxy",
+      "ms": 4.93,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784115.3505232,
+      "label": "proxy",
+      "ms": 4.32,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784115.350652,
+      "label": "proxy",
+      "ms": 4.21,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784115.350813,
+      "label": "proxy",
+      "ms": 4.18,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784115.3523111,
+      "label": "proxy",
+      "ms": 5.46,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784116.3515842,
+      "label": "static",
+      "ms": 0.5,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784116.3489652,
+      "label": "proxy",
+      "ms": 4.57,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784116.3496852,
+      "label": "proxy",
+      "ms": 3.87,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784116.348422,
+      "label": "proxy",
+      "ms": 5.14,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784116.348913,
+      "label": "proxy",
+      "ms": 4.67,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784116.348677,
+      "label": "proxy",
+      "ms": 5.37,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784116.3505883,
+      "label": "proxy",
+      "ms": 3.48,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784116.3507402,
+      "label": "proxy",
+      "ms": 3.47,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784116.3499634,
+      "label": "proxy",
+      "ms": 4.26,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784116.3508859,
+      "label": "proxy",
+      "ms": 4.05,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784116.3515093,
+      "label": "direct",
+      "ms": 3.88,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784116.3523781,
+      "label": "proxy",
+      "ms": 3.43,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784117.351651,
+      "label": "static",
+      "ms": 0.5,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784117.3490295,
+      "label": "proxy",
+      "ms": 4.45,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784117.3487954,
+      "label": "proxy",
+      "ms": 4.7,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784117.3489792,
+      "label": "proxy",
+      "ms": 4.53,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784117.3497472,
+      "label": "proxy",
+      "ms": 3.91,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784117.3500285,
+      "label": "proxy",
+      "ms": 5.04,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784117.3509068,
+      "label": "proxy",
+      "ms": 4.19,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784117.3508053,
+      "label": "proxy",
+      "ms": 4.3,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784117.3484943,
+      "label": "proxy",
+      "ms": 6.64,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784117.3506515,
+      "label": "proxy",
+      "ms": 4.96,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784117.3515718,
+      "label": "direct",
+      "ms": 4.46,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784117.3524437,
+      "label": "proxy",
+      "ms": 4.59,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784118.3517199,
+      "label": "static",
+      "ms": 0.43,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784118.349122,
+      "label": "proxy",
+      "ms": 5.51,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784118.350098,
+      "label": "proxy",
+      "ms": 4.91,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784118.3485637,
+      "label": "proxy",
+      "ms": 6.55,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784118.3490465,
+      "label": "proxy",
+      "ms": 6.08,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784118.349812,
+      "label": "proxy",
+      "ms": 5.32,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784118.3509805,
+      "label": "proxy",
+      "ms": 4.17,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784118.348856,
+      "label": "proxy",
+      "ms": 6.3,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784118.3507123,
+      "label": "proxy",
+      "ms": 4.45,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784118.350867,
+      "label": "proxy",
+      "ms": 4.31,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784118.3516388,
+      "label": "direct",
+      "ms": 3.82,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784118.3525097,
+      "label": "proxy",
+      "ms": 3.73,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784119.3517911,
+      "label": "static",
+      "ms": 0.47,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784119.349047,
+      "label": "proxy",
+      "ms": 5.05,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784119.3486333,
+      "label": "proxy",
+      "ms": 5.57,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784119.3501608,
+      "label": "proxy",
+      "ms": 4.06,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784119.3492837,
+      "label": "proxy",
+      "ms": 5.04,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784119.3493278,
+      "label": "proxy",
+      "ms": 5.19,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784119.3507757,
+      "label": "proxy",
+      "ms": 3.81,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784119.350921,
+      "label": "proxy",
+      "ms": 3.68,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784119.3510735,
+      "label": "proxy",
+      "ms": 3.54,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784119.3498755,
+      "label": "proxy",
+      "ms": 4.76,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784119.3517046,
+      "label": "direct",
+      "ms": 3.91,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784119.3525758,
+      "label": "proxy",
+      "ms": 3.46,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784120.3518584,
+      "label": "static",
+      "ms": 0.51,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784120.3502257,
+      "label": "proxy",
+      "ms": 4.21,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784120.3493905,
+      "label": "proxy",
+      "ms": 5.07,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784120.3487005,
+      "label": "proxy",
+      "ms": 5.9,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784120.3491178,
+      "label": "proxy",
+      "ms": 5.49,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784120.349908,
+      "label": "proxy",
+      "ms": 4.71,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784120.34932,
+      "label": "proxy",
+      "ms": 5.91,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784120.350837,
+      "label": "proxy",
+      "ms": 4.53,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784120.3517716,
+      "label": "direct",
+      "ms": 3.63,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784120.3509848,
+      "label": "proxy",
+      "ms": 4.72,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784120.3516028,
+      "label": "proxy",
+      "ms": 4.26,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784120.352642,
+      "label": "proxy",
+      "ms": 3.99,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784121.3519046,
+      "label": "static",
+      "ms": 0.46,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784121.3491797,
+      "label": "proxy",
+      "ms": 5.46,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784121.3488166,
+      "label": "proxy",
+      "ms": 5.94,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784121.3494575,
+      "label": "proxy",
+      "ms": 5.31,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784121.3510478,
+      "label": "proxy",
+      "ms": 3.83,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784121.3509023,
+      "label": "proxy",
+      "ms": 3.98,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784121.3493838,
+      "label": "proxy",
+      "ms": 5.52,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784121.3502944,
+      "label": "proxy",
+      "ms": 4.61,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784121.3499687,
+      "label": "proxy",
+      "ms": 5.08,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784121.351838,
+      "label": "direct",
+      "ms": 4.79,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784121.3527088,
+      "label": "proxy",
+      "ms": 3.95,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784121.3516662,
+      "label": "proxy",
+      "ms": 5.01,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784122.351971,
+      "label": "static",
+      "ms": 0.33,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784122.3488863,
+      "label": "proxy",
+      "ms": 5.94,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784122.3509624,
+      "label": "proxy",
+      "ms": 3.96,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784122.3511088,
+      "label": "proxy",
+      "ms": 3.82,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784122.349278,
+      "label": "proxy",
+      "ms": 5.66,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784122.3500328,
+      "label": "proxy",
+      "ms": 5.16,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784122.3494494,
+      "label": "proxy",
+      "ms": 5.76,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784122.3503578,
+      "label": "proxy",
+      "ms": 4.86,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784122.349521,
+      "label": "proxy",
+      "ms": 5.71,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784122.351905,
+      "label": "direct",
+      "ms": 4.5,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784122.3517337,
+      "label": "proxy",
+      "ms": 4.68,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784122.352772,
+      "label": "proxy",
+      "ms": 3.67,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784123.3520396,
+      "label": "static",
+      "ms": 0.45,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784123.3504236,
+      "label": "proxy",
+      "ms": 4.57,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784123.349341,
+      "label": "proxy",
+      "ms": 5.94,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784123.3495095,
+      "label": "proxy",
+      "ms": 5.89,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784123.3489559,
+      "label": "proxy",
+      "ms": 6.46,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784123.351171,
+      "label": "proxy",
+      "ms": 4.39,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784123.3510246,
+      "label": "proxy",
+      "ms": 4.55,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784123.3495839,
+      "label": "proxy",
+      "ms": 6.0,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784123.3500974,
+      "label": "proxy",
+      "ms": 5.5,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784123.352838,
+      "label": "proxy",
+      "ms": 4.06,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784123.3517728,
+      "label": "proxy",
+      "ms": 5.14,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784123.351973,
+      "label": "direct",
+      "ms": 4.96,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784124.3521073,
+      "label": "static",
+      "ms": 0.44,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784124.3494034,
+      "label": "proxy",
+      "ms": 4.9,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784124.3501565,
+      "label": "proxy",
+      "ms": 4.25,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784124.3496425,
+      "label": "proxy",
+      "ms": 4.78,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784124.3490238,
+      "label": "proxy",
+      "ms": 5.4,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784124.3497806,
+      "label": "proxy",
+      "ms": 4.66,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784124.3504934,
+      "label": "proxy",
+      "ms": 3.96,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784124.3518531,
+      "label": "proxy",
+      "ms": 3.13,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784124.351085,
+      "label": "proxy",
+      "ms": 3.91,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784124.35124,
+      "label": "proxy",
+      "ms": 3.78,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784124.3520327,
+      "label": "direct",
+      "ms": 3.0,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784124.352904,
+      "label": "proxy",
+      "ms": 3.74,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784125.3521743,
+      "label": "static",
+      "ms": 0.4,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784125.350217,
+      "label": "proxy",
+      "ms": 3.54,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784125.3490934,
+      "label": "proxy",
+      "ms": 4.79,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784125.3494961,
+      "label": "proxy",
+      "ms": 4.4,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784125.3497028,
+      "label": "proxy",
+      "ms": 4.29,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784125.349845,
+      "label": "proxy",
+      "ms": 4.16,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784125.3505547,
+      "label": "proxy",
+      "ms": 3.46,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784125.3511434,
+      "label": "proxy",
+      "ms": 3.81,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784125.3513052,
+      "label": "proxy",
+      "ms": 3.66,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784125.3519084,
+      "label": "proxy",
+      "ms": 3.07,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784125.352097,
+      "label": "direct",
+      "ms": 2.9,
+      "status": 200,
+      "error": null
+    },
+    {
+      "at": 1791784125.3529675,
+      "label": "proxy",
+      "ms": 2.88,
+      "status": 200,
+      "error": null
+    }
+  ]
+}

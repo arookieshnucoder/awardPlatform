@@ -1,0 +1,10 @@
+{
+  "tests": 315,
+  "failures": 0,
+  "errors": 0,
+  "releaseTargetedTests": 19,
+  "releaseTargetedFailures": 0,
+  "lintErrors": 0,
+  "existingLintWarnings": 2,
+  "build": "passed"
+}

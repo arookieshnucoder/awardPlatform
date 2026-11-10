@@ -1,0 +1,97 @@
+/* Bundled Noto Sans SC: Latin, common simplified Chinese, punctuation and UI glyphs. */
+@font-face {
+  font-family: 'Award Sans';
+  src: url('/fonts/award-sans-regular.woff2?v=20261010') format('woff2');
+  unicode-range: U+0250-1FFF, U+2070-10FFFF;
+  font-weight: 100 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Award Sans';
+  src: url('/fonts/award-sans-bold.woff2?v=20261010') format('woff2');
+  unicode-range: U+0250-1FFF, U+2070-10FFFF;
+  font-weight: 501 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Award Sans';
+  src: url('/fonts/award-sans-regular-latin.woff2?v=20261012-punctuation') format('woff2');
+  unicode-range: U+0000-024F, U+2000-206F;
+  font-weight: 100 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Award Sans';
+  src: url('/fonts/award-sans-bold-latin.woff2?v=20261012-punctuation') format('woff2');
+  unicode-range: U+0000-024F, U+2000-206F;
+  font-weight: 501 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* One body font for public pages, management screens, controls, and portals. */
+:root {
+  --app-font-body: 'Award Sans', 'Noto Sans CJK SC', 'Microsoft YaHei', 'PingFang SC', Arial, sans-serif;
+}
+
+button, input, textarea, select {
+  font-family: var(--app-font-body);
+}
+
+/* Reset default styles and add global styling for the award platform. */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: var(--app-font-body);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Ensure full height for proper layout */
+html, body, #root {
+  height: 100%;
+}
+
+/* Custom scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--mantine-color-gray-0);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--mantine-color-gray-4);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--mantine-color-gray-6);
+}
+
+/* Dark mode scrollbar */
+[data-mantine-color-scheme="dark"] ::-webkit-scrollbar-track {
+  background: var(--mantine-color-dark-7);
+}
+
+[data-mantine-color-scheme="dark"] ::-webkit-scrollbar-thumb {
+  background: var(--mantine-color-dark-4);
+}
+
+[data-mantine-color-scheme="dark"] ::-webkit-scrollbar-thumb:hover {
+  background: var(--mantine-color-dark-3);
+}
+
+/* Control text keeps its baseline and stays on one line across languages. */
+.mantine-Button-label, .mantine-InputWrapper-label, .mantine-Badge-label {
+  white-space: nowrap;
+}

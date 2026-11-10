@@ -1,0 +1,460 @@
+[
+  {
+    "role": "admin",
+    "visibleMs": 411.8,
+    "errors": [],
+    "calls": [
+      "/api/v1/auth/refresh",
+      "/api/v1/profiles/me",
+      "/api/v1/hackathons",
+      "/api/v1/hackathons/test-award-1/ideas",
+      "/api/v1/hackathons/test-award-1/judging/scores/summary",
+      "/api/v1/hackathons/test-award-2/ideas",
+      "/api/v1/hackathons/test-award-2/judging/scores/summary"
+    ],
+    "metrics": {
+      "fonts": [
+        {
+          "family": "Award Sans",
+          "status": "unloaded"
+        },
+        {
+          "family": "Award Sans",
+          "status": "unloaded"
+        },
+        {
+          "family": "Award Sans",
+          "status": "loaded"
+        },
+        {
+          "family": "Award Sans",
+          "status": "loaded"
+        }
+      ],
+      "video": {
+        "width": 1920,
+        "height": 1080,
+        "time": 5.283548,
+        "error": null,
+        "frames": {}
+      },
+      "longTasks": [
+        {
+          "start": 68,
+          "duration": 66
+        }
+      ],
+      "resources": [
+        {
+          "path": "/media/tech-blue-poster.jpg",
+          "bytes": 266057,
+          "ms": 3
+        },
+        {
+          "path": "/assets/index-fonts-23adb549f0f0.css",
+          "bytes": 56554,
+          "ms": 5
+        },
+        {
+          "path": "/assets/index-DufYbWWy.js",
+          "bytes": 209848,
+          "ms": 7
+        },
+        {
+          "path": "/assets/hackathonService-B4ZeB8Pn.js",
+          "bytes": 1006,
+          "ms": 65
+        },
+        {
+          "path": "/assets/AwardManagement-QKh7z8Oh.js",
+          "bytes": 7288,
+          "ms": 65
+        },
+        {
+          "path": "/assets/judgingService-BO0IXzLz.js",
+          "bytes": 657,
+          "ms": 65
+        },
+        {
+          "path": "/assets/organizationService-BM8MYRTO.js",
+          "bytes": 841,
+          "ms": 67
+        },
+        {
+          "path": "/assets/pagination-DwHsShgu.js",
+          "bytes": 537,
+          "ms": 67
+        },
+        {
+          "path": "/assets/committeeScoring-0H6mwc1X.js",
+          "bytes": 1091,
+          "ms": 67
+        },
+        {
+          "path": "/assets/ideaService-Dj-sYRSg.js",
+          "bytes": 1083,
+          "ms": 67
+        },
+        {
+          "path": "/assets/Card-B8M1zLik.js",
+          "bytes": 979,
+          "ms": 69
+        },
+        {
+          "path": "/assets/Title-cZ3rgiq7.js",
+          "bytes": 990,
+          "ms": 70
+        },
+        {
+          "path": "/assets/use-form-BP9_u-sm.js",
+          "bytes": 6200,
+          "ms": 70
+        },
+        {
+          "path": "/assets/Progress-53chl94m.js",
+          "bytes": 1365,
+          "ms": 69
+        },
+        {
+          "path": "/assets/IconPlus-C_VRPlr0.js",
+          "bytes": 473,
+          "ms": 69
+        },
+        {
+          "path": "/assets/get-auto-contrast-value-Da6zqqWm.js",
+          "bytes": 376,
+          "ms": 70
+        },
+        {
+          "path": "/assets/Badge-BjNfDUyS.js",
+          "bytes": 1042,
+          "ms": 71
+        },
+        {
+          "path": "/assets/IconCheck-CXFNt33j.js",
+          "bytes": 438,
+          "ms": 72
+        },
+        {
+          "path": "/assets/IconAlertCircle-H7ti7-c_.js",
+          "bytes": 549,
+          "ms": 72
+        },
+        {
+          "path": "/assets/Alert-CZD8YrEP.js",
+          "bytes": 1154,
+          "ms": 72
+        },
+        {
+          "path": "/assets/Table-J3LbWPu8.js",
+          "bytes": 2034,
+          "ms": 72
+        },
+        {
+          "path": "/assets/NumberInput-yiRyePIH.js",
+          "bytes": 9224,
+          "ms": 73
+        },
+        {
+          "path": "/assets/Textarea-Bo-QLrHY.js",
+          "bytes": 2198,
+          "ms": 74
+        },
+        {
+          "path": "/assets/InputBase-oPzdtWgB.js",
+          "bytes": 3492,
+          "ms": 74
+        },
+        {
+          "path": "/assets/ActionIcon-CkAMC_PQ.js",
+          "bytes": 1573,
+          "ms": 75
+        },
+        {
+          "path": "/assets/IconEdit-BNhsWQ38.js",
+          "bytes": 618,
+          "ms": 75
+        },
+        {
+          "path": "/assets/IconTrash-CS4tjfFm.js",
+          "bytes": 654,
+          "ms": 75
+        },
+        {
+          "path": "/assets/Divider-DcPHLaxw.js",
+          "bytes": 1164,
+          "ms": 75
+        },
+        {
+          "path": "/assets/TextInput-K5P7HsfR.js",
+          "bytes": 600,
+          "ms": 76
+        },
+        {
+          "path": "/assets/CheckIcon-CgwnsgBj.js",
+          "bytes": 1000,
+          "ms": 76
+        },
+        {
+          "path": "/assets/uiTranslations-CVPLELB2.js",
+          "bytes": 27056,
+          "ms": 77
+        },
+        {
+          "path": "/assets/Select-CrWnNrlB.js",
+          "bytes": 7549,
+          "ms": 78
+        },
+        {
+          "path": "/fonts/award-sans-bold-latin.woff2",
+          "bytes": 22336,
+          "ms": 61
+        },
+        {
+          "path": "/fonts/award-sans-regular-latin.woff2",
+          "bytes": 21904,
+          "ms": 61
+        },
+        {
+          "path": "/media/tech-blue-loop.mp4",
+          "bytes": 3483720,
+          "ms": 22
+        }
+      ],
+      "alerts": [],
+      "canvas": [
+        {
+          "width": 1440,
+          "height": 900
+        }
+      ]
+    },
+    "chineseFontLoaded": true
+  },
+  {
+    "role": "participant",
+    "visibleMs": 841.4,
+    "errors": [],
+    "calls": [
+      "/api/v1/auth/refresh",
+      "/api/v1/profiles/me",
+      "/api/v1/profiles/me/judge-assignments",
+      "/api/v1/profiles/me/judge-assignments",
+      "/api/v1/hackathons",
+      "/api/v1/profiles/me/judge-assignments"
+    ],
+    "metrics": {
+      "fonts": [
+        {
+          "family": "Award Sans",
+          "status": "unloaded"
+        },
+        {
+          "family": "Award Sans",
+          "status": "unloaded"
+        },
+        {
+          "family": "Award Sans",
+          "status": "loaded"
+        },
+        {
+          "family": "Award Sans",
+          "status": "loaded"
+        }
+      ],
+      "video": {
+        "width": 1920,
+        "height": 1080,
+        "time": 5.780604,
+        "error": null,
+        "frames": {}
+      },
+      "longTasks": [],
+      "resources": [
+        {
+          "path": "/media/tech-blue-poster.jpg",
+          "bytes": 266057,
+          "ms": 4
+        },
+        {
+          "path": "/assets/index-fonts-23adb549f0f0.css",
+          "bytes": 56554,
+          "ms": 4
+        },
+        {
+          "path": "/assets/index-DufYbWWy.js",
+          "bytes": 209848,
+          "ms": 8
+        },
+        {
+          "path": "/fonts/award-sans-regular-latin.woff2",
+          "bytes": 21904,
+          "ms": 3
+        },
+        {
+          "path": "/fonts/award-sans-bold-latin.woff2",
+          "bytes": 22336,
+          "ms": 9
+        },
+        {
+          "path": "/media/tech-blue-loop.mp4",
+          "bytes": 3483720,
+          "ms": 6
+        },
+        {
+          "path": "/assets/hackathonService-B4ZeB8Pn.js",
+          "bytes": 1006,
+          "ms": 7
+        },
+        {
+          "path": "/assets/AwardManagement-QKh7z8Oh.js",
+          "bytes": 7288,
+          "ms": 8
+        },
+        {
+          "path": "/assets/judgingService-BO0IXzLz.js",
+          "bytes": 657,
+          "ms": 7
+        },
+        {
+          "path": "/assets/organizationService-BM8MYRTO.js",
+          "bytes": 841,
+          "ms": 8
+        },
+        {
+          "path": "/assets/pagination-DwHsShgu.js",
+          "bytes": 537,
+          "ms": 8
+        },
+        {
+          "path": "/assets/committeeScoring-0H6mwc1X.js",
+          "bytes": 1091,
+          "ms": 9
+        },
+        {
+          "path": "/assets/ideaService-Dj-sYRSg.js",
+          "bytes": 1083,
+          "ms": 10
+        },
+        {
+          "path": "/assets/Title-cZ3rgiq7.js",
+          "bytes": 990,
+          "ms": 11
+        },
+        {
+          "path": "/assets/Card-B8M1zLik.js",
+          "bytes": 979,
+          "ms": 11
+        },
+        {
+          "path": "/assets/IconPlus-C_VRPlr0.js",
+          "bytes": 473,
+          "ms": 11
+        },
+        {
+          "path": "/assets/use-form-BP9_u-sm.js",
+          "bytes": 6200,
+          "ms": 11
+        },
+        {
+          "path": "/assets/Progress-53chl94m.js",
+          "bytes": 1365,
+          "ms": 11
+        },
+        {
+          "path": "/assets/get-auto-contrast-value-Da6zqqWm.js",
+          "bytes": 376,
+          "ms": 13
+        },
+        {
+          "path": "/assets/IconCheck-CXFNt33j.js",
+          "bytes": 438,
+          "ms": 13
+        },
+        {
+          "path": "/assets/Badge-BjNfDUyS.js",
+          "bytes": 1042,
+          "ms": 13
+        },
+        {
+          "path": "/assets/IconAlertCircle-H7ti7-c_.js",
+          "bytes": 549,
+          "ms": 13
+        },
+        {
+          "path": "/assets/Alert-CZD8YrEP.js",
+          "bytes": 1154,
+          "ms": 13
+        },
+        {
+          "path": "/assets/Table-J3LbWPu8.js",
+          "bytes": 2034,
+          "ms": 13
+        },
+        {
+          "path": "/assets/Textarea-Bo-QLrHY.js",
+          "bytes": 2198,
+          "ms": 15
+        },
+        {
+          "path": "/assets/ActionIcon-CkAMC_PQ.js",
+          "bytes": 1573,
+          "ms": 16
+        },
+        {
+          "path": "/assets/IconEdit-BNhsWQ38.js",
+          "bytes": 618,
+          "ms": 17
+        },
+        {
+          "path": "/assets/InputBase-oPzdtWgB.js",
+          "bytes": 3492,
+          "ms": 17
+        },
+        {
+          "path": "/assets/IconTrash-CS4tjfFm.js",
+          "bytes": 654,
+          "ms": 17
+        },
+        {
+          "path": "/assets/NumberInput-yiRyePIH.js",
+          "bytes": 9224,
+          "ms": 17
+        },
+        {
+          "path": "/assets/Divider-DcPHLaxw.js",
+          "bytes": 1164,
+          "ms": 18
+        },
+        {
+          "path": "/assets/TextInput-K5P7HsfR.js",
+          "bytes": 600,
+          "ms": 18
+        },
+        {
+          "path": "/assets/uiTranslations-CVPLELB2.js",
+          "bytes": 27056,
+          "ms": 19
+        },
+        {
+          "path": "/assets/Select-CrWnNrlB.js",
+          "bytes": 7549,
+          "ms": 19
+        },
+        {
+          "path": "/assets/CheckIcon-CgwnsgBj.js",
+          "bytes": 1000,
+          "ms": 19
+        }
+      ],
+      "alerts": [],
+      "canvas": [
+        {
+          "width": 1440,
+          "height": 900
+        }
+      ]
+    },
+    "chineseFontLoaded": true
+  }
+]

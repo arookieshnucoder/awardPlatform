@@ -1,0 +1,66 @@
+# Local dependencies and generated output
+node_modules/
+target/
+dist/
+build/
+coverage/
+test-results/
+playwright-report/
+*.log
+*.tsbuildinfo
+
+# Local settings, credentials, and private certificates
+.codex/
+.vscode/
+.env
+.env.*
+!.env.example
+!.env.sample
+tls-private-*/
+*.key
+*.pem
+*.p12
+*.pfx
+*.jks
+application-local.yml
+application-local.properties
+
+# Exclude server secrets and generated files
+.git
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+id_rsa*
+id_ed25519*
+.npmrc
+.pypirc
+.netrc
+.ssh/
+.aws/
+node_modules/
+dist/
+build/
+target/
+coverage/
+.next/
+.vscode/
+.codex/
+*.log
+*.tar
+*.tar.gz
+*.tgz
+*.zip
+*.sql
+*.dump
+
+# 本次 Docker 故障恢复备份包含本机数据，不进入源码仓库。
+/test/docker-recovery-20261105/
+
+# Database schema and migration source files
+!/app/hackhub-api/src/main/resources/db/migration/
+!/app/hackhub-api/src/main/resources/db/migration/**
+!/app/infra/postgres/init.sql

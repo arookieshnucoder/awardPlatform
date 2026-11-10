@@ -1,0 +1,42 @@
+[
+  {
+    "clients": 10,
+    "requests": 500,
+    "seconds": 9.81,
+    "rps": 51.0,
+    "errors": 0,
+    "stopped": false,
+    "endpoints": {
+      "public_awards": {
+        "requests": 250,
+        "p95_ms": 3.44,
+        "max_ms": 11.6
+      },
+      "public_nominations": {
+        "requests": 250,
+        "p95_ms": 5.76,
+        "max_ms": 16.96
+      }
+    }
+  },
+  {
+    "clients": 25,
+    "requests": 883,
+    "seconds": 10.01,
+    "rps": 88.2,
+    "errors": 25,
+    "stopped": true,
+    "endpoints": {
+      "public_awards": {
+        "requests": 438,
+        "p95_ms": 5.15,
+        "max_ms": 3005.72
+      },
+      "public_nominations": {
+        "requests": 445,
+        "p95_ms": 9.45,
+        "max_ms": 3003.92
+      }
+    }
+  }
+]

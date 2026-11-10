@@ -1,0 +1,68 @@
+.dp-award-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 20px;
+  color: var(--mantine-color-text);
+  text-decoration: none;
+  flex-shrink: 0;
+}
+
+.dp-award-brand__logo {
+  display: block;
+  width: 132px;
+  height: auto;
+}
+
+.dp-award-brand__divider {
+  width: 1px;
+  height: 30px;
+  background: #b4b8b5;
+}
+
+.dp-award-brand__title {
+  font-size: 25px;
+  font-weight: 550;
+  line-height: 1.1;
+  letter-spacing: -0.7px;
+  white-space: nowrap;
+}
+
+.dp-header-leading,
+.dp-header-actions {
+  flex-wrap: nowrap;
+}
+
+@media (max-width: 47.99em) {
+  .dp-award-brand { gap: 10px; }
+  .dp-award-brand__logo { width: 88px; }
+  .dp-award-brand__divider { height: 23px; }
+  .dp-award-brand__title { font-size: 18px; letter-spacing: -0.5px; }
+  .dp-header-user-copy { display: none; }
+}
+
+@media (max-width: 24em) {
+  .dp-award-brand { gap: 7px; }
+  .dp-award-brand__logo { width: 76px; }
+  .dp-award-brand__title { font-size: 16px; }
+}
+
+.dp-award-brand--inverse { color: #fff; }
+.dp-award-brand--inverse .dp-award-brand__logo { filter: brightness(0) invert(1); }
+.dp-award-brand--inverse .dp-award-brand__divider { background: rgba(255, 255, 255, 0.55); }
+.award-landing .award-landing__header { width: 100%; justify-content: space-between; }
+
+/* The landing lockup sits directly on the video, without a background capsule. */
+.award-landing .dp-award-brand--inverse {
+  padding: 0;
+  background: transparent;
+  text-shadow: 0 1px 6px rgb(0 0 0 / 45%);
+}
+
+@media (min-width: 70em) {
+  .award-landing .award-landing__header {
+    display: grid;
+    grid-template-columns: 1fr minmax(280px, 460px) 1fr;
+  }
+  .award-landing .award-landing__nav { width: 100%; }
+  .award-landing .award-landing__sign-in { justify-self: start; }
+}

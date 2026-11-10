@@ -1,0 +1,10 @@
+# Add this file beside the existing runtime compose.yml; preserve site-specific settings.
+services:
+  api:
+    environment:
+      APP_AUTH_COOKIE_SECURE: ${APP_AUTH_COOKIE_SECURE:-true}
+      APP_SSO_ENABLED: ${APP_SSO_ENABLED:-false}
+      APP_SSO_TENANT_ID: ${APP_SSO_TENANT_ID:-}
+      APP_SSO_CLIENT_ID: ${APP_SSO_CLIENT_ID:-}
+      APP_SSO_CLIENT_SECRET: ${APP_SSO_CLIENT_SECRET:-}
+      APP_SSO_PUBLIC_BASE_URL: ${APP_SSO_PUBLIC_BASE_URL:-}

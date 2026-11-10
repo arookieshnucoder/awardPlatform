@@ -1,0 +1,422 @@
+[
+  {
+    "at": "2026-10-10T07:42:46.291667+00:00",
+    "io_pressure": "some avg10=62.76 avg60=76.44 avg300=74.72 total=992855825",
+    "probes": [
+      {
+        "target": "nginx_health",
+        "ms": 1.98,
+        "status": 200
+      },
+      {
+        "target": "api_via_nginx",
+        "ms": 3.67,
+        "status": 200
+      },
+      {
+        "target": "api_direct",
+        "ms": 3.5,
+        "status": 200
+      }
+    ]
+  },
+  {
+    "at": "2026-10-10T07:42:47.291737+00:00",
+    "io_pressure": "some avg10=62.76 avg60=76.44 avg300=74.72 total=993304107",
+    "probes": [
+      {
+        "target": "nginx_health",
+        "ms": 0.79,
+        "status": 200
+      },
+      {
+        "target": "api_via_nginx",
+        "ms": 2.29,
+        "status": 200
+      },
+      {
+        "target": "api_direct",
+        "ms": 2.23,
+        "status": 200
+      }
+    ]
+  },
+  {
+    "at": "2026-10-10T07:42:48.291804+00:00",
+    "io_pressure": "some avg10=58.63 avg60=75.25 avg300=74.49 total=994011072",
+    "probes": [
+      {
+        "target": "nginx_health",
+        "ms": 0.95,
+        "status": 200
+      },
+      {
+        "target": "api_via_nginx",
+        "ms": 2.42,
+        "status": 200
+      },
+      {
+        "target": "api_direct",
+        "ms": 2.64,
+        "status": 200
+      }
+    ]
+  },
+  {
+    "at": "2026-10-10T07:42:49.291956+00:00",
+    "io_pressure": "some avg10=58.63 avg60=75.25 avg300=74.49 total=994955511",
+    "probes": [
+      {
+        "target": "nginx_health",
+        "ms": 1.29,
+        "status": 200
+      },
+      {
+        "target": "api_via_nginx",
+        "ms": 2.29,
+        "status": 200
+      },
+      {
+        "target": "api_direct",
+        "ms": 2.58,
+        "status": 200
+      }
+    ]
+  },
+  {
+    "at": "2026-10-10T07:42:50.292090+00:00",
+    "io_pressure": "some avg10=63.05 avg60=75.50 avg300=74.54 total=995927807",
+    "probes": [
+      {
+        "target": "nginx_health",
+        "ms": 0.88,
+        "status": 200
+      },
+      {
+        "target": "api_via_nginx",
+        "ms": 2.86,
+        "status": 200
+      },
+      {
+        "target": "api_direct",
+        "ms": 2.77,
+        "status": 200
+      }
+    ]
+  },
+  {
+    "at": "2026-10-10T07:42:51.292398+00:00",
+    "io_pressure": "some avg10=63.05 avg60=75.50 avg300=74.54 total=996879490",
+    "probes": [
+      {
+        "target": "nginx_health",
+        "ms": 1.05,
+        "status": 200
+      },
+      {
+        "target": "api_via_nginx",
+        "ms": 2.61,
+        "status": 200
+      },
+      {
+        "target": "api_direct",
+        "ms": 2.4,
+        "status": 200
+      }
+    ]
+  },
+  {
+    "at": "2026-10-10T07:42:52.292489+00:00",
+    "io_pressure": "some avg10=69.02 avg60=76.17 avg300=74.69 total=997841097",
+    "probes": [
+      {
+        "target": "nginx_health",
+        "ms": 0.96,
+        "status": 200
+      },
+      {
+        "target": "api_via_nginx",
+        "ms": 2.8,
+        "status": 200
+      },
+      {
+        "target": "api_direct",
+        "ms": 2.7,
+        "status": 200
+      }
+    ]
+  },
+  {
+    "at": "2026-10-10T07:42:53.292601+00:00",
+    "io_pressure": "some avg10=69.02 avg60=76.17 avg300=74.69 total=998817126",
+    "probes": [
+      {
+        "target": "nginx_health",
+        "ms": 0.76,
+        "status": 200
+      },
+      {
+        "target": "api_via_nginx",
+        "ms": 1.93,
+        "status": 200
+      },
+      {
+        "target": "api_direct",
+        "ms": 2.01,
+        "status": 200
+      }
+    ]
+  },
+  {
+    "at": "2026-10-10T07:42:54.292638+00:00",
+    "io_pressure": "some avg10=73.90 avg60=76.82 avg300=74.84 total=999796123",
+    "probes": [
+      {
+        "target": "nginx_health",
+        "ms": 0.59,
+        "status": 200
+      },
+      {
+        "target": "api_via_nginx",
+        "ms": 1.97,
+        "status": 200
+      },
+      {
+        "target": "api_direct",
+        "ms": 1.9,
+        "status": 200
+      }
+    ]
+  },
+  {
+    "at": "2026-10-10T07:42:55.292774+00:00",
+    "io_pressure": "some avg10=73.90 avg60=76.82 avg300=74.84 total=1000780484",
+    "probes": [
+      {
+        "target": "nginx_health",
+        "ms": 0.71,
+        "status": 200
+      },
+      {
+        "target": "api_via_nginx",
+        "ms": 2.12,
+        "status": 200
+      },
+      {
+        "target": "api_direct",
+        "ms": 2.12,
+        "status": 200
+      }
+    ]
+  },
+  {
+    "at": "2026-10-10T07:42:56.292887+00:00",
+    "io_pressure": "some avg10=78.27 avg60=77.51 avg300=75.00 total=1001749000",
+    "probes": [
+      {
+        "target": "nginx_health",
+        "ms": 0.79,
+        "status": 200
+      },
+      {
+        "target": "api_via_nginx",
+        "ms": 2.15,
+        "status": 200
+      },
+      {
+        "target": "api_direct",
+        "ms": 2.04,
+        "status": 200
+      }
+    ]
+  },
+  {
+    "at": "2026-10-10T07:42:57.293024+00:00",
+    "io_pressure": "some avg10=78.27 avg60=77.51 avg300=75.00 total=1002687452",
+    "probes": [
+      {
+        "target": "nginx_health",
+        "ms": 0.82,
+        "status": 200
+      },
+      {
+        "target": "api_via_nginx",
+        "ms": 2001.16,
+        "status": "TimeoutError"
+      },
+      {
+        "target": "api_direct",
+        "ms": 2.62,
+        "status": 200
+      }
+    ]
+  },
+  {
+    "at": "2026-10-10T07:42:59.294629+00:00",
+    "io_pressure": "some avg10=81.30 avg60=78.08 avg300=75.13 total=1004658488",
+    "probes": [
+      {
+        "target": "nginx_health",
+        "ms": 0.49,
+        "status": 200
+      },
+      {
+        "target": "api_via_nginx",
+        "ms": 2.08,
+        "status": 200
+      },
+      {
+        "target": "api_direct",
+        "ms": 2.18,
+        "status": 200
+      }
+    ]
+  },
+  {
+    "at": "2026-10-10T07:43:00.294703+00:00",
+    "io_pressure": "some avg10=84.32 avg60=78.74 avg300=75.29 total=1005648261",
+    "probes": [
+      {
+        "target": "nginx_health",
+        "ms": 0.71,
+        "status": 200
+      },
+      {
+        "target": "api_via_nginx",
+        "ms": 1.96,
+        "status": 200
+      },
+      {
+        "target": "api_direct",
+        "ms": 2.13,
+        "status": 200
+      }
+    ]
+  },
+  {
+    "at": "2026-10-10T07:43:01.294836+00:00",
+    "io_pressure": "some avg10=84.32 avg60=78.74 avg300=75.29 total=1006620547",
+    "probes": [
+      {
+        "target": "nginx_health",
+        "ms": 0.84,
+        "status": 200
+      },
+      {
+        "target": "api_via_nginx",
+        "ms": 1.93,
+        "status": 200
+      },
+      {
+        "target": "api_direct",
+        "ms": 2.01,
+        "status": 200
+      }
+    ]
+  },
+  {
+    "at": "2026-10-10T07:43:02.294976+00:00",
+    "io_pressure": "some avg10=86.80 avg60=79.37 avg300=75.45 total=1007599875",
+    "probes": [
+      {
+        "target": "nginx_health",
+        "ms": 0.45,
+        "status": 200
+      },
+      {
+        "target": "api_via_nginx",
+        "ms": 2.55,
+        "status": 200
+      },
+      {
+        "target": "api_direct",
+        "ms": 2.47,
+        "status": 200
+      }
+    ]
+  },
+  {
+    "at": "2026-10-10T07:43:03.295106+00:00",
+    "io_pressure": "some avg10=86.80 avg60=79.37 avg300=75.45 total=1008564896",
+    "probes": [
+      {
+        "target": "nginx_health",
+        "ms": 0.83,
+        "status": 200
+      },
+      {
+        "target": "api_via_nginx",
+        "ms": 2.09,
+        "status": 200
+      },
+      {
+        "target": "api_direct",
+        "ms": 1.91,
+        "status": 200
+      }
+    ]
+  },
+  {
+    "at": "2026-10-10T07:43:04.295176+00:00",
+    "io_pressure": "some avg10=88.65 avg60=79.94 avg300=75.59 total=1009537191",
+    "probes": [
+      {
+        "target": "nginx_health",
+        "ms": 0.61,
+        "status": 200
+      },
+      {
+        "target": "api_via_nginx",
+        "ms": 2.11,
+        "status": 200
+      },
+      {
+        "target": "api_direct",
+        "ms": 2.24,
+        "status": 200
+      }
+    ]
+  },
+  {
+    "at": "2026-10-10T07:43:05.295313+00:00",
+    "io_pressure": "some avg10=88.65 avg60=79.94 avg300=75.59 total=1010498668",
+    "probes": [
+      {
+        "target": "nginx_health",
+        "ms": 0.77,
+        "status": 200
+      },
+      {
+        "target": "api_via_nginx",
+        "ms": 2.33,
+        "status": 200
+      },
+      {
+        "target": "api_direct",
+        "ms": 2.23,
+        "status": 200
+      }
+    ]
+  },
+  {
+    "at": "2026-10-10T07:43:06.295464+00:00",
+    "io_pressure": "some avg10=89.98 avg60=80.47 avg300=75.73 total=1011477389",
+    "probes": [
+      {
+        "target": "nginx_health",
+        "ms": 0.66,
+        "status": 200
+      },
+      {
+        "target": "api_via_nginx",
+        "ms": 2.65,
+        "status": 200
+      },
+      {
+        "target": "api_direct",
+        "ms": 2.54,
+        "status": 200
+      }
+    ]
+  }
+]

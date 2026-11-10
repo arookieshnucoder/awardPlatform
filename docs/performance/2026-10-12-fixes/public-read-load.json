@@ -1,0 +1,50 @@
+{
+  "at": "2026-10-12T05:44:33.168200+00:00",
+  "scope": "public awards list GET only; 10 seconds per stage, one request per client per second; not authenticated online-user capacity",
+  "initialDeployment": {
+    "/hackhub-app": {
+      "id": "8cc4d8724c0e4d0a3b6d1458b38fdc4692b64b551aa50be4004ff12d8a0b7020",
+      "image": "sha256:ce0aef7513be1f3993431ad9530c5d92bd4c30feef6e9f84340d73ac76bbc207",
+      "started": "2026-10-12T05:38:12.408909299Z"
+    },
+    "/hackhub-api": {
+      "id": "fe36e82a1e3cfd7b5179a8a575e510957473b7d39407cdfd75ab0ddd06851791",
+      "image": "sha256:a8ffe9875f6f01c49f92d048330a5c34efbee86f0fa74a49dd3370e75c560b61",
+      "started": "2026-10-12T05:37:26.136770328Z"
+    }
+  },
+  "finalDeployment": {
+    "/hackhub-app": {
+      "id": "8cc4d8724c0e4d0a3b6d1458b38fdc4692b64b551aa50be4004ff12d8a0b7020",
+      "image": "sha256:ce0aef7513be1f3993431ad9530c5d92bd4c30feef6e9f84340d73ac76bbc207",
+      "started": "2026-10-12T05:38:12.408909299Z"
+    },
+    "/hackhub-api": {
+      "id": "fe36e82a1e3cfd7b5179a8a575e510957473b7d39407cdfd75ab0ddd06851791",
+      "image": "sha256:a8ffe9875f6f01c49f92d048330a5c34efbee86f0fa74a49dd3370e75c560b61",
+      "started": "2026-10-12T05:37:26.136770328Z"
+    }
+  },
+  "stages": [
+    {
+      "clients": 5,
+      "maxRequestsPerSecond": 5,
+      "requests": 50,
+      "errors": 0,
+      "p50ms": 4.38,
+      "p95ms": 5.29,
+      "maxMs": 6.2,
+      "deploymentChanged": false
+    },
+    {
+      "clients": 10,
+      "maxRequestsPerSecond": 10,
+      "requests": 100,
+      "errors": 0,
+      "p50ms": 4.35,
+      "p95ms": 1538.53,
+      "maxMs": 1540.04,
+      "deploymentChanged": false
+    }
+  ]
+}

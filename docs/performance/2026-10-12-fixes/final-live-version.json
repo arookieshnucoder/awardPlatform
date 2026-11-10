@@ -1,0 +1,27 @@
+{
+  "/hackhub-app": {
+    "id": "23c2a7c8ce68f5f6ada38cb3979b532836ad63288f505460ab75929ee5b5ef7b",
+    "image": "sha256:9ba9e2bba8fe5186bdb27993c357716cccda1616dde1954c7618192e19a63ec7",
+    "started": "2026-10-12T05:48:24.526063539Z",
+    "health": "healthy"
+  },
+  "/hackhub-api": {
+    "id": "9dce665345711622713666c59734575eafe52bcd7afc641d33b7b5fbe6ab8a83",
+    "image": "sha256:fb4fa13bea78c86d5d7122aec7d6935d1687475eb40bf357b7a2585de049f4aa",
+    "started": "2026-10-12T05:48:18.887256786Z",
+    "health": "healthy"
+  },
+  "fontFix": {
+    "css": "/assets/index-DdlxIjop.css",
+    "includesPunctuation": true,
+    "newVersion": true,
+    "regular": {
+      "bytes": 21604,
+      "matchesSource": true
+    },
+    "bold": {
+      "bytes": 22036,
+      "matchesSource": true
+    }
+  }
+}
