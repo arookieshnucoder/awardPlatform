@@ -1,10 +1,11 @@
-import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type CSSProperties, type MouseEvent, type ReactNode } from 'react'
 import {
   IconArrowUpRight,
   IconMenu2,
   IconX,
 } from '@tabler/icons-react'
 import { Avatar, Group, Menu, Text, UnstyledButton } from '@mantine/core'
+import { notifications } from '@mantine/notifications'
 import { useAuthStore } from '../store/authStore'
 import { useLanguage } from '../contexts/LanguageContext'
 import { useAwardAccess } from '../hooks/useAwardAccess'
@@ -13,7 +14,7 @@ import { useNominationType } from '../hooks/useNominationType'
 import { Link, useLocation } from 'react-router-dom'
 import { AwardBrand } from '../components/Layout/AwardBrand'
 import { useTechBackground } from '../hooks/useTechBackground'
-import { nextVotingWindowChange, votingWindowStatus } from '../config/votingWindow'
+import { nextVotingWindowChange, votingEntryNotice, votingWindowStatus } from '../config/votingWindow'
 import './LandingPage.css'
 
 const landingVideoSrc = '/media/tech-blue-loop.mp4'
@@ -39,6 +40,13 @@ export function LandingPage({ children }: { children?: ReactNode }) {
       { label: t('sidebar.projectOverview'), to: '/projects', active: pathname === '/projects' },
     ] : []),
   ]
+
+  const checkVotingEntry = (event: MouseEvent<HTMLAnchorElement>) => {
+    const message = votingEntryNotice(user?.role, nominationEligibility)
+    if (!message) return
+    event.preventDefault()
+    notifications.show({ message, color: 'orange', autoClose: 4000, className: 'dp-status-toast' })
+  }
 
   useEffect(() => {
     if (user?.role === 'admin') return
@@ -99,6 +107,7 @@ export function LandingPage({ children }: { children?: ReactNode }) {
             <Link
               className={item.active ? 'award-landing__nav-link is-active' : 'award-landing__nav-link'}
               to={item.to}
+              onClick={item.to === '/projects' ? checkVotingEntry : undefined}
               aria-current={item.active ? 'page' : undefined}
               key={item.label}
             >
@@ -152,7 +161,10 @@ export function LandingPage({ children }: { children?: ReactNode }) {
           />
           <nav className="award-landing__mobile-menu" id="award-mobile-menu" aria-label="Mobile navigation">
             {entryPoints.map((item) => (
-              <Link to={item.to} key={item.label} onClick={() => setMenuOpen(false)}>
+              <Link to={item.to} key={item.label} onClick={(event) => {
+                if (item.to === '/projects') checkVotingEntry(event)
+                setMenuOpen(false)
+              }}>
                 {item.label}
                 <IconArrowUpRight aria-hidden="true" size={17} />
               </Link>

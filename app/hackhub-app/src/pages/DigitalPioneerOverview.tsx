@@ -9,7 +9,8 @@ import { useLanguage } from '../contexts/LanguageContext'
 import { DIGITAL_PIONEER_TIMELINE, getDigitalPioneerTracks } from '../config/digitalPioneer'
 import { useNominationType } from '../hooks/useNominationType'
 import { useAuthStore } from '../store/authStore'
-import { votingWindowStatus } from '../config/votingWindow'
+import { votingEntryNotice } from '../config/votingWindow'
+import { useNominationEligibility } from '../hooks/useNominationEligibility'
 import './DigitalPioneer.css'
 
 const copy = {
@@ -32,17 +33,17 @@ export function DigitalPioneerOverview(): ReactElement {
   const text = copy[language]
   const [nominationType, setNominationType] = useNominationType()
   const { user } = useAuthStore()
+  const eligibility = useNominationEligibility()
   const navigate = useNavigate()
 
   const openVoting = () => {
-    const status = votingWindowStatus(user?.role)
-    if (status === 'open') {
+    const message = votingEntryNotice(user?.role, eligibility)
+    if (!message) {
       navigate('/projects')
       return
     }
     notifications.show({
-      message: status === 'early' ? 'Voting is not open yet.' : 'The voting period has ended.',
-      color: 'orange', autoClose: 4000, className: 'dp-status-toast',
+      message, color: 'orange', autoClose: 4000, className: 'dp-status-toast',
     })
   }
 

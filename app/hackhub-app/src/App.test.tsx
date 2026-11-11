@@ -5,9 +5,10 @@ import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, expect, it, vi } from 'vitest'
 import App from './App'
 
-const { auth, moduleLoaded } = vi.hoisted(() => ({
+const { auth, moduleLoaded, eligibility } = vi.hoisted(() => ({
   auth: { user: null as { id: string; role: string } | null, initialized: false, loading: true, initialize: vi.fn() },
   moduleLoaded: vi.fn(),
+  eligibility: { data: undefined as { canStartNomination: boolean } | undefined, isPending: true },
 }))
 vi.mock('./store/authStore', () => ({ useAuthStore: () => auth }))
 vi.mock('./pages/AwardManagement', () => {
@@ -19,6 +20,8 @@ vi.mock('./pages/LandingPage', () => ({ LandingPage: ({ children }: { children: 
 vi.mock('./pages/DigitalPioneerOverview', () => ({ DigitalPioneerOverview: () => <div>CN Award overview</div> }))
 vi.mock('./contexts/RealtimeContext', () => ({ RealtimeProvider: ({ children }: { children: ReactNode }) => children }))
 vi.mock('./hooks/useAwardAccess', () => ({ useAwardAccess: () => ({ canReview: true, loading: false }) }))
+vi.mock('./hooks/useNominationEligibility', () => ({ useNominationEligibility: () => eligibility }))
+vi.mock('./pages/ProjectShowcase', () => ({ ProjectShowcase: () => <div>Candidate list</div> }))
 
 it('downloads the award page during session restoration without displaying it before authentication', async () => {
   const view = () => <MantineProvider env="test"><MemoryRouter initialEntries={['/awards']}><App /></MemoryRouter></MantineProvider>
@@ -39,6 +42,35 @@ beforeEach(() => {
   auth.initialized = false
   auth.loading = true
   auth.initialize.mockClear()
+  eligibility.data = undefined
+  eligibility.isPending = true
+})
+
+it.each(['/projects', '/projects/?view=voting-records'])('protects direct access to %s until the voting roster is confirmed', async (path) => {
+  auth.user = { id: 'employee-1', role: 'participant' }
+  auth.initialized = true
+  auth.loading = false
+  const view = () => <MantineProvider env="test"><MemoryRouter initialEntries={[path]}><App /></MemoryRouter></MantineProvider>
+  const rendered = render(view())
+  expect(screen.queryByText('Candidate list')).not.toBeInTheDocument()
+
+  eligibility.data = { canStartNomination: false }
+  eligibility.isPending = false
+  rendered.rerender(view())
+  expect(screen.getByRole('alert')).toHaveTextContent('You do not have permission to view Browse & Vote.')
+  expect(screen.queryByText('Candidate list')).not.toBeInTheDocument()
+
+  eligibility.data = { canStartNomination: true }
+  rendered.rerender(view())
+  expect(await screen.findByText('Candidate list')).toBeInTheDocument()
+})
+
+it('lets an administrator open Browse & Vote independently of the roster check', async () => {
+  auth.user = { id: 'admin-1', role: 'admin' }
+  auth.initialized = true
+  auth.loading = false
+  render(<MantineProvider env="test"><MemoryRouter initialEntries={['/projects']}><App /></MemoryRouter></MantineProvider>)
+  expect(await screen.findByText('Candidate list')).toBeInTheDocument()
 })
 
 it.each(['/', '/login'])('restores a recent visit to %s without displaying the sign-in page', async (path) => {

@@ -6,20 +6,26 @@ import { notifications } from '@mantine/notifications'
 import { LanguageProvider } from '../contexts/LanguageContext'
 import { DigitalPioneerOverview } from './DigitalPioneerOverview'
 
-const auth = vi.hoisted(() => ({ role: 'participant' }))
+const auth = vi.hoisted(() => ({ role: 'participant', onVotingRoster: true }))
 vi.mock('../store/authStore', () => ({ useAuthStore: () => ({ user: { role: auth.role } }) }))
+vi.mock('../hooks/useNominationEligibility', () => ({
+  useNominationEligibility: () => ({ data: { canStartNomination: auth.onVotingRoster } }),
+}))
 
-beforeEach(() => { sessionStorage.clear(); auth.role = 'participant' })
+beforeEach(() => { sessionStorage.clear(); auth.role = 'participant'; auth.onVotingRoster = true })
 afterEach(() => vi.restoreAllMocks())
 
 describe('DigitalPioneerOverview', () => {
   it.each([
-    ['participant', '2026-12-13T23:59:59+08:00', 'Voting is not open yet.'],
-    ['participant', '2026-12-26T00:00:00+08:00', 'The voting period has ended.'],
-    ['participant', '2026-12-25T23:59:59+08:00', null],
-    ['admin', '2026-11-11T00:00:00+08:00', null],
-  ])('checks the voting window before navigating for %s at %s', (role, time, message) => {
+    ['participant', true, '2026-11-29T23:59:59+08:00', 'Voting is not open yet.'],
+    ['participant', true, '2026-12-12T00:00:00+08:00', 'The voting period has ended.'],
+    ['participant', true, '2026-12-14T00:00:00+08:00', 'The voting period has ended.'],
+    ['participant', true, '2026-12-11T23:59:59+08:00', null],
+    ['participant', false, '2026-12-11T23:59:59+08:00', 'You do not have permission to view Browse & Vote.'],
+    ['admin', false, '2026-11-11T00:00:00+08:00', null],
+  ])('checks the voting roster and window for %s with membership %s at %s', (role, onVotingRoster, time, message) => {
     auth.role = role
+    auth.onVotingRoster = onVotingRoster
     vi.spyOn(Date, 'now').mockReturnValue(Date.parse(time))
     const notify = vi.spyOn(notifications, 'show').mockReturnValue('voting-window-test')
     render(<MemoryRouter><MantineProvider env="test"><LanguageProvider><Routes>

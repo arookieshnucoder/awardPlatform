@@ -1,32 +1,46 @@
 import { afterEach, describe, expect, it, vi, beforeEach } from 'vitest'
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MantineProvider } from '@mantine/core'
-import { MemoryRouter } from 'react-router-dom'
+import { MemoryRouter, useLocation } from 'react-router-dom'
+import { notifications } from '@mantine/notifications'
 import { LandingPage } from './LandingPage'
 
-const state = vi.hoisted(() => ({ user: null as null | { id: string; name: string; email?: string; role: string }, judge: false }))
+const state = vi.hoisted(() => ({ user: null as null | { id: string; name: string; email?: string; role: string }, judge: false, onVotingRoster: true }))
 vi.mock('../store/authStore', () => ({ useAuthStore: () => ({ user: state.user, logout: vi.fn() }) }))
 vi.mock('../hooks/useAwardAccess', () => ({ useAwardAccess: () => ({ canReview: state.user?.role === 'admin' || state.judge, canManage: state.user?.role === 'admin' }) }))
 vi.mock('../hooks/useTechBackground', () => ({ useTechBackground: vi.fn() }))
-vi.mock('../hooks/useNominationEligibility', () => ({ useNominationEligibility: () => ({ data: { canSubmit: true, canReview: false } }) }))
+vi.mock('../hooks/useNominationEligibility', () => ({ useNominationEligibility: () => ({ data: { canSubmit: true, canReview: false, canStartNomination: state.onVotingRoster } }) }))
 
 const renderPage = (path = '/') => render(<MantineProvider env="test"><MemoryRouter initialEntries={[path]}><LandingPage><p>Original overview content</p></LandingPage></MemoryRouter></MantineProvider>)
 
 beforeEach(() => {
   state.user = null
   state.judge = false
-  vi.spyOn(Date, 'now').mockReturnValue(Date.parse('2026-12-14T00:00:00+08:00'))
+  state.onVotingRoster = true
+  vi.spyOn(Date, 'now').mockReturnValue(Date.parse('2026-11-30T00:00:00+08:00'))
   window.scrollTo = vi.fn()
   Element.prototype.scrollIntoView = vi.fn()
 })
 afterEach(() => vi.restoreAllMocks())
 
 describe('LandingPage', () => {
+  it.each(['Main navigation', 'Mobile navigation'])('blocks a roster outsider at the %s entry during voting', (navigation) => {
+    state.user = { id: 'outsider', name: 'Associate', role: 'participant' }
+    state.onVotingRoster = false
+    const notify = vi.spyOn(notifications, 'show').mockReturnValue('voting-access-test')
+    function CurrentPage() { return <p>Page {useLocation().pathname}</p> }
+    render(<MantineProvider env="test"><MemoryRouter><LandingPage><CurrentPage /></LandingPage></MemoryRouter></MantineProvider>)
+    if (navigation === 'Mobile navigation') fireEvent.click(screen.getByRole('button', { name: 'Open navigation menu' }))
+    fireEvent.click(within(screen.getByRole('navigation', { name: navigation })).getByRole('link', { name: 'Browse & Vote' }))
+    expect(notify).toHaveBeenCalledWith(expect.objectContaining({ message: 'You do not have permission to view Browse & Vote.' }))
+    expect(screen.getByText('Page /')).toBeInTheDocument()
+  })
+
   it.each([
-    ['participant', '2026-12-13T15:59:59.999Z', false],
-    ['participant', '2026-12-13T16:00:00Z', true],
-    ['manager', '2026-12-25T15:59:59.999Z', true],
-    ['manager', '2026-12-25T16:00:00Z', false],
+    ['participant', '2026-11-29T15:59:59.999Z', false],
+    ['participant', '2026-11-29T16:00:00Z', true],
+    ['manager', '2026-12-11T15:59:59.999Z', true],
+    ['manager', '2026-12-11T16:00:00Z', false],
     ['admin', '2026-11-11T00:00:00Z', true],
     ['admin', '2026-12-26T00:00:00Z', true],
   ])('shows desktop and mobile voting links for %s at %s only when allowed', (role, time, visible) => {

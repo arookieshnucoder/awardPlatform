@@ -1,5 +1,5 @@
 import { Routes, Route, Navigate, useLocation, useParams } from 'react-router-dom'
-import { LoadingOverlay } from '@mantine/core'
+import { Alert, Container, LoadingOverlay } from '@mantine/core'
 import { lazy, Suspense, useEffect, useState, type ComponentType, type ReactNode } from 'react'
 import { useAuthStore } from './store/authStore'
 import { RealtimeProvider } from './contexts/RealtimeContext'
@@ -8,6 +8,8 @@ import { LandingPage } from './pages/LandingPage'
 import { useAwardAccess } from './hooks/useAwardAccess'
 import { loginDestination } from './lib/loginDestination'
 import { HackathonAccess } from './components/HackathonAccess'
+import { useNominationEligibility } from './hooks/useNominationEligibility'
+import { votingAccessNotice } from './config/votingWindow'
 
 let preloadedAwardManagement: ComponentType | undefined
 const loadAwardManagement = () => import('./pages/AwardManagement').then((module) => {
@@ -42,6 +44,19 @@ function ReviewModuleAccess({ children }: { children: ReactNode }) {
   const { canReview, loading } = useAwardAccess()
   if (loading) return <LoadingOverlay visible />
   return canReview ? children : <Navigate to="/projects" replace />
+}
+
+function BrowseVotingAccess({ children }: { children: ReactNode }) {
+  const { user } = useAuthStore()
+  const eligibility = useNominationEligibility()
+  if (user?.role !== 'admin' && eligibility.isPending) return <LoadingOverlay visible />
+
+  const message = votingAccessNotice(user?.role, eligibility)
+  if (!message) return children
+
+  return <Container className="dp-page" py="xl">
+    <Alert color="orange" role="alert" styles={{ message: { color: 'white' } }}>{message}</Alert>
+  </Container>
 }
 
 function App() {
@@ -87,7 +102,7 @@ function App() {
     return <RealtimeProvider><LandingPage>
       <Suspense fallback={<LoadingOverlay visible />}>
         {location.pathname === '/nominate' ? <ProjectShowcase nominationMode />
-          : location.pathname === '/projects' ? <ProjectShowcase />
+          : location.pathname === '/projects' ? <BrowseVotingAccess><ProjectShowcase /></BrowseVotingAccess>
           : <DigitalPioneerOverview />}
       </Suspense>
     </LandingPage></RealtimeProvider>
@@ -114,7 +129,7 @@ function App() {
             <Route path="/teams/:id" element={<Navigate to="/projects" replace />} />
             <Route path="/ideas" element={<Navigate to="/projects" replace />} />
             <Route path="/hackathons/:id/ideas" element={<Navigate to="/projects" replace />} />
-            <Route path="/projects" element={<ProjectShowcase />} />
+            <Route path="/projects" element={<BrowseVotingAccess><ProjectShowcase /></BrowseVotingAccess>} />
             <Route path="/nominate" element={<ProjectShowcase nominationMode />} />
             <Route path="/my-nominations" element={<NominationApprovals />} />
             <Route path="/nomination-approvals" element={<NominationApprovals reviewMode />} />
