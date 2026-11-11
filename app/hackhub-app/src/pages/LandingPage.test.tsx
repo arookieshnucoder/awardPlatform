@@ -32,26 +32,36 @@ describe('LandingPage', () => {
     render(<MantineProvider env="test"><MemoryRouter><LandingPage><CurrentPage /></LandingPage></MemoryRouter></MantineProvider>)
     if (navigation === 'Mobile navigation') fireEvent.click(screen.getByRole('button', { name: 'Open navigation menu' }))
     fireEvent.click(within(screen.getByRole('navigation', { name: navigation })).getByRole('link', { name: 'Browse & Vote' }))
-    expect(notify).toHaveBeenCalledWith(expect.objectContaining({ message: 'You do not have permission to view Browse & Vote.' }))
+    expect(notify).toHaveBeenCalledWith(expect.objectContaining({ message: 'The “Browse & Vote” section is coming soon' }))
     expect(screen.getByText('Page /')).toBeInTheDocument()
   })
 
   it.each([
-    ['participant', '2026-11-29T15:59:59.999Z', false],
-    ['participant', '2026-11-29T16:00:00Z', true],
-    ['manager', '2026-12-11T15:59:59.999Z', true],
-    ['manager', '2026-12-11T16:00:00Z', false],
-    ['admin', '2026-11-11T00:00:00Z', true],
-    ['admin', '2026-12-26T00:00:00Z', true],
-  ])('shows desktop and mobile voting links for %s at %s only when allowed', (role, time, visible) => {
+    ['participant', '2026-11-29T15:59:59.999Z', 'The “Browse & Vote” section is coming soon'],
+    ['participant', '2026-11-29T16:00:00Z', null],
+    ['manager', '2026-12-11T15:59:59.999Z', null],
+    ['manager', '2026-12-11T16:00:00Z', 'The voting period has ended.'],
+    ['admin', '2026-11-11T00:00:00Z', null],
+    ['admin', '2026-12-26T00:00:00Z', null],
+  ])('shows the voting link for %s at %s and checks access on click', (role, time, message) => {
     state.user = { id: 'u1', name: 'Associate', role }
     vi.mocked(Date.now).mockReturnValue(Date.parse(time))
-    renderPage()
+    const notify = vi.spyOn(notifications, 'show').mockReturnValue('voting-window-test')
+    function CurrentPage() { return <p>Page {useLocation().pathname}</p> }
+    render(<MantineProvider env="test"><MemoryRouter><LandingPage><CurrentPage /></LandingPage></MemoryRouter></MantineProvider>)
     fireEvent.click(screen.getByRole('button', { name: 'Open navigation menu' }))
     for (const navigation of ['Main navigation', 'Mobile navigation']) {
       const menu = within(screen.getByRole('navigation', { name: navigation }))
-      expect(Boolean(menu.queryByRole('link', { name: 'Browse & Vote' }))).toBe(visible)
+      expect(menu.getByRole('link', { name: 'Browse & Vote' })).toBeInTheDocument()
       expect(menu.getByRole('link', { name: 'Nomination' })).toBeInTheDocument()
+    }
+    fireEvent.click(within(screen.getByRole('navigation', { name: 'Main navigation' })).getByRole('link', { name: 'Browse & Vote' }))
+    if (message) {
+      expect(notify).toHaveBeenCalledWith(expect.objectContaining({ message }))
+      expect(screen.getByText('Page /')).toBeInTheDocument()
+    } else {
+      expect(notify).not.toHaveBeenCalled()
+      expect(screen.getByText('Page /projects')).toBeInTheDocument()
     }
   })
 

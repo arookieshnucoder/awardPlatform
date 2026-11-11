@@ -17,11 +17,11 @@ afterEach(() => vi.restoreAllMocks())
 
 describe('DigitalPioneerOverview', () => {
   it.each([
-    ['participant', true, '2026-11-29T23:59:59+08:00', 'Voting is not open yet.'],
+    ['participant', true, '2026-11-29T23:59:59+08:00', 'The “Browse & Vote” section is coming soon'],
     ['participant', true, '2026-12-12T00:00:00+08:00', 'The voting period has ended.'],
     ['participant', true, '2026-12-14T00:00:00+08:00', 'The voting period has ended.'],
     ['participant', true, '2026-12-11T23:59:59+08:00', null],
-    ['participant', false, '2026-12-11T23:59:59+08:00', 'You do not have permission to view Browse & Vote.'],
+    ['participant', false, '2026-12-11T23:59:59+08:00', 'The “Browse & Vote” section is coming soon'],
     ['admin', false, '2026-11-11T00:00:00+08:00', null],
   ])('checks the voting roster and window for %s with membership %s at %s', (role, onVotingRoster, time, message) => {
     auth.role = role

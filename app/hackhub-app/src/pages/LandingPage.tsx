@@ -14,7 +14,7 @@ import { useNominationType } from '../hooks/useNominationType'
 import { Link, useLocation } from 'react-router-dom'
 import { AwardBrand } from '../components/Layout/AwardBrand'
 import { useTechBackground } from '../hooks/useTechBackground'
-import { nextVotingWindowChange, votingEntryNotice, votingWindowStatus } from '../config/votingWindow'
+import { votingEntryNotice } from '../config/votingWindow'
 import './LandingPage.css'
 
 const landingVideoSrc = '/media/tech-blue-loop.mp4'
@@ -30,15 +30,12 @@ export function LandingPage({ children }: { children?: ReactNode }) {
   const showHero = pathname === '/' || pathname === '/overview'
   const [menuOpen, setMenuOpen] = useState(false)
   const [videoReady, setVideoReady] = useState(false)
-  const [now, setNow] = useState(Date.now)
   const backdropRef = useRef<HTMLDivElement>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
   const entryPoints = [
     { label: t('sidebar.overview'), to: '/#overview', active: showHero },
     { label: t('sidebar.nomination'), to: `/nominate?type=${nominationType}`, active: pathname === '/nominate' },
-    ...(votingWindowStatus(user?.role) === 'open' ? [
-      { label: t('sidebar.projectOverview'), to: '/projects', active: pathname === '/projects' },
-    ] : []),
+    { label: t('sidebar.projectOverview'), to: '/projects', active: pathname === '/projects' },
   ]
 
   const checkVotingEntry = (event: MouseEvent<HTMLAnchorElement>) => {
@@ -47,15 +44,6 @@ export function LandingPage({ children }: { children?: ReactNode }) {
     event.preventDefault()
     notifications.show({ message, color: 'orange', autoClose: 4000, className: 'dp-status-toast' })
   }
-
-  useEffect(() => {
-    if (user?.role === 'admin') return
-    const currentTime = Date.now()
-    const nextChange = nextVotingWindowChange(currentTime)
-    if (nextChange === undefined) return
-    const timer = window.setTimeout(() => setNow(Date.now()), Math.min(nextChange - currentTime, 2_147_483_647))
-    return () => window.clearTimeout(timer)
-  }, [now, user?.role])
 
   useEffect(() => {
     if (hash === '#overview' || pathname === '/overview') {

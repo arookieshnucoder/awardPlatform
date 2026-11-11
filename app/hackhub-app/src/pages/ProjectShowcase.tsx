@@ -76,7 +76,7 @@ import { AwardCriteriaList } from '../components/AwardCriteriaList'
 import './DigitalPioneer.css'
 
 const BD_VOTING_MESSAGE = 'Only folks from the BD department can vote.'
-const BD_NOMINATION_MESSAGE = 'Only folks from the BD department can submit nominations.'
+const BD_NOMINATION_MESSAGE = 'Only associates from the BD China can submit'
 
 function nomineeNameFromEmail(email?: string): string | undefined {
   const localPart = email?.split('@', 2)[0].replace(/^fixed-term\./i, '')

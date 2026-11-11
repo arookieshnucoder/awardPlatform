@@ -57,7 +57,7 @@ it.each(['/projects', '/projects/?view=voting-records'])('protects direct access
   eligibility.data = { canStartNomination: false }
   eligibility.isPending = false
   rendered.rerender(view())
-  expect(screen.getByRole('alert')).toHaveTextContent('You do not have permission to view Browse & Vote.')
+  expect(screen.getByRole('alert')).toHaveTextContent('The “Browse & Vote” section is coming soon')
   expect(screen.queryByText('Candidate list')).not.toBeInTheDocument()
 
   eligibility.data = { canStartNomination: true }

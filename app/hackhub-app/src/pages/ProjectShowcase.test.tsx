@@ -155,7 +155,7 @@ describe('ProjectShowcase', () => {
       fireEvent.click(track)
       expect(track).toHaveAttribute('aria-checked', 'false')
     })
-    await waitFor(() => expect(screen.getAllByText('Only folks from the BD department can submit nominations.').length).toBeGreaterThan(0))
+    await waitFor(() => expect(screen.getAllByText('Only associates from the BD China can submit').length).toBeGreaterThan(0))
     expect(document.getElementById('nomination-track-description')).toBeNull()
     expect(document.getElementById('nomination-form')).toBeNull()
     expect(screen.queryByRole('button', { name: 'Save Draft' })).not.toBeInTheDocument()
