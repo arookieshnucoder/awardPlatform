@@ -14,8 +14,8 @@ import { StorageService } from '../services/storageService'
 import { TeamService } from '../services/teamService'
 
 const { loadDraft, saveDraft, removeDraft } = vi.hoisted(() => ({ loadDraft: vi.fn(), saveDraft: vi.fn(), removeDraft: vi.fn() }))
-vi.mock('../services/nominationDraftStore', () => ({
-  nominationDraftKey: ({ userId, hackathonId, nominationType, editId }: { userId: string; hackathonId: string; nominationType: string; editId?: string | null }) => JSON.stringify([userId, hackathonId, nominationType, editId ?? 'new']),
+vi.mock('../services/nominationDraftStore', async (importOriginal) => ({
+  ...await importOriginal<typeof import('../services/nominationDraftStore')>(),
   NominationDraftStore: { load: loadDraft, save: saveDraft, remove: removeDraft },
 }))
 
@@ -73,7 +73,8 @@ vi.stubGlobal('ResizeObserver', class {
 })
 
 vi.mock('../store/authStore', () => ({ useAuthStore: () => ({ user: currentUser }) }))
-vi.mock('../hooks/useNominationEligibility', () => ({ useNominationEligibility: () => ({ data: { canSubmit: true, canReview: false, nominatingHead: 'Assigned HoD' } }) }))
+const nominationEligibility = vi.hoisted(() => ({ canStartNomination: true, canSubmit: true, canReview: false, nominatingHead: 'Assigned HoD' }))
+vi.mock('../hooks/useNominationEligibility', () => ({ useNominationEligibility: () => ({ data: nominationEligibility }) }))
 vi.mock('../contexts/LanguageContext', () => ({ useLanguage: () => ({ language: 'en' }) }))
 vi.mock('../lib/apiClient', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../lib/apiClient')>()
@@ -131,14 +132,54 @@ vi.mock('../services/judgingService', () => ({
   JudgingService: { getJudges: vi.fn().mockResolvedValue([]) },
 }))
 
+vi.mock('../services/teamMemberService', () => ({ TeamMemberService: { search: vi.fn().mockResolvedValue([]) } }))
+
 describe('ProjectShowcase', () => {
   beforeEach(() => {
     localStorage.clear(); sessionStorage.clear(); vi.clearAllMocks()
+    nominationEligibility.canStartNomination = true
+    nominationEligibility.canSubmit = true
     loadDraft.mockResolvedValue(null)
     saveDraft.mockImplementation(async (_key: string, data: unknown) => ({ version: 1, savedAt: '2026-11-09T00:00:00Z', data }))
     removeDraft.mockResolvedValue(undefined)
   })
   afterEach(() => { currentUser.role = 'participant'; act(() => notifications.clean()) })
+
+  it.each(['individual', 'team'])('blocks all %s tracks before revealing details for an account outside the voting roster', async (type) => {
+    nominationEligibility.canStartNomination = false
+    nominationEligibility.canSubmit = false
+    render(<MantineProvider env="test"><Notifications /><MemoryRouter initialEntries={[`/nominate?type=${type}`]}><ProjectShowcase nominationMode /></MemoryRouter></MantineProvider>)
+    const tracks = await screen.findAllByRole('radio')
+    expect(tracks).toHaveLength(3)
+    tracks.forEach((track) => {
+      fireEvent.click(track)
+      expect(track).toHaveAttribute('aria-checked', 'false')
+    })
+    await waitFor(() => expect(screen.getAllByText('Only folks from the BD department can submit nominations.').length).toBeGreaterThan(0))
+    expect(document.getElementById('nomination-track-description')).toBeNull()
+    expect(document.getElementById('nomination-form')).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Save Draft' })).not.toBeInTheDocument()
+    expect(loadDraft).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    ['fixed-term.Alex.WANG@cn.bosch.com', 'Alex WANG'],
+    ['xiao.ming2@cn.bosch.com', 'xiao ming'],
+  ])('shows the full nominee name in the card and both detail locations for %s', async (email, fullName) => {
+    getIdeas.mockResolvedValueOnce({ content: [{
+      id: 'full-name-nominee', title: 'Short name', description: 'Published evidence', category: 'Customer Values',
+      createdBy: 'nominator', projectAttachments: [{ type: 'nomination', name: 'Short name', nomineeUserId: 'actual-nominee' }],
+      tags: [], attachments: [], votes: 0, status: 'submitted',
+    }] })
+    vi.mocked(ProfileService.getProfile).mockResolvedValueOnce({ name: 'Short name', email } as Awaited<ReturnType<typeof ProfileService.getProfile>>)
+    render(<MantineProvider env="test"><MemoryRouter initialEntries={['/projects?type=individual']}><ProjectShowcase /></MemoryRouter></MantineProvider>)
+    expect(await screen.findByRole('heading', { name: fullName })).toBeInTheDocument()
+    expect(ProfileService.getProfile).toHaveBeenCalledWith('actual-nominee')
+    fireEvent.click(screen.getByRole('button', { name: 'View details' }))
+    const details = await screen.findByRole('dialog', { name: fullName })
+    expect(within(details).getByRole('heading', { name: 'Nominee' })).toBeInTheDocument()
+    expect(within(details).getAllByText(fullName)).toHaveLength(2)
+  })
   it('carries Team query selection into the matching criteria and team creation flow', async () => {
     render(<MantineProvider><MemoryRouter initialEntries={['/nominate?type=team']}><ProjectShowcase nominationMode /></MemoryRouter></MantineProvider>)
     expect(screen.getByRole('button', { name: 'Team', exact: true })).toHaveAttribute('aria-pressed', 'true')
@@ -316,6 +357,8 @@ describe('ProjectShowcase', () => {
     await user.click(await screen.findByRole('option', { name: 'Collaboration to Win' }))
     expect(screen.getByRole('radio', { name: /Collaboration to Win/ })).toHaveAttribute('aria-checked', 'true')
     expect(document.getElementById('nomination-track-description')).toHaveTextContent('Shared-Goal Ownership (35%)')
+    expect(screen.getByRole('textbox', { name: /Executive Summary/ })).toHaveValue('')
+    await user.click(valueTrack)
     expect(screen.getByRole('textbox', { name: /Executive Summary/ })).toHaveValue('Keep this contribution when switching categories.')
   })
 
@@ -659,7 +702,7 @@ describe('ProjectShowcase', () => {
     expect(updateIdea).toHaveBeenCalledOnce()
     expect(createIdea).not.toHaveBeenCalled()
     expect(uploadFile).not.toHaveBeenCalled()
-    expect(removeDraft).toHaveBeenCalledWith('["user-1","hackathon-1","team","rejected-team"]')
+    expect(removeDraft).toHaveBeenCalledWith('["user-1","hackathon-1","team","rejected-team","Customer Values"]')
   })
 
   it('restores a saved individual draft with files, previews before submitting and removes it only after success', async () => {
@@ -679,7 +722,8 @@ describe('ProjectShowcase', () => {
     expect(screen.getByRole('textbox', { name: /Award Category/ })).toHaveValue('Customer Values')
     expect(screen.queryByTitle('Selected PDF preview: saved-evidence.pdf')).not.toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Save Draft' }))
-    await waitFor(() => expect(saveDraft).toHaveBeenCalledWith('["user-1","hackathon-1","individual","new"]', expect.objectContaining({ form: data.form, photo, document: documentFile })))
+    await waitFor(() => expect(saveDraft).toHaveBeenCalledWith('["user-1","hackathon-1","individual","new","Customer Values"]', expect.objectContaining({ form: data.form, photo, document: documentFile })))
+    expect(screen.getByText('Draft saved successfully.')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Submit nomination' }))
     const review = await screen.findByRole('dialog', { name: 'Review Individual Nomination' })
     expect(createIdea).not.toHaveBeenCalled()
@@ -697,7 +741,7 @@ describe('ProjectShowcase', () => {
     await user.click(within(await screen.findByRole('dialog', { name: 'Review Individual Nomination' })).getByRole('button', { name: 'Confirm and Submit' }))
     await waitFor(() => expect(createIdea).toHaveBeenCalledTimes(1))
     expect(uploadFile).toHaveBeenCalledWith(documentFile, 'project-attachments', 'nominations/hackathon-1/user-1')
-    expect(removeDraft).toHaveBeenCalledWith('["user-1","hackathon-1","individual","new"]')
+    expect(removeDraft).toHaveBeenCalledWith('["user-1","hackathon-1","individual","new","Customer Values"]')
   })
 
   it('saves an incomplete form without uploading or submitting and reports storage failures', async () => {
@@ -711,6 +755,87 @@ describe('ProjectShowcase', () => {
     expect(screen.getByRole('textbox', { name: /Executive Summary/ })).toHaveValue('A partial summary')
     expect(createIdea).not.toHaveBeenCalled()
     expect(uploadFile).not.toHaveBeenCalled()
+    expect(screen.queryByText('Draft saved successfully.')).not.toBeInTheDocument()
+  })
+
+  it('discards the specific saved category from the draft reminder before a track is chosen', async () => {
+    loadDraft.mockResolvedValueOnce({
+      version: 1, savedAt: '2026-11-09T00:00:00Z',
+      data: { form: { category: 'Innovation Breakthrough' } },
+    })
+    render(<MantineProvider env="test"><MemoryRouter initialEntries={['/nominate?type=individual']}><ProjectShowcase nominationMode /></MemoryRouter></MantineProvider>)
+    await userEvent.click(await screen.findByRole('button', { name: 'Discard Draft' }))
+    expect(removeDraft).toHaveBeenCalledWith('["user-1","hackathon-1","individual","new","Innovation Breakthrough"]')
+    expect(await screen.findByText(/Saved draft removed/)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Restore Draft' })).not.toBeInTheDocument()
+  })
+
+  it('isolates individual questions and attachments by track through both category controls', async () => {
+    const toast = vi.spyOn(notifications, 'show')
+    const user = userEvent.setup()
+    const view = render(<MantineProvider env="test"><MemoryRouter initialEntries={['/nominate?type=individual']}><ProjectShowcase nominationMode /></MemoryRouter></MantineProvider>)
+    await user.click(screen.getByRole('radio', { name: /Customer Values/ }))
+    const questions = [/Executive Summary/, /Details of Your Core Achievement/, /How You Demonstrate/, /Tag/i]
+    await screen.findByRole('textbox', { name: questions[0] })
+    questions.forEach((name, index) => fireEvent.change(screen.getByRole('textbox', { name }), { target: { value: `Customer ${index}` } }))
+    const pdf = new File(['%PDF-1.7'], 'customer-only.pdf', { type: 'application/pdf' })
+    fireEvent.change(view.container.querySelectorAll('input[type="file"]')[1], { target: { files: [pdf] } })
+    // 点击当前赛道不清空内容；标题说明中也不再包含额外空行。
+    await user.click(screen.getByRole('radio', { name: /Customer Values/ }))
+    expect(screen.getByRole('textbox', { name: questions[0] })).toHaveValue('Customer 0')
+    expect(document.getElementById('nomination-track-description')!.querySelector('br + br')).toBeNull()
+    await user.click(screen.getByRole('radio', { name: /Innovation Breakthrough/ }))
+    questions.forEach((name) => expect(screen.getByRole('textbox', { name })).toHaveValue(''))
+    expect(screen.queryByText('customer-only.pdf')).not.toBeInTheDocument()
+    expect(screen.getByRole('textbox', { name: 'Outlook Name' })).toHaveValue(currentUser.email)
+    fireEvent.change(screen.getByRole('textbox', { name: questions[0] }), { target: { value: 'Innovation only' } })
+    await user.click(screen.getByRole('button', { name: 'Save Draft' }))
+    await waitFor(() => expect(saveDraft).toHaveBeenCalledWith(expect.stringContaining('Innovation Breakthrough'), expect.objectContaining({ document: null, photo: null })))
+    expect(toast).toHaveBeenCalledWith(expect.objectContaining({ message: 'Draft saved successfully.' }))
+    // 下拉框切换同样恢复对应赛道，不把另一个赛道的草稿混进来。
+    await user.click(screen.getByRole('textbox', { name: 'Award Category' }))
+    await user.click(screen.getByRole('option', { name: 'Customer Values' }))
+    questions.forEach((name, index) => expect(screen.getByRole('textbox', { name })).toHaveValue(`Customer ${index}`))
+    expect(screen.getAllByText('customer-only.pdf').length).toBeGreaterThan(0)
+    await user.click(screen.getByRole('button', { name: 'Save Draft' }))
+    await waitFor(() => expect(saveDraft).toHaveBeenLastCalledWith(expect.stringContaining('Customer Values'), expect.objectContaining({ document: pdf })))
+    await user.click(screen.getByRole('radio', { name: /Innovation Breakthrough/ }))
+    expect(screen.getByRole('textbox', { name: questions[0] })).toHaveValue('Innovation only')
+    expect(screen.queryByText('customer-only.pdf')).not.toBeInTheDocument()
+    expect(createIdea).not.toHaveBeenCalled()
+  })
+
+  it('isolates team fields, photo and attachment while changing tracks from cards and dropdown', async () => {
+    const user = userEvent.setup()
+    const view = render(<MantineProvider env="test"><MemoryRouter initialEntries={['/nominate?type=team']}><ProjectShowcase nominationMode /></MemoryRouter></MantineProvider>)
+    await user.click(screen.getByRole('radio', { name: /Customer Values/ }))
+    await screen.findByRole('textbox', { name: 'Project Name' })
+    const fields = ['Project Name', /Core Team Member/, /Achievement Summary/, /Details of Your Team/, /How You Demonstrate/]
+    fields.forEach((name, index) => fireEvent.change(screen.getByRole('textbox', { name }), { target: { value: `Customer team ${index}` } }))
+    const photo = new File(['photo'], 'customer-team.png', { type: 'image/png' })
+    const pdf = new File(['%PDF-1.7'], 'customer-team.pdf', { type: 'application/pdf' })
+    fireEvent.change(view.container.querySelectorAll('input[type="file"]')[0], { target: { files: [photo] } })
+    fireEvent.change(view.container.querySelectorAll('input[type="file"]')[1], { target: { files: [pdf] } })
+    await user.click(screen.getByRole('radio', { name: /Innovation Breakthrough/ }))
+    fields.forEach((name) => expect(screen.getByRole('textbox', { name })).toHaveValue(''))
+    expect(screen.queryByText('customer-team.png')).not.toBeInTheDocument()
+    expect(screen.queryByText('customer-team.pdf')).not.toBeInTheDocument()
+    fireEvent.change(screen.getByRole('textbox', { name: 'Project Name' }), { target: { value: 'Innovation team' } })
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Save Draft' })).toBeEnabled())
+    await user.click(screen.getByRole('button', { name: 'Save Draft' }))
+    await waitFor(() => expect(saveDraft).toHaveBeenCalledWith(expect.stringContaining('Innovation Breakthrough'), expect.objectContaining({ photo: null, document: null })))
+    expect(screen.getByText('Draft saved successfully.')).toBeInTheDocument()
+    await user.click(screen.getByRole('textbox', { name: 'Award Category' }))
+    await user.click(screen.getByRole('option', { name: 'Customer Values' }))
+    fields.forEach((name, index) => expect(screen.getByRole('textbox', { name })).toHaveValue(`Customer team ${index}`))
+    expect(screen.getByText('customer-team.png')).toBeInTheDocument()
+    expect(screen.getAllByText('customer-team.pdf').length).toBeGreaterThan(0)
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Save Draft' })).toBeEnabled())
+    await user.click(screen.getByRole('button', { name: 'Save Draft' }))
+    await waitFor(() => expect(saveDraft).toHaveBeenLastCalledWith(expect.stringContaining('Customer Values'), expect.objectContaining({ photo, document: pdf })))
+    await user.click(screen.getByRole('radio', { name: /Innovation Breakthrough/ }))
+    expect(screen.getByRole('textbox', { name: 'Project Name' })).toHaveValue('Innovation team')
+    expect(createIdea).not.toHaveBeenCalled()
   })
 
   it.each(['image/webp', 'image/png'])('submits a cropped %s photo in a draft award without creating a team', async (outputType) => {

@@ -151,7 +151,7 @@ public class VoteIdeaUseCase {
 	}
 
 	private void requireRosterMembership(Profile profile) {
-		if (profile.getRole() != Profile.Role.ADMIN && directory.resolveRosterParticipant(profile).isEmpty()) {
+		if (!directory.isAdminOrRosterParticipant(profile)) {
 			throw new ParticipantNotEligibleException(profile.getId());
 		}
 	}

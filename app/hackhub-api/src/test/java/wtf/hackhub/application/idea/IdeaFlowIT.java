@@ -40,6 +40,10 @@ class IdeaFlowIT extends PostgresIntegrationTest {
 	@BeforeEach
 	void setup() {
 		creatorId = UUID.fromString(insertProfile("creator@test.com", "Creator", "manager"));
+		jdbc.update("""
+				INSERT INTO voting_participants(personnel_number,organizational_unit,display_name,normalized_name)
+				VALUES ('idea-flow-creator', 'BD/TEST', 'Creator', 'creator') ON CONFLICT (personnel_number) DO NOTHING
+				""");
 		var cmd = new CreateHackathonUseCase.Command("Idea Hack", "desc", Instant.now(),
 				Instant.now().plusSeconds(86400), 4, 100, creatorId, null, List.of(), List.of());
 		Hackathon h = createHackathon.execute(cmd);

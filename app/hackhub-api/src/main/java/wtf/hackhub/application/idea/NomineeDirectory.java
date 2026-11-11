@@ -82,6 +82,10 @@ public class NomineeDirectory {
 		return resolveRosterParticipant(profile);
 	}
 
+	public boolean isAdminOrRosterParticipant(Profile profile) {
+		return profile.getRole() == Profile.Role.ADMIN || resolveRosterParticipant(profile).isPresent();
+	}
+
 	/**
 	 * Resolve an actual roster entry, without treating an account department as
 	 * membership.

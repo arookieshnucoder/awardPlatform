@@ -1,5 +1,5 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest'
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { afterEach, describe, expect, it, vi, beforeEach } from 'vitest'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MantineProvider } from '@mantine/core'
 import { MemoryRouter } from 'react-router-dom'
 import { LandingPage } from './LandingPage'
@@ -15,11 +15,32 @@ const renderPage = (path = '/') => render(<MantineProvider env="test"><MemoryRou
 beforeEach(() => {
   state.user = null
   state.judge = false
+  vi.spyOn(Date, 'now').mockReturnValue(Date.parse('2026-12-14T00:00:00+08:00'))
   window.scrollTo = vi.fn()
   Element.prototype.scrollIntoView = vi.fn()
 })
+afterEach(() => vi.restoreAllMocks())
 
 describe('LandingPage', () => {
+  it.each([
+    ['participant', '2026-12-13T15:59:59.999Z', false],
+    ['participant', '2026-12-13T16:00:00Z', true],
+    ['manager', '2026-12-25T15:59:59.999Z', true],
+    ['manager', '2026-12-25T16:00:00Z', false],
+    ['admin', '2026-11-11T00:00:00Z', true],
+    ['admin', '2026-12-26T00:00:00Z', true],
+  ])('shows desktop and mobile voting links for %s at %s only when allowed', (role, time, visible) => {
+    state.user = { id: 'u1', name: 'Associate', role }
+    vi.mocked(Date.now).mockReturnValue(Date.parse(time))
+    renderPage()
+    fireEvent.click(screen.getByRole('button', { name: 'Open navigation menu' }))
+    for (const navigation of ['Main navigation', 'Mobile navigation']) {
+      const menu = within(screen.getByRole('navigation', { name: navigation }))
+      expect(Boolean(menu.queryByRole('link', { name: 'Browse & Vote' }))).toBe(visible)
+      expect(menu.getByRole('link', { name: 'Nomination' })).toBeInTheDocument()
+    }
+  })
+
   it('opens all three sections without a login gate and embeds overview below the hero', () => {
     renderPage()
     expect(screen.getByRole('link', { name: 'Overview' })).toHaveAttribute('href', '/#overview')

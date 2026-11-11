@@ -1,12 +1,15 @@
 import { Button, Container, Grid, Group, Stack, Text } from '@mantine/core'
+import { notifications } from '@mantine/notifications'
 import { IconBallpen, IconEye } from '@tabler/icons-react'
 import type { ReactElement } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import digitalCubes from '../assets/bosch-digital-cubes.png'
 import { AwardCriteriaList } from '../components/AwardCriteriaList'
 import { useLanguage } from '../contexts/LanguageContext'
 import { DIGITAL_PIONEER_TIMELINE, getDigitalPioneerTracks } from '../config/digitalPioneer'
 import { useNominationType } from '../hooks/useNominationType'
+import { useAuthStore } from '../store/authStore'
+import { votingWindowStatus } from '../config/votingWindow'
 import './DigitalPioneer.css'
 
 const copy = {
@@ -28,6 +31,20 @@ export function DigitalPioneerOverview(): ReactElement {
   const { language } = useLanguage()
   const text = copy[language]
   const [nominationType, setNominationType] = useNominationType()
+  const { user } = useAuthStore()
+  const navigate = useNavigate()
+
+  const openVoting = () => {
+    const status = votingWindowStatus(user?.role)
+    if (status === 'open') {
+      navigate('/projects')
+      return
+    }
+    notifications.show({
+      message: status === 'early' ? 'Voting is not open yet.' : 'The voting period has ended.',
+      color: 'orange', autoClose: 4000, className: 'dp-status-toast',
+    })
+  }
 
   return (
     <Container size={1440} py={{ base: 'md', md: 'xl' }} className="dp-page">
@@ -101,8 +118,7 @@ export function DigitalPioneerOverview(): ReactElement {
             {text.nominate}
           </Button>
           <Button
-            component={Link}
-            to="/projects"
+            onClick={openVoting}
             variant="default"
             className="dp-secondary-button"
             size="lg"

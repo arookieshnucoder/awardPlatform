@@ -3,6 +3,7 @@ export interface NominationDraftScope {
   hackathonId: string
   nominationType: 'individual' | 'team'
   editId?: string | null
+  category?: string
 }
 
 export interface NominationDraft<T> {
@@ -11,9 +12,10 @@ export interface NominationDraft<T> {
   data: T
 }
 
-// 使用独立的用户、活动、类型及编辑记录键，防止恢复其他表单的草稿。
+// 每个用户、活动、提名类型、编辑记录和赛道分别保存，兼容旧版未分赛道的键。
 export const nominationDraftKey = (scope: NominationDraftScope) => JSON.stringify([
   scope.userId, scope.hackathonId, scope.nominationType, scope.editId ?? 'new',
+  ...(scope.category ? [scope.category] : []),
 ])
 
 const openDatabase = () => new Promise<IDBDatabase>((resolve, reject) => {
@@ -56,7 +58,47 @@ async function transact<T>(mode: IDBTransactionMode, action: (store: IDBObjectSt
 
 export const NominationDraftStore = {
   async load<T>(key: string): Promise<NominationDraft<T> | null> {
-    const record = await transact<NominationDraft<T> | undefined>('readonly', (store) => store.get(key))
+    const database = await openDatabase()
+    let record: NominationDraft<T> | undefined
+    try {
+      await new Promise<void>((resolve, reject) => {
+        const scope: string[] = JSON.parse(key)
+        const prefix = JSON.stringify(scope.slice(0, 4))
+        const transaction = database.transaction('drafts', 'readwrite')
+        const store = transaction.objectStore('drafts')
+        const consider = (draft: NominationDraft<T>, category: string | undefined) => {
+          if ((!scope[4] || category === scope[4]) && (!record || draft.savedAt >= record.savedAt)) record = draft
+        }
+        // 顺便迁移旧草稿，并在未选赛道时找到最近保存的草稿入口。
+        const cursor = store.openCursor()
+        cursor.onsuccess = () => {
+          const entry = cursor.result
+          if (!entry) return
+          const storedScope: string[] = JSON.parse(String(entry.key))
+          if (JSON.stringify(storedScope.slice(0, 4)) === prefix) {
+            const draft = entry.value as NominationDraft<T>
+            const data = draft.data as { category?: string; form?: { category?: string } } | undefined
+            const category = storedScope[4] ?? data?.category ?? data?.form?.category
+            if (storedScope.length === 4 && category) {
+              const migratedKey = JSON.stringify([...storedScope, category])
+              // 已有独立草稿优先，避免旧版本覆盖新内容。
+              const existing = store.get(migratedKey)
+              existing.onsuccess = () => {
+                if (!existing.result) {
+                  store.put(draft, migratedKey)
+                  consider(draft, category)
+                }
+              }
+              entry.delete()
+            } else consider(draft, category)
+          }
+          entry.continue()
+        }
+        transaction.oncomplete = () => resolve()
+        transaction.onerror = () => reject(new Error('Unable to read draft storage.'))
+        transaction.onabort = () => reject(new Error('Draft storage was interrupted. Please retry.'))
+      })
+    } finally { database.close() }
     if (!record) return null
     if (record.version !== 1 || typeof record.savedAt !== 'string' || !record.data) {
       throw new Error('This draft cannot be restored. Please save a new draft.')

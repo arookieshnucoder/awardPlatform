@@ -1,13 +1,41 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen, within } from '@testing-library/react'
 import { MantineProvider } from '@mantine/core'
-import { MemoryRouter } from 'react-router-dom'
+import { MemoryRouter, Route, Routes } from 'react-router-dom'
+import { notifications } from '@mantine/notifications'
 import { LanguageProvider } from '../contexts/LanguageContext'
 import { DigitalPioneerOverview } from './DigitalPioneerOverview'
 
-beforeEach(() => sessionStorage.clear())
+const auth = vi.hoisted(() => ({ role: 'participant' }))
+vi.mock('../store/authStore', () => ({ useAuthStore: () => ({ user: { role: auth.role } }) }))
+
+beforeEach(() => { sessionStorage.clear(); auth.role = 'participant' })
+afterEach(() => vi.restoreAllMocks())
 
 describe('DigitalPioneerOverview', () => {
+  it.each([
+    ['participant', '2026-12-13T23:59:59+08:00', 'Voting is not open yet.'],
+    ['participant', '2026-12-26T00:00:00+08:00', 'The voting period has ended.'],
+    ['participant', '2026-12-25T23:59:59+08:00', null],
+    ['admin', '2026-11-11T00:00:00+08:00', null],
+  ])('checks the voting window before navigating for %s at %s', (role, time, message) => {
+    auth.role = role
+    vi.spyOn(Date, 'now').mockReturnValue(Date.parse(time))
+    const notify = vi.spyOn(notifications, 'show').mockReturnValue('voting-window-test')
+    render(<MemoryRouter><MantineProvider env="test"><LanguageProvider><Routes>
+      <Route path="/" element={<DigitalPioneerOverview />} />
+      <Route path="/projects" element={<p>Voting page</p>} />
+    </Routes></LanguageProvider></MantineProvider></MemoryRouter>)
+    fireEvent.click(screen.getByRole('button', { name: 'Browse & Vote' }))
+    if (message) {
+      expect(notify).toHaveBeenCalledWith(expect.objectContaining({ message }))
+      expect(screen.queryByText('Voting page')).not.toBeInTheDocument()
+    } else {
+      expect(screen.getByText('Voting page')).toBeInTheDocument()
+      expect(notify).not.toHaveBeenCalled()
+    }
+  })
+
   it('introduces the individual award and all three categories', () => {
     render(
       <MemoryRouter>

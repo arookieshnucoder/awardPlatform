@@ -16,31 +16,41 @@ import java.util.UUID;
 
 @Service
 public class NominationApprovalService {
+	static final String BD_NOMINATION_MESSAGE = "Only folks from the BD department can submit nominations.";
+
 	private final NominationApprovalDirectory directory;
+	private final NomineeDirectory nominees;
 	private final IdeaRepository ideas;
 	private final ProfileRepository profiles;
 	private final IdeaMutationLock mutationLock;
 	private final JdbcTemplate jdbc;
 	public NominationApprovalService(NominationApprovalDirectory directory, IdeaRepository ideas,
-			ProfileRepository profiles, IdeaMutationLock mutationLock, JdbcTemplate jdbc) {
+			ProfileRepository profiles, IdeaMutationLock mutationLock, JdbcTemplate jdbc, NomineeDirectory nominees) {
 		this.directory = directory;
+		this.nominees = nominees;
 		this.ideas = ideas;
 		this.profiles = profiles;
 		this.mutationLock = mutationLock;
 		this.jdbc = jdbc;
 	}
-	public record Eligibility(boolean canSubmit, boolean canReview, String nominatingHead, String message) { }
+	public record Eligibility(boolean canSubmit, boolean canReview, String nominatingHead, String message,
+			boolean canStartNomination) { }
 	public record Selection(UUID id, int version) { }
 	@Transactional(readOnly = true)
 	public Eligibility eligibility(UUID userId) {
 		boolean canReview = directory.reviewerKey(userId).isPresent();
-		boolean privileged = profiles.findById(userId).map(p -> p.getRole() != Profile.Role.PARTICIPANT).orElse(false);
+		var profile = profiles.findById(userId);
+		if (profile.filter(nominees::isAdminOrRosterParticipant).isEmpty()) {
+			return new Eligibility(false, canReview, null, BD_NOMINATION_MESSAGE, false);
+		}
+		boolean privileged = profile.get().getRole() != Profile.Role.PARTICIPANT;
 		var employee = directory.employee(userId);
+		String nominatingHead = employee.map(NominationApprovalDirectory.Employee::nominatingHead).orElse(null);
 		try {
 			if (!privileged) directory.requireEmployee(userId);
-			return new Eligibility(true, canReview, employee.map(NominationApprovalDirectory.Employee::nominatingHead).orElse(null), null);
+			return new Eligibility(true, canReview, nominatingHead, null, true);
 		} catch (IllegalArgumentException ex) {
-			return new Eligibility(false, canReview, employee.map(NominationApprovalDirectory.Employee::nominatingHead).orElse(null), ex.getMessage());
+			return new Eligibility(false, canReview, nominatingHead, ex.getMessage(), true);
 		}
 	}
 	@Transactional(readOnly = true)

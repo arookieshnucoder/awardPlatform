@@ -76,6 +76,13 @@ import { AwardCriteriaList } from '../components/AwardCriteriaList'
 import './DigitalPioneer.css'
 
 const BD_VOTING_MESSAGE = 'Only folks from the BD department can vote.'
+const BD_NOMINATION_MESSAGE = 'Only folks from the BD department can submit nominations.'
+
+function nomineeNameFromEmail(email?: string): string | undefined {
+  const localPart = email?.split('@', 2)[0].replace(/^fixed-term\./i, '')
+  const parts = localPart?.replace(/\d/g, '').split('.').filter(Boolean)
+  return parts && parts.length >= 2 ? parts.join(' ') : undefined
+}
 
 interface Project {
   id: string
@@ -389,6 +396,7 @@ export function ProjectShowcase({ nominationMode = false, managementMode = false
   const nomineeToOpen = searchParams.get('nominee')
   const eligibility = useNominationEligibility()
   const canNominate = eligibility.data?.canSubmit === true
+  const canStartNomination = !user || user.role === 'admin' || eligibility.data?.canStartNomination === true
   const ownNominations = useQuery({
     queryKey: ['my-nomination-slots', user?.id], queryFn: () => IdeaService.getMyNominations(),
     enabled: nominationMode && Boolean(user), staleTime: 0, retry: false,
@@ -436,18 +444,45 @@ export function ProjectShowcase({ nominationMode = false, managementMode = false
   const [photoToCrop, setPhotoToCrop] = useState<File | null>(null)
   const photoPreview = usePhotoUrl(projectImage && !validatePersonalPhoto(projectImage) ? projectImage : null)
   const [uploadForm, setUploadForm] = useState<ProjectUploadForm>(emptyUploadForm)
+  const individualCategoryForms = useRef(new Map<string, IndividualNominationDraft>())
   const individualDraftKey = user && uploadForm.hackathonId ? nominationDraftKey({
-    userId: user.id, hackathonId: uploadForm.hackathonId, nominationType: 'individual', editId,
+    userId: user.id, hackathonId: uploadForm.hackathonId, nominationType: 'individual', editId, category: uploadForm.category,
   }) : null
   const currentDraftKey = useRef(individualDraftKey)
   const draftUserId = user?.id
   currentDraftKey.current = individualDraftKey
-  const individualDraftActive = nominationMode && (editingNomination
+  const individualDraftActive = nominationMode && canStartNomination && (editingNomination
     ? editingNomination.projectAttachments?.find((item) => item.type === 'nomination')?.nominationType ?? 'individual'
     : preferredNominationType) === 'individual'
-  useEffect(() => {
+  const changeNominationCategory = (category: string) => {
+    if (!canStartNomination) {
+      const message = eligibility.data?.canStartNomination === false ? BD_NOMINATION_MESSAGE
+        : eligibility.isError ? 'Unable to verify your nomination eligibility. Please refresh.'
+          : 'Checking your nomination eligibility. Please try again in a moment.'
+      notifications.show({ message, color: 'orange', autoClose: 4000, className: 'dp-status-toast' })
+      return
+    }
+    if (category === uploadForm.category || editId || uploading || savingDraft) return
+    if (individualDraftKey && uploadForm.category) {
+      individualCategoryForms.current.set(individualDraftKey, {
+        form: uploadForm, photo: projectImage, document: individualDocument,
+      })
+    }
+    const nextKey = user ? nominationDraftKey({
+      userId: user.id, hackathonId: uploadForm.hackathonId, nominationType: 'individual', category,
+    }) : null
+    const cached = nextKey ? individualCategoryForms.current.get(nextKey) : undefined
+    setUploadForm(cached?.form ?? { ...emptyUploadForm(), hackathonId: uploadForm.hackathonId, category })
+    setProjectImage(cached?.photo ?? null)
+    setIndividualDocument(cached?.document ?? null)
+    setPhotoToCrop(null)
+    setIndividualPreviewOpened(false)
     setIndividualDraft(null)
     setDraftNotice(null)
+  }
+  useEffect(() => { setDraftNotice(null) }, [individualDraftActive, draftUserId, editId])
+  useEffect(() => {
+    setIndividualDraft(null)
     if (!individualDraftActive || !individualDraftKey) return
     let active = true
     void NominationDraftStore.load<IndividualNominationDraft>(individualDraftKey).then((draft) => {
@@ -458,19 +493,20 @@ export function ProjectShowcase({ nominationMode = false, managementMode = false
 
   useEffect(() => {
     setTeamDraftCategory(null)
-    if (!nominationMode || !draftUserId || !uploadForm.hackathonId || preferredNominationType !== 'team' || uploadForm.category || editId) return
+    if (!nominationMode || !canStartNomination || !draftUserId || !uploadForm.hackathonId || preferredNominationType !== 'team' || uploadForm.category || editId) return
     let active = true
     const key = nominationDraftKey({ userId: draftUserId, hackathonId: uploadForm.hackathonId, nominationType: 'team' })
     void NominationDraftStore.load<{ category: string }>(key).then((draft) => {
       if (active && draft && DIGITAL_PIONEER_TRACKS.some((track) => track.value === draft.data.category)) setTeamDraftCategory(draft.data.category)
     }).catch(() => undefined)
     return () => { active = false }
-  }, [nominationMode, draftUserId, uploadForm.hackathonId, uploadForm.category, preferredNominationType, editId])
+  }, [nominationMode, canStartNomination, draftUserId, uploadForm.hackathonId, uploadForm.category, preferredNominationType, editId])
 
   const saveIndividualDraft = async () => {
     if (!individualDraftKey || savingDraft || uploading) return
     const key = individualDraftKey
     setSavingDraft(true)
+    setDraftNotice(null)
     try {
       const saved = await NominationDraftStore.save<IndividualNominationDraft>(key, {
         form: { ...uploadForm }, photo: projectImage, document: individualDocument,
@@ -478,7 +514,8 @@ export function ProjectShowcase({ nominationMode = false, managementMode = false
       })
       if (currentDraftKey.current === key) {
         setIndividualDraft(saved)
-        setDraftNotice('Draft saved on this browser. You can reopen it when you return.')
+        setDraftNotice('Draft saved successfully.')
+        notifications.show({ message: 'Draft saved successfully.', color: 'green', autoClose: 4000, className: 'dp-status-toast' })
       }
     } catch {
       if (currentDraftKey.current === key) setDraftNotice('Unable to save the draft. Keep this page open and try again.')
@@ -503,16 +540,20 @@ export function ProjectShowcase({ nominationMode = false, managementMode = false
   const discardIndividualDraft = async () => {
     if (!individualDraftKey || savingDraft || uploading) return
     const key = individualDraftKey
+    const savedCategory = individualDraft?.data.form.category
+    const keyToRemove = !uploadForm.category && savedCategory && user ? nominationDraftKey({
+      userId: user.id, hackathonId: uploadForm.hackathonId, nominationType: 'individual', editId, category: savedCategory,
+    }) : key
     setSavingDraft(true)
     try {
-      await NominationDraftStore.remove(key)
+      await NominationDraftStore.remove(keyToRemove)
       if (currentDraftKey.current === key) { setIndividualDraft(null); setDraftNotice('Saved draft removed. Your current form is unchanged.') }
     } catch {
       if (currentDraftKey.current === key) setDraftNotice('Unable to remove the saved draft. Please try again.')
     } finally { setSavingDraft(false) }
   }
   useEffect(() => {
-    if (!editId || !user) return
+    if (!editId || !user || !canStartNomination) return
     let active = true
     setEditError(null)
     setEditingNomination(null)
@@ -531,7 +572,7 @@ export function ProjectShowcase({ nominationMode = false, managementMode = false
       })
     }).catch((error) => { if (active) setEditError(error instanceof Error ? error.message : 'Unable to load your nomination.') })
     return () => { active = false }
-  }, [editId, user])
+  }, [editId, user, canStartNomination])
   const [assignedJudgeHackathons, setAssignedJudgeHackathons] = useState<Set<string>>(new Set())
   const [filters, setFilters] = useState<ProjectFilters>({
     search: '',
@@ -619,15 +660,19 @@ export function ProjectShowcase({ nominationMode = false, managementMode = false
             const creatorProfile = teamMembers.length > 0 || nomination?.name != null
               ? null
               : await getProfile(idea.createdBy)
+            const nominationType = idea.teamId || nomination?.nominationType === 'team' ? 'team' : 'individual'
+            const nomineeId = nomination?.nomineeUserId ?? (nomination?.name ? undefined : teamMembers[0]?.id ?? idea.createdBy)
+            const nomineeProfile = !nominationMode && !managementMode && nomineeId ? await getProfile(nomineeId) : null
+            const fullName = nomineeNameFromEmail(nomineeProfile?.email)
 
             return {
               id: idea.id,
-              nomination_type: idea.teamId || nomination?.nominationType === 'team' ? 'team' : 'individual',
+              nomination_type: nominationType,
               documents: idea.projectAttachments?.filter((item) => item.type === 'document') ?? [],
-              title: idea.title,
+              title: nominationType === 'individual' ? fullName ?? idea.title : idea.title,
               description: idea.description,
               nominee_org_code: nomination?.nomineeOrgCode ?? '',
-              nominee_name: nomination?.name ?? teamMembers[0]?.name ?? creatorProfile?.name ?? team?.name ?? 'Individual Nominee',
+              nominee_name: fullName ?? nomination?.name ?? teamMembers[0]?.name ?? creatorProfile?.name ?? team?.name ?? 'Individual Nominee',
               team_members: teamMembers,
               hackathon_id: hackathon.id,
               category: normalizeDigitalPioneerTrack(idea.category, idea.tags ?? []),
@@ -668,7 +713,7 @@ export function ProjectShowcase({ nominationMode = false, managementMode = false
       } finally {
         if (sequence === loadSequence.current) setLoading(false)
       }
-  }, [user])
+  }, [user, nominationMode, managementMode])
 
   useEffect(() => {
     setRecordToDelete(null)
@@ -676,6 +721,7 @@ export function ProjectShowcase({ nominationMode = false, managementMode = false
     setProjects([])
     setAssignedJudgeHackathons(new Set())
     setUploadForm(emptyUploadForm())
+    individualCategoryForms.current.clear()
     setProjectImage(null)
     setIndividualDocument(null)
     setIndividualPreviewOpened(false)
@@ -1058,9 +1104,9 @@ export function ProjectShowcase({ nominationMode = false, managementMode = false
         </Modal>
         <section className="dp-nomination-flow" aria-labelledby="track-choice-title">
           {eligibility.isError && <Alert color="red">Unable to verify your nomination eligibility. Please refresh.</Alert>}
-          {eligibility.data && !canNominate && <Alert color="orange">{eligibility.data.message || 'Your signed-in account could not be matched to an eligible employee and Nominating HoD.'}</Alert>}
+          {eligibility.data && !canNominate && (canStartNomination || editId) && <Alert color="orange">{eligibility.data.message || 'Your signed-in account could not be matched to an eligible employee and Nominating HoD.'}</Alert>}
           {editError && <Alert color="red">{editError}</Alert>}
-          {editId && !editingNomination && !editError && <Text>Loading your submitted nomination…</Text>}
+          {editId && canStartNomination && !editingNomination && !editError && <Text>Loading your submitted nomination…</Text>}
           {editingNomination?.approvalReason && <Alert color="orange" title="Requested Changes">{editingNomination.approvalReason}</Alert>}
           <div className="dp-flow-heading">
             <div>
@@ -1085,9 +1131,9 @@ export function ProjectShowcase({ nominationMode = false, managementMode = false
             </Alert>}
             {draftNotice && <Text c="white" role="status">{draftNotice}</Text>}
           </Stack>}
-          {teamDraftCategory && <Alert title="Saved Team Draft" mb="lg" styles={{ title: { color: 'white' }, message: { color: 'white' } }}>
+          {canStartNomination && teamDraftCategory && <Alert title="Saved Team Draft" mb="lg" styles={{ title: { color: 'white' }, message: { color: 'white' } }}>
             A team draft is available. Open its category, then choose Restore Draft to continue.
-            <Button mt="sm" variant="light" c="white" onClick={() => setUploadForm((current) => ({ ...current, category: teamDraftCategory }))}>Open Saved Team Draft</Button>
+            <Button mt="sm" variant="light" c="white" onClick={() => changeNominationCategory(teamDraftCategory)}>Open Saved Team Draft</Button>
           </Alert>}
 
           <div className="dp-nomination-tracks" role="radiogroup" aria-label="Nomination track">
@@ -1102,8 +1148,8 @@ export function ProjectShowcase({ nominationMode = false, managementMode = false
                   aria-checked={isSelected}
                   aria-controls="nomination-track-description nomination-form"
                   aria-expanded={isSelected}
-                  disabled={Boolean(editingNomination) && track.value !== editingNomination?.category}
-                  onClick={() => setUploadForm((current) => ({ ...current, category: track.value }))}
+                  disabled={uploading || savingDraft || (Boolean(editId) && track.value !== editingNomination?.category)}
+                  onClick={() => changeNominationCategory(track.value)}
                 >
                   <span className="dp-nomination-track__topline">
                     <span aria-hidden="true" />
@@ -1118,11 +1164,11 @@ export function ProjectShowcase({ nominationMode = false, managementMode = false
             })}
           </div>
 
-          {selectedNominationTrack && (
+          {canStartNomination && selectedNominationTrack && (
             <div id="nomination-track-description" className="dp-fieldset" translate="no" aria-live="polite">
               <Title order={3}>{selectedNominationTrack.label}</Title>
               <Text mt="sm" lang="zh">{selectedNominationTrack.labelZh}</Text>
-              <AwardCriteriaList standards={selectedNominationTrack.standards} />
+              <AwardCriteriaList standards={selectedNominationTrack.standards} compact />
             </div>
           )}
 
@@ -1130,7 +1176,7 @@ export function ProjectShowcase({ nominationMode = false, managementMode = false
             <div className="dp-track-gate" role="status">
               <Text fw={650}>Choose a track to begin</Text>
             </div>
-          ) : loading ? (
+          ) : !canStartNomination ? null : loading ? (
             <div className="dp-track-gate" role="status">
               <Text fw={650}>Preparing the nomination form…</Text>
             </div>
@@ -1151,7 +1197,7 @@ export function ProjectShowcase({ nominationMode = false, managementMode = false
             : editId && !editingNomination ? null : nominationType === 'team' && user ? (
             <TeamNominationForm key={`${user.id}:${uploadForm.hackathonId}:${editingNomination?.id ?? 'new'}`}
               user={user} hackathonId={uploadForm.hackathonId} category={uploadForm.category}
-              onCategoryChange={(category) => setUploadForm((current) => ({ ...current, category }))}
+              onCategoryChange={changeNominationCategory}
               canSubmit={canNominate} editing={editingNomination} onSubmitted={(idea, draftWarning) => { setSubmissionDraftWarning(draftWarning ?? null); setSubmittedNomination(idea); void ownNominations.refetch() }} />
           ) : (
             <Card className="dp-form-shell" p={{ base: 'lg', md: 38 }}>
@@ -1214,9 +1260,9 @@ export function ProjectShowcase({ nominationMode = false, managementMode = false
                           data={nominationTracks.map((track) => ({ value: track.value, label: track.label }))}
                           value={uploadForm.category}
                           allowDeselect={false}
-                          disabled={Boolean(editingNomination)}
+                          disabled={Boolean(editingNomination) || uploading || savingDraft}
                           onChange={(value) => {
-                            if (value) setUploadForm((current) => ({ ...current, category: value }))
+                            if (value) changeNominationCategory(value)
                           }}
                         />
                       </Grid.Col>

@@ -2,8 +2,10 @@ package wtf.hackhub.application.idea;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 import wtf.hackhub.domain.Hackathon;
 import wtf.hackhub.domain.Idea;
 import wtf.hackhub.domain.Profile;
@@ -79,6 +81,7 @@ public class SubmitIdeaUseCase {
 				.orElseThrow(() -> new IdeaAccessDeniedException(null, createdBy));
 		boolean teamSubmission = teamId != null || hasTeamMetadata(projectAttachments);
 		if (teamId != null) requireTeamCaptain(teamId, hackathonId, createdBy);
+		requireNominationAccess(requester);
 		// The transaction lock spans the duplicate check, implicit team creation and idea insert.
 		mutationLock.acquire(UUID.nameUUIDFromBytes(("nomination:" + hackathonId + ":" + createdBy + ":"
 				+ teamSubmission).getBytes(java.nio.charset.StandardCharsets.UTF_8)));
@@ -138,6 +141,9 @@ public class SubmitIdeaUseCase {
 		if (!idea.getCreatedBy().equals(requestingUserId)) {
 			throw new IdeaAccessDeniedException(ideaId, requestingUserId);
 		}
+		var requester = profileRepository.findById(requestingUserId)
+				.orElseThrow(() -> new IdeaAccessDeniedException(ideaId, requestingUserId));
+		requireNominationAccess(requester);
 		boolean teamSubmission = idea.getTeamId() != null && hasTeamMetadata(idea.getProjectAttachments());
 		if (idea.getTeamId() != null)
 			requireTeamCaptain(idea.getTeamId(), idea.getHackathonId(), requestingUserId);
@@ -182,6 +188,12 @@ public class SubmitIdeaUseCase {
 			approvalService.record(idea, requestingUserId, "submitted", null);
 		}
 		return ideaRepository.save(idea);
+	}
+
+	private void requireNominationAccess(Profile requester) {
+		if (!nomineeDirectory.isAdminOrRosterParticipant(requester)) {
+			throw new ResponseStatusException(HttpStatus.FORBIDDEN, NominationApprovalService.BD_NOMINATION_MESSAGE);
+		}
 	}
 
 	private String employeeMetadata(String attachments, NominationApprovalDirectory.Employee employee,

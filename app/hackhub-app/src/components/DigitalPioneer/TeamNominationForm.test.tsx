@@ -88,7 +88,7 @@ describe('Team nomination form', () => {
       projectAttachments: expect.arrayContaining([expect.objectContaining({ nominationType: 'team', projectName: 'Test project', coreTeamMembers: 'Member One;Member Two', achievementSummary: 'Test-only achievement summary', teamAchievementImpact: 'Measurable test impact', cultureDemonstration: 'Test culture evidence' })]),
     }))
     expect(TeamService.createTeam).not.toHaveBeenCalled()
-    expect(NominationDraftStore.remove).toHaveBeenCalledWith(nominationDraftKey({ userId: user.id, hackathonId: 'campaign', nominationType: 'team' }))
+    expect(NominationDraftStore.remove).toHaveBeenCalledWith(nominationDraftKey({ userId: user.id, hackathonId: 'campaign', nominationType: 'team', category: 'customer-values' }))
   })
   it('blocks a summary over 200 words before uploading or submitting', async () => {
     const view = show()
@@ -166,9 +166,9 @@ describe('Team nomination form', () => {
     fireEvent.change(view.container.querySelectorAll('input[type="file"]')[1], { target: { files: [pdf] } })
     await waitFor(() => expect(screen.getByRole('button', { name: 'Save Draft' })).toBeEnabled())
     fireEvent.click(screen.getByRole('button', { name: 'Save Draft' }))
-    expect((await screen.findByText(/Draft saved in this browser/)).closest('.mantine-Alert-message')).toHaveStyle({ color: '#fff' })
+    expect((await screen.findByText('Draft saved successfully.')).closest('.mantine-Alert-message')).toHaveStyle({ color: '#fff' })
     const [key, data] = vi.mocked(NominationDraftStore.save).mock.calls[0]
-    expect(key).toBe(nominationDraftKey({ userId: user.id, hackathonId: 'campaign', nominationType: 'team' }))
+    expect(key).toBe(nominationDraftKey({ userId: user.id, hackathonId: 'campaign', nominationType: 'team', category: 'customer-values' }))
     expect(data).toEqual(expect.objectContaining({ projectName: 'Test project', photo: expect.objectContaining({ name: 'team.png' }), document: pdf }))
     expect(IdeaService.createIdea).not.toHaveBeenCalled()
     expect(StorageService.uploadFile).not.toHaveBeenCalled()
@@ -190,7 +190,7 @@ describe('Team nomination form', () => {
     await waitFor(() => expect(screen.getByRole('button', { name: 'Save Draft' })).toBeEnabled())
     fireEvent.click(screen.getByRole('button', { name: 'Save Draft' }))
     expect((await screen.findByText(/Unable to save your draft/)).closest('.mantine-Alert-message')).toHaveStyle({ color: '#fff' })
-    expect(screen.queryByText(/Draft saved in this browser/)).not.toBeInTheDocument()
+    expect(screen.queryByText('Draft saved successfully.')).not.toBeInTheDocument()
     expect(IdeaService.createIdea).not.toHaveBeenCalled()
   })
 

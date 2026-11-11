@@ -988,6 +988,12 @@
   gap: clamp(16px, 2vw, 24px);
 }
 
+#nomination-track-description .dp-standard-list { margin-top: 12px; }
+#nomination-track-description .dp-standard-list li { padding: 10px 0; line-height: 1.5; }
+.dp-status-toast { background-color: #152447; border: 1px solid #516488; }
+.dp-status-toast .mantine-Notification-description,
+.dp-status-toast .mantine-Notification-closeButton { color: #fff; }
+
 /* Reuse the overview track surfaces and colors for selectable categories. */
 .dp-page .dp-nomination-track {
   display: flex;

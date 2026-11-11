@@ -1,5 +1,6 @@
 import { Alert, Button, Card, FileInput, Grid, Group, Image, Modal, Select, Stack, Text, Textarea, TextInput, Title } from '@mantine/core'
 import { useEffect, useRef, useState } from 'react'
+import { notifications } from '@mantine/notifications'
 import { getDigitalPioneerTracks } from '../../config/digitalPioneer'
 import { IdeaService, type CreateIdeaInput, type Idea, type ProjectAttachment } from '../../services/ideaService'
 import { PHOTO_ACCEPT, StorageService, validatePersonalPhoto } from '../../services/storageService'
@@ -38,13 +39,19 @@ interface TeamDraft {
 
 export function TeamNominationForm({ user, hackathonId, category, onCategoryChange, canSubmit, editing, onSubmitted }: Props) {
   const metadata = editing?.projectAttachments?.find((item) => item.type === 'nomination')
-  const [projectName, setProjectName] = useState(metadata?.projectName ?? '')
-  const [coreTeamMembers, setCoreTeamMembers] = useState(metadata?.coreTeamMembers ?? '')
-  const [achievementSummary, setAchievementSummary] = useState(metadata?.achievementSummary ?? '')
-  const [teamAchievementImpact, setTeamAchievementImpact] = useState(metadata?.teamAchievementImpact ?? '')
-  const [cultureDemonstration, setCultureDemonstration] = useState(metadata?.cultureDemonstration ?? '')
-  const [photo, setPhoto] = useState<File | null>(null)
-  const [document, setDocument] = useState<File | null>(null)
+  const draftKey = nominationDraftKey({ userId: user.id, hackathonId, nominationType: 'team', editId: editing?.id, category })
+  const currentDraftKey = useRef(draftKey)
+  currentDraftKey.current = draftKey
+  const [categoryForms, setCategoryForms] = useState<Record<string, TeamDraft>>({})
+  const initialForm: TeamDraft = {
+    category, projectName: metadata?.projectName ?? '', coreTeamMembers: metadata?.coreTeamMembers ?? '',
+    achievementSummary: metadata?.achievementSummary ?? '', teamAchievementImpact: metadata?.teamAchievementImpact ?? '',
+    cultureDemonstration: metadata?.cultureDemonstration ?? '', photo: null, document: null,
+  }
+  const { projectName, coreTeamMembers, achievementSummary, teamAchievementImpact, cultureDemonstration, photo, document } = categoryForms[draftKey] ?? initialForm
+  const updateForm = (fields: Partial<TeamDraft>) => setCategoryForms((current) => ({
+    ...current, [draftKey]: { ...(current[draftKey] ?? initialForm), ...fields },
+  }))
   const [photoPreview, setPhotoPreview] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -55,7 +62,6 @@ export function TeamNominationForm({ user, hackathonId, category, onCategoryChan
   const [draftMessage, setDraftMessage] = useState<string | null>(null)
   const [draftError, setDraftError] = useState<string | null>(null)
   const busyRef = useRef(false)
-  const draftKey = nominationDraftKey({ userId: user.id, hackathonId, nominationType: 'team', editId: editing?.id })
   const savedPhoto = editing?.projectAttachments?.find((item) => item.type === 'screenshot')
   const savedDocuments = editing?.projectAttachments?.filter((item) => item.type === 'document') ?? []
   const photoError = validateTeamPhoto(photo)
@@ -67,6 +73,10 @@ export function TeamNominationForm({ user, hackathonId, category, onCategoryChan
     let active = true
     setDraftLoading(true)
     setSavedDraft(null)
+    setDraftMessage(null)
+    setDraftError(null)
+    setError(null)
+    setReviewOpened(false)
     void NominationDraftStore.load<TeamDraft>(draftKey).then((draft) => {
       if (active) setSavedDraft(draft)
     }).catch(() => {
@@ -79,15 +89,19 @@ export function TeamNominationForm({ user, hackathonId, category, onCategoryChan
     if (draftSaving || draftLoading || busy) return
     setDraftSaving(true)
     setDraftError(null)
+    setDraftMessage(null)
     try {
       const draft = await NominationDraftStore.save<TeamDraft>(draftKey, {
         category, projectName, coreTeamMembers, achievementSummary, teamAchievementImpact, cultureDemonstration,
         photo, document, approvalVersion: editing?.approvalVersion,
       })
-      setSavedDraft(draft)
-      setDraftMessage('Draft saved in this browser. You can leave and restore it from this form later.')
+      if (currentDraftKey.current === draftKey) {
+        setSavedDraft(draft)
+        setDraftMessage('Draft saved successfully.')
+        notifications.show({ message: 'Draft saved successfully.', color: 'green', autoClose: 4000, className: 'dp-status-toast' })
+      }
     } catch {
-      setDraftError('Unable to save your draft. Check available browser storage and retry before leaving.')
+      if (currentDraftKey.current === draftKey) setDraftError('Unable to save your draft. Check available browser storage and retry before leaving.')
     } finally { setDraftSaving(false) }
   }
 
@@ -99,14 +113,7 @@ export function TeamNominationForm({ user, hackathonId, category, onCategoryChan
       setDraftError('This nomination has changed since the draft was saved. Discard the old draft and use the latest nomination.')
       return
     }
-    if (!editing) onCategoryChange(draft.category)
-    setProjectName(draft.projectName)
-    setCoreTeamMembers(draft.coreTeamMembers)
-    setAchievementSummary(draft.achievementSummary)
-    setTeamAchievementImpact(draft.teamAchievementImpact)
-    setCultureDemonstration(draft.cultureDemonstration)
-    setPhoto(draft.photo)
-    setDocument(draft.document)
+    updateForm(draft)
     setDraftError(null)
     setDraftMessage('Draft restored. Review your information before submitting.')
   }
@@ -116,10 +123,12 @@ export function TeamNominationForm({ user, hackathonId, category, onCategoryChan
     setDraftSaving(true)
     try {
       await NominationDraftStore.remove(draftKey)
-      setSavedDraft(null)
-      setDraftError(null)
-      setDraftMessage('Saved draft deleted. Your current form is unchanged.')
-    } catch { setDraftError('Unable to delete the saved draft. Please retry.') }
+      if (currentDraftKey.current === draftKey) {
+        setSavedDraft(null)
+        setDraftError(null)
+        setDraftMessage('Saved draft deleted. Your current form is unchanged.')
+      }
+    } catch { if (currentDraftKey.current === draftKey) setDraftError('Unable to delete the saved draft. Please retry.') }
     finally { setDraftSaving(false) }
   }
 
@@ -218,30 +227,30 @@ export function TeamNominationForm({ user, hackathonId, category, onCategoryChan
         <Grid.Col span={{ base: 12, sm: 6 }}><Select label="Award Category" required allowDeselect={false} disabled={busy || Boolean(editing)}
           data={getDigitalPioneerTracks('team').map((track) => ({ value: track.value, label: track.label }))}
           value={category} onChange={(value) => { if (value) onCategoryChange(value) }} /></Grid.Col>
-        <Grid.Col span={12}><TextInput label="Project Name" required value={projectName} maxLength={200} disabled={busy} onChange={(event) => setProjectName(event.currentTarget.value)} /></Grid.Col>
+        <Grid.Col span={12}><TextInput label="Project Name" required value={projectName} maxLength={200} disabled={busy} onChange={(event) => updateForm({ projectName: event.currentTarget.value })} /></Grid.Col>
         <Grid.Col span={{ base: 12, md: 4 }}>
           <FileInput className="dp-team-file-input" label="Team Photo" placeholder="JPG, PNG or WebP; up to 10 MB per photo." required clearable
-            accept={PHOTO_ACCEPT} value={photo} disabled={busy} onChange={setPhoto} error={photoError} />
+            accept={PHOTO_ACCEPT} value={photo} disabled={busy} onChange={(photo) => updateForm({ photo })} error={photoError} />
           {savedPhoto && <Text size="sm">Your submitted team photo is retained unless you upload a replacement.</Text>}
           {photoPreview && <Image src={photoPreview} alt="Team photo preview" fit="contain" mah={240} mt="sm" />}
         </Grid.Col>
         <Grid.Col span={12}><CoreTeamMembersInput disabled={busy}
-          value={coreTeamMembers} onChange={setCoreTeamMembers} /></Grid.Col>
+          value={coreTeamMembers} onChange={(coreTeamMembers) => updateForm({ coreTeamMembers })} /></Grid.Col>
       </Grid>
       <div className="dp-fieldset" translate="no"><Textarea label="Achievement Summary (≤ 200 words)" required autosize minRows={8} resize="vertical" disabled={busy}
         placeholder="Summarize the achievement, the value created, and why it deserves the 2026 Digital Pioneer Award in this track."
         value={achievementSummary} error={summaryWords > 200 ? 'Maximum 200 words.' : undefined}
-        onChange={(event) => setAchievementSummary(event.currentTarget.value)} />
+        onChange={(event) => updateForm({ achievementSummary: event.currentTarget.value })} />
       </div>
       <div className="dp-fieldset" translate="no"><Textarea label="Details of Your Team Achievement in 2026 and Business Impact" required autosize minRows={4} resize="vertical" disabled={busy}
         placeholder="What were the measurable outcomes in 2026? including financial figures"
-        value={teamAchievementImpact} onChange={(event) => setTeamAchievementImpact(event.currentTarget.value)} /></div>
+        value={teamAchievementImpact} onChange={(event) => updateForm({ teamAchievementImpact: event.currentTarget.value })} /></div>
       <div className="dp-fieldset" translate="no"><Textarea label="How You Demonstrate BD China Culture (Especially in Your Applied Category)" required autosize minRows={4} resize="vertical" disabled={busy}
         placeholder="Describe how the /team demonstrated the culture pillar of this track."
-        value={cultureDemonstration} onChange={(event) => setCultureDemonstration(event.currentTarget.value)} /></div>
+        value={cultureDemonstration} onChange={(event) => updateForm({ cultureDemonstration: event.currentTarget.value })} /></div>
       <div className="dp-fieldset" translate="no"><FileInput className="dp-team-file-input dp-team-attachment" label="Attachment" clearable disabled={busy} accept={documentAccept}
         placeholder="Optional supplementary materials, document size less than 20 MB"
-        value={document} onChange={setDocument} error={documentError} />
+        value={document} onChange={(document) => updateForm({ document })} error={documentError} />
         {document && !documentError && <LocalNominationAttachment file={document} />}
         {!document && savedDocuments.map((item) => <Stack key={item.storageKey ?? item.url} gap="xs"><Text size="sm">Retained attachment: {item.name}</Text><NominationEvidence attachment={item} /></Stack>)}
       </div>

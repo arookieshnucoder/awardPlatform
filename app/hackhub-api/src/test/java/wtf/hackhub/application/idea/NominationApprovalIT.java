@@ -44,11 +44,20 @@ class NominationApprovalIT extends PostgresIntegrationTest {
 		hod = UUID.fromString(insertProfile(roster.hodEmail(), "Editable HoD name", "participant"));
 		outsider = UUID.fromString(insertProfile("outsider@example.invalid", roster.nominatingHead(), "participant"));
 		bind(employee, roster.email());
+		addVotingRosterEntry(employee);
 		bind(hod, roster.hodEmail());
 		campaign = jdbc.queryForObject("INSERT INTO hackathons(title,description,start_date,end_date,registration_key,allowed_participants,created_by,status,visibility) VALUES ('Approval test','Details',now(),now() + interval '30 days','approval-test',1000,?,'running','public') RETURNING id", UUID.class, employee);
 	}
 	void bind(UUID profile, String email) {
 		jdbc.update("INSERT INTO sso_identities(tenant_id,object_id,profile_id,verified_email) VALUES (?,?,?,?)", UUID.randomUUID(), UUID.randomUUID(), profile, email);
+	}
+	void addVotingRosterEntry(UUID profile) {
+		String name = jdbc.queryForObject("SELECT name FROM profiles WHERE id=?", String.class, profile);
+		String normalizedName = NomineeDirectory.normalizeIdentity(name);
+		jdbc.update("""
+				INSERT INTO voting_participants(personnel_number,organizational_unit,display_name,normalized_name)
+				SELECT ?, 'BD/TEST', ?, ? WHERE NOT EXISTS (SELECT 1 FROM voting_participants WHERE normalized_name=?)
+				""", "approval-fixture-" + normalizedName, name, normalizedName, normalizedName);
 	}
 	Idea nomination(String title) {
 		return submit.executeNomination(title, "Actual employee evidence", campaign, null, employee, "Customer Values", List.of(),
@@ -248,6 +257,8 @@ class NominationApprovalIT extends PostgresIntegrationTest {
 		jdbc.update("INSERT INTO team_members(team_id,user_id,role) VALUES (?,?,'member')", original, outsider);
 		// Use a verified roster identity for the member, but it must not grant captain rights.
 		bind(outsider, "cpy8sgh@bosch.com");
+		jdbc.update("UPDATE profiles SET name='Noncaptain voting fixture' WHERE id=?", outsider);
+		addVotingRosterEntry(outsider);
 		assertThatThrownBy(() -> submitTeam(null, outsider, teamMetadata(outsider)))
 				.isInstanceOf(SubmitIdeaUseCase.IdeaAccessDeniedException.class);
 	}
@@ -303,6 +314,22 @@ class NominationApprovalIT extends PostgresIntegrationTest {
 		assertThatThrownBy(() -> approvals.assigned(hod)).isInstanceOf(ResponseStatusException.class);
 	}
 	@Test
+	void verified_employee_outside_voting_roster_cannot_start_or_submit() {
+		UUID unlisted = UUID.fromString(insertProfile("unlisted-roster-fixture@example.invalid",
+				"Unlisted roster fixture", "participant"));
+		bind(unlisted, roster.email());
+		assertThat(directory.requireEmployee(unlisted)).isEqualTo(roster);
+		assertThat(approvals.eligibility(unlisted)).isEqualTo(new NominationApprovalService.Eligibility(
+				false, false, null, NominationApprovalService.BD_NOMINATION_MESSAGE, false));
+		assertThatThrownBy(() -> submit.executeNomination("Blocked", "Evidence", campaign, null, unlisted,
+				"Customer Values", List.of(), Idea.Status.SUBMITTED, null, null, null))
+				.isInstanceOfSatisfying(ResponseStatusException.class, error -> {
+					assertThat(error.getStatusCode().value()).isEqualTo(403);
+					assertThat(error.getReason()).isEqualTo(NominationApprovalService.BD_NOMINATION_MESSAGE);
+				});
+		assertThat(approvals.mine(unlisted)).isEmpty();
+	}
+	@Test
 	void confirmed_roster_emails_resolve_but_missing_verified_email_blocks_submission() throws Exception {
 		List<NominationApprovalDirectory.Employee> rows;
 		try (var input = new ClassPathResource("nomination-roster.json").getInputStream()) {
@@ -316,6 +343,7 @@ class NominationApprovalIT extends PostgresIntegrationTest {
 				.hasSize(2);
 		UUID confirmedUser = UUID.fromString(insertProfile("confirmed@example.invalid", "Employee", "participant"));
 		bind(confirmedUser, "cpy8sgh@bosch.com");
+		addVotingRosterEntry(confirmedUser);
 		assertThat(approvals.eligibility(confirmedUser).canSubmit()).isTrue();
 		assertThat(directory.requireEmployee(confirmedUser).name()).contains("CHEN Peiyi");
 		assertThat(directory.reviewerKey(hod)).contains("vio2kor@bosch.com");
@@ -334,6 +362,7 @@ class NominationApprovalIT extends PostgresIntegrationTest {
 				.findFirst().orElseThrow();
 		UUID selfId = UUID.fromString(insertProfile(selfHead.email(), "Editable name", "participant"));
 		bind(selfId, selfHead.email());
+		addVotingRosterEntry(selfId);
 		assertThat(directory.allowsSelfApproval(selfId)).isTrue();
 		assertThat(approvals.eligibility(selfId).canSubmit()).isTrue();
 		assertThat(approvals.eligibility(selfId).canReview()).isTrue();
@@ -379,6 +408,7 @@ class NominationApprovalIT extends PostgresIntegrationTest {
 		UUID tester = UUID.fromString(insertProfile(email, "SSO test display name", role));
 		jdbc.update("UPDATE profiles SET org_code='TEST-DEPARTMENT' WHERE id=?", tester);
 		bind(tester, email);
+		addVotingRosterEntry(tester);
 		assertThat(approvals.eligibility(tester).canSubmit()).isTrue();
 		assertThat(approvals.eligibility(tester).canReview()).isTrue();
 		assertThat(directory.allowsSelfApproval(tester)).isTrue();

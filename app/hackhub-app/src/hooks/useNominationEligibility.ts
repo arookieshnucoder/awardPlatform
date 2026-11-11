@@ -4,6 +4,7 @@ import { useAuthStore } from '../store/authStore'
 
 interface NominationEligibility {
   canSubmit: boolean
+  canStartNomination: boolean
   canReview: boolean
   nominatingHead: string | null
   message: string | null

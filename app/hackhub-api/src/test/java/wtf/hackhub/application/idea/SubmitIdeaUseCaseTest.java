@@ -59,6 +59,7 @@ class SubmitIdeaUseCaseTest {
 		var manager = new wtf.hackhub.domain.Profile("manager@example.test", "Manager", "hash");
 		manager.changeRole(wtf.hackhub.domain.Profile.Role.MANAGER);
 		org.mockito.Mockito.lenient().when(profileRepository.findById(USER_ID)).thenReturn(Optional.of(manager));
+		org.mockito.Mockito.lenient().when(nomineeDirectory.isAdminOrRosterParticipant(any())).thenReturn(true);
 		org.mockito.Mockito.lenient().when(nomineeDirectory.enrich(org.mockito.ArgumentMatchers.nullable(String.class),
 				org.mockito.ArgumentMatchers.anyBoolean())).thenAnswer(call -> call.getArgument(0));
 	}
@@ -86,6 +87,26 @@ class SubmitIdeaUseCaseTest {
 
 		Idea result = useCase.execute("title", "desc", HACKATHON_ID, null, USER_ID, "AI", List.of("ml"));
 		assertThat(result.getTitle()).isEqualTo("title");
+	}
+
+	@Test
+	void rejects_create_and_edit_without_roster_access_before_saving() {
+		stubValidSubmit();
+		when(nomineeDirectory.isAdminOrRosterParticipant(any())).thenReturn(false);
+		var existing = idea(USER_ID);
+		when(ideaRepository.findById(existing.getId())).thenReturn(Optional.of(existing));
+		assertThatThrownBy(() -> useCase.execute("Title", "Evidence", HACKATHON_ID, null, USER_ID, "AI", List.of()))
+				.isInstanceOfSatisfying(org.springframework.web.server.ResponseStatusException.class, error -> {
+					assertThat(error.getStatusCode()).isEqualTo(org.springframework.http.HttpStatus.FORBIDDEN);
+					assertThat(error.getReason()).isEqualTo(NominationApprovalService.BD_NOMINATION_MESSAGE);
+				});
+		assertThatThrownBy(() -> useCase.update(existing.getId(), USER_ID, "Revised", "Evidence", "AI", List.of(),
+				Idea.Status.SUBMITTED, null, null, null))
+				.isInstanceOfSatisfying(org.springframework.web.server.ResponseStatusException.class,
+						error -> assertThat(error.getStatusCode()).isEqualTo(org.springframework.http.HttpStatus.FORBIDDEN));
+		assertThat(existing.getTitle()).isEqualTo("title");
+		verify(ideaRepository, org.mockito.Mockito.never()).save(any());
+		verify(ideaRepository, org.mockito.Mockito.never()).saveAndFlush(any());
 	}
 
 	@Test
