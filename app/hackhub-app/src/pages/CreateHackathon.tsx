@@ -20,6 +20,7 @@ import {
 } from '@mantine/core'
 import { useForm } from '@mantine/form'
 import { DateTimePicker } from '@mantine/dates'
+import '@mantine/dates/styles.css'
 import { IconPlus, IconTrash, IconKey, IconInfoCircle } from '@tabler/icons-react'
 import { notifications } from '@mantine/notifications'
 import { useNavigate, useSearchParams } from 'react-router-dom'

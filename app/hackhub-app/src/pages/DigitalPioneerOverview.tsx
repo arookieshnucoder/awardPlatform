@@ -8,6 +8,7 @@ import { AwardCriteriaList } from '../components/AwardCriteriaList'
 import { useLanguage } from '../contexts/LanguageContext'
 import { DIGITAL_PIONEER_TIMELINE, getDigitalPioneerTracks } from '../config/digitalPioneer'
 import { useNominationType } from '../hooks/useNominationType'
+import { preloadProjectShowcase } from '../lib/preloadShowcase'
 import { useAuthStore } from '../store/authStore'
 import { votingEntryNotice } from '../config/votingWindow'
 import { useNominationEligibility } from '../hooks/useNominationEligibility'
@@ -112,6 +113,8 @@ export function DigitalPioneerOverview(): ReactElement {
           <Button
             component={Link}
             to={`/nominate?type=${nominationType}`}
+            onPointerEnter={preloadProjectShowcase}
+            onFocus={preloadProjectShowcase}
             className="dp-primary-button"
             size="lg"
             leftSection={<IconBallpen size={18} />}
@@ -120,6 +123,8 @@ export function DigitalPioneerOverview(): ReactElement {
           </Button>
           <Button
             onClick={openVoting}
+            onPointerEnter={preloadProjectShowcase}
+            onFocus={preloadProjectShowcase}
             variant="default"
             className="dp-secondary-button"
             size="lg"

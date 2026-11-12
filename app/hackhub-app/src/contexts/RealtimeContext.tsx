@@ -13,8 +13,7 @@
 
 import { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react'
 import type { ReactNode } from 'react'
-import { Client, type IMessage, type StompSubscription } from '@stomp/stompjs'
-import SockJS from 'sockjs-client'
+import type { Client, IMessage, StompSubscription } from '@stomp/stompjs'
 import { notifications } from '@mantine/notifications'
 import { useAuthStore } from '../store/authStore'
 import { tokenStore } from '../lib/tokenStore'
@@ -53,56 +52,57 @@ export type HackathonEvent = {
 const Context = createContext<RealtimeContextType | null>(null)
 
 export function RealtimeProvider({ children }: { children: ReactNode }) {
-  const user = useAuthStore((s) => s.user)
+  const userId = useAuthStore((s) => s.user?.id)
   const [isConnected, setIsConnected] = useState(false)
   const clientRef = useRef<Client | null>(null)
 
   useEffect(() => {
-    if (!user) {
+    if (!userId) {
       clientRef.current?.deactivate()
       clientRef.current = null
       setIsConnected(false)
       return
     }
 
-    const client = new Client({
-      webSocketFactory: () => new SockJS(WS_URL),
-      connectHeaders: {
-        Authorization: `Bearer ${tokenStore.getAccessToken() ?? ''}`,
-      },
-      reconnectDelay: 3000,
-      onConnect: () => setIsConnected(true),
-      onDisconnect: () => setIsConnected(false),
-      onWebSocketClose: () => setIsConnected(false),
-      onStompError: (frame) => {
-        console.error('STOMP error', frame.headers?.message)
-      },
+    let active = true
+    void Promise.all([import('@stomp/stompjs'), import('sockjs-client')]).then(([{ Client }, { default: SockJS }]) => {
+      if (!active) return
+      const client = new Client({
+        webSocketFactory: () => new SockJS(WS_URL),
+        connectHeaders: {
+          Authorization: `Bearer ${tokenStore.getAccessToken() ?? ''}`,
+        },
+        reconnectDelay: 3000,
+        onConnect: () => {
+          if (!active) return
+          setIsConnected(true)
+          client.subscribe('/user/queue/notifications', (msg: IMessage) => {
+            try {
+              const data = JSON.parse(msg.body) as { title: string; message: string }
+              notifications.show({ title: data.title, message: data.message, color: 'blue' })
+            } catch {}
+          })
+        },
+        onDisconnect: () => { if (active) setIsConnected(false) },
+        onWebSocketClose: () => { if (active) setIsConnected(false) },
+        onStompError: (frame) => {
+          console.error('STOMP error', frame.headers?.message)
+        },
+      })
+
+      clientRef.current = client
+      client.activate()
+    }).catch((error: unknown) => {
+      if (active) console.error('Failed to load realtime connection', error)
     })
 
-    // Subscribe to user-specific notifications after connect
-    client.onConnect = () => {
-      setIsConnected(true)
-      client.subscribe('/user/queue/notifications', (msg: IMessage) => {
-        try {
-          const data = JSON.parse(msg.body) as { title: string; message: string }
-          notifications.show({
-            title: data.title,
-            message: data.message,
-            color: 'blue',
-          })
-        } catch {}
-      })
-    }
-
-    client.activate()
-    clientRef.current = client
-
     return () => {
-      client.deactivate()
+      active = false
+      void clientRef.current?.deactivate()
       clientRef.current = null
       setIsConnected(false)
     }
-  }, [user?.id])
+  }, [userId])
 
   const subscribeToTeamChat = useCallback(
     (teamId: string, callback: (msg: ChatEvent) => void) => {

@@ -324,7 +324,7 @@ class SubmitIdeaUseCaseTest {
 	@Test
 	void existing_individual_nomination_blocks_another_track_before_saving() {
 		stubValidSubmit();
-		when(ideaRepository.findByCreatedByOrderByCreatedAtDesc(USER_ID)).thenReturn(List.of(idea(USER_ID)));
+		when(ideaRepository.findByCreatedByAndHackathonId(USER_ID, HACKATHON_ID)).thenReturn(List.of(idea(USER_ID)));
 		assertThatThrownBy(() -> useCase.executeNomination("Second", "Evidence", HACKATHON_ID, null, USER_ID,
 				"Innovation Breakthrough", List.of(), Idea.Status.SUBMITTED, null, null, null))
 				.isInstanceOf(org.springframework.web.server.ResponseStatusException.class).hasMessageContaining("only one individual");

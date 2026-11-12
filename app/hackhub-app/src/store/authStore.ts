@@ -19,6 +19,7 @@ interface AuthResponse {
     name: string
     role: string
     avatarUrl: string | null
+    skills?: string[]
   }
 }
 
@@ -52,7 +53,7 @@ function mapUser(u: AuthResponse['user'] | ProfileResponse): AuthUser {
     name: u.name,
     role: u.role as AuthUser['role'],
     avatar: 'avatarUrl' in u ? u.avatarUrl ?? undefined : undefined,
-    skills: 'skills' in u ? u.skills : [],
+    skills: u.skills ?? [],
   }
 }
 
@@ -74,6 +75,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           set({ user: null })
           return
         }
+        if (refreshed.user && Array.isArray(refreshed.user.skills)) {
+          set({ user: mapUser(refreshed.user) })
+          return
+        }
       }
       const profile = await api.get<ProfileResponse>('/api/v1/profiles/me')
       set({ user: mapUser(profile) })
@@ -91,8 +96,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const data = await api.post<AuthResponse>('/api/v1/auth/login', { email, password },
         { skipAuth: true })
       tokenStore.setAccessToken(data.accessToken)
-      // Fetch full profile (includes skills)
-      const profile = await api.get<ProfileResponse>('/api/v1/profiles/me')
+      // Older API versions omit skills from the authenticated profile.
+      const profile = Array.isArray(data.user.skills) ? data.user : await api.get<ProfileResponse>('/api/v1/profiles/me')
       set({ user: mapUser(profile) })
     } finally {
       set({ loading: false })
@@ -153,18 +158,18 @@ function handleSessionExpired() {
   useAuthStore.setState({ user: null })
 }
 
-async function tryRefreshSilently(): Promise<boolean> {
+async function tryRefreshSilently(): Promise<AuthResponse | null> {
   try {
     const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? ''
     const res = await fetch(`${BASE_URL}/api/v1/auth/refresh`, {
       method: 'POST',
       credentials: 'include',
     })
-    if (!res.ok) return false
-    const { accessToken } = await res.json()
-    tokenStore.setAccessToken(accessToken)
-    return true
+    if (!res.ok) return null
+    const session: AuthResponse = await res.json()
+    tokenStore.setAccessToken(session.accessToken)
+    return session
   } catch {
-    return false
+    return null
   }
 }

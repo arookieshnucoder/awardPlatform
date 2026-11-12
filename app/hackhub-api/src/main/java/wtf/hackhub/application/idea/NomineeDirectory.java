@@ -3,6 +3,7 @@ package wtf.hackhub.application.idea;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.springframework.stereotype.Service;
+import wtf.hackhub.domain.Idea;
 import wtf.hackhub.domain.Profile;
 import wtf.hackhub.domain.VotingParticipant;
 import wtf.hackhub.infrastructure.persistence.auth.ProfileRepository;
@@ -84,6 +85,40 @@ public class NomineeDirectory {
 
 	public boolean isAdminOrRosterParticipant(Profile profile) {
 		return profile.getRole() == Profile.Role.ADMIN || resolveRosterParticipant(profile).isPresent();
+	}
+
+	/** Resolve display names with one profile query per showcase page. */
+	public Map<UUID, String> showcaseNames(List<Idea> ideas) {
+		var mapper = new ObjectMapper();
+		Map<UUID, UUID> nomineeIds = new HashMap<>();
+		for (var idea : ideas) {
+			try {
+				var attachments = idea.getProjectAttachments();
+				var items = attachments == null || attachments.isBlank() ? mapper.createArrayNode() : mapper.readTree(attachments);
+				if (!items.isArray()) continue;
+				UUID nomineeId = idea.getApprovalStatus() == null ? idea.getCreatedBy() : null;
+				for (var item : items) {
+					if (!"nomination".equals(item.path("type").asText())) continue;
+					if (item.hasNonNull("nomineeUserId")) nomineeId = UUID.fromString(item.path("nomineeUserId").asText());
+					break;
+				}
+				if (nomineeId != null) nomineeIds.put(idea.getId(), nomineeId);
+			} catch (com.fasterxml.jackson.core.JsonProcessingException | IllegalArgumentException ignored) {
+				// Preserve the existing response for historical records without usable identity metadata.
+			}
+		}
+		if (nomineeIds.isEmpty()) return Map.of();
+		Map<UUID, String> byProfile = new HashMap<>();
+		for (var profile : profileRepository.findAllById(new HashSet<>(nomineeIds.values()))) {
+			String localPart = profile.getEmail().split("@", 2)[0].replaceFirst("(?i)^fixed-term\\.", "");
+			var parts = Arrays.stream(localPart.replaceAll("[0-9]", "").split("\\.")).filter(part -> !part.isEmpty()).toList();
+			byProfile.put(profile.getId(), parts.size() < 2 ? "" : String.join(" ", parts));
+		}
+		Map<UUID, String> byIdea = new HashMap<>();
+		nomineeIds.forEach((ideaId, profileId) -> {
+			if (byProfile.containsKey(profileId)) byIdea.put(ideaId, byProfile.get(profileId));
+		});
+		return byIdea;
 	}
 
 	/**

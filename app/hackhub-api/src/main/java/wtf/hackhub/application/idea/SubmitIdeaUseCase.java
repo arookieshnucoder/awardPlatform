@@ -23,6 +23,8 @@ import java.util.UUID;
 
 @Service
 public class SubmitIdeaUseCase {
+
+	private static final ObjectMapper ATTACHMENTS = new ObjectMapper();
 	private final IdeaMutationLock mutationLock;
 	private final wtf.hackhub.infrastructure.storage.NominationPdfValidator pdfValidator;
 	private final wtf.hackhub.application.team.CreateTeamUseCase createTeam;
@@ -85,9 +87,8 @@ public class SubmitIdeaUseCase {
 		// The transaction lock spans the duplicate check, implicit team creation and idea insert.
 		mutationLock.acquire(UUID.nameUUIDFromBytes(("nomination:" + hackathonId + ":" + createdBy + ":"
 				+ teamSubmission).getBytes(java.nio.charset.StandardCharsets.UTF_8)));
-		if (ideaRepository.findByCreatedByOrderByCreatedAtDesc(createdBy).stream()
-				.anyMatch(existing -> existing.getHackathonId().equals(hackathonId)
-						&& (existing.getTeamId() != null || hasTeamMetadata(existing.getProjectAttachments())) == teamSubmission))
+		if (ideaRepository.findByCreatedByAndHackathonId(createdBy, hackathonId).stream()
+				.anyMatch(existing -> (existing.getTeamId() != null || hasTeamMetadata(existing.getProjectAttachments())) == teamSubmission))
 			throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.CONFLICT,
 					"You may submit only one " + (teamSubmission ? "team" : "individual") + " nomination per award. Edit your existing nomination.");
 		boolean employeeSubmission = teamSubmission || requester.getRole() == Profile.Role.PARTICIPANT
@@ -117,7 +118,8 @@ public class SubmitIdeaUseCase {
 				employeeSubmission ? Idea.Status.SUBMITTED : status == null ? Idea.Status.DRAFT : status, repositoryUrl, demoUrl, projectAttachments);
 		if (employeeSubmission) {
 			idea.submitForApproval(approvalDirectory.headKey(employee), employee.nominatingHead());
-			idea = ideaRepository.saveAndFlush(idea);
+			// record() flushes the pending insert before writing the audit row.
+			idea = ideaRepository.save(idea);
 			approvalService.record(idea, createdBy, "submitted", null);
 			return idea;
 		}
@@ -199,8 +201,7 @@ public class SubmitIdeaUseCase {
 	private String employeeMetadata(String attachments, NominationApprovalDirectory.Employee employee,
 			UUID userId, UUID hackathonId) {
 		try {
-			var mapper = new ObjectMapper();
-			var items = attachments == null ? mapper.createArrayNode() : mapper.readTree(attachments);
+			var items = attachments == null ? ATTACHMENTS.createArrayNode() : ATTACHMENTS.readTree(attachments);
 			if (!items.isArray()) throw new IllegalArgumentException("Nomination attachments must be an array");
 			com.fasterxml.jackson.databind.node.ObjectNode nomination = null;
 			for (var item : items) {
@@ -264,7 +265,7 @@ public class SubmitIdeaUseCase {
 
 	private static com.fasterxml.jackson.databind.JsonNode attachmentItems(String attachments) {
 		try {
-			var items = new ObjectMapper().readTree(attachments == null || attachments.isBlank() ? "[]" : attachments);
+			var items = ATTACHMENTS.readTree(attachments == null || attachments.isBlank() ? "[]" : attachments);
 			if (items == null || !items.isArray())
 				throw new IllegalArgumentException("Nomination attachments must be an array");
 			return items;
@@ -352,7 +353,7 @@ public class SubmitIdeaUseCase {
 		if (attachments == null || attachments.isBlank())
 			return;
 		try {
-			var items = new ObjectMapper().readTree(attachments);
+			var items = ATTACHMENTS.readTree(attachments);
 			if (items == null || !items.isArray())
 				throw new IllegalArgumentException("Nomination attachments must be an array");
 			int nominations = 0;

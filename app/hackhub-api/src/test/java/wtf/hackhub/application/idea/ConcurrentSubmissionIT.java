@@ -6,9 +6,11 @@ import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.AuthorityUtils;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.web.server.ResponseStatusException;
 import wtf.hackhub.domain.Idea;
 import wtf.hackhub.support.PostgresIntegrationTest;
 import wtf.hackhub.infrastructure.security.JwtProvider;
@@ -27,6 +29,7 @@ import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.IntConsumer;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -112,6 +115,24 @@ class ConcurrentSubmissionIT extends PostgresIntegrationTest {
 		concurrent("new-nomination", CLIENTS, i -> nominations.executeNomination("Nomination " + i, "Fixture", award,
 				null, managers.get(i), "Customer Values", List.of(), Idea.Status.SUBMITTED, null, null, null));
 		assertThat(jdbc.queryForObject("SELECT count(*) FROM ideas WHERE hackathon_id=?", Integer.class, award)).isEqualTo(CLIENTS);
+	}
+
+	@Test
+	void concurrent_retries_for_one_nomination_create_only_one_row() throws Exception {
+		UUID nominee = participant();
+		UUID award = award(nominee);
+		var successes = new AtomicInteger();
+		concurrent("duplicate-nomination", CLIENTS, i -> {
+			try {
+				nominations.executeNomination("Nomination", "Fixture", award, null, nominee, "Customer Values",
+						List.of(), Idea.Status.SUBMITTED, null, null, null);
+				successes.incrementAndGet();
+			} catch (ResponseStatusException ex) {
+				assertThat(ex.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+			}
+		});
+		assertThat(successes.get()).isEqualTo(1);
+		assertThat(jdbc.queryForObject("SELECT count(*) FROM ideas WHERE hackathon_id=?", Integer.class, award)).isEqualTo(1);
 	}
 
 	@ParameterizedTest

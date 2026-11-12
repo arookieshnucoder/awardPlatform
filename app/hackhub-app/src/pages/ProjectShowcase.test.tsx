@@ -208,7 +208,7 @@ describe('ProjectShowcase', () => {
     expect(message).toHaveStyle({ color: 'rgb(255, 255, 255)' })
     expect(screen.queryByText('No nomination window is currently open.')).not.toBeInTheDocument()
   })
-  it('shares duplicate profile and image requests within a load, then refreshes them on remount', async () => {
+  it('shares duplicate profile requests within a load, then refreshes them on remount', async () => {
     const page = { content: [1, 2].map((id) => ({
       id: `shared-${id}`, title: `Shared nominee ${id}`, description: 'Shared assets',
       createdBy: 'shared-user', category: 'Customer Values', tags: [], attachments: [],
@@ -222,13 +222,11 @@ describe('ProjectShowcase', () => {
     const first = show()
     await screen.findByText('Shared nominee 2')
     expect(ProfileService.getProfile).toHaveBeenCalledTimes(1)
-    expect(StorageService.getPresignedUrl).toHaveBeenCalledTimes(1)
     expect(TeamService.getTeamMembers).not.toHaveBeenCalled()
     first.unmount()
     show()
     await screen.findByText('Shared nominee 2')
     expect(ProfileService.getProfile).toHaveBeenCalledTimes(2)
-    expect(StorageService.getPresignedUrl).toHaveBeenCalledTimes(2)
   })
 
   it('defers offscreen photos, loads nearby photos and allows retry after a failed request', async () => {
@@ -247,24 +245,28 @@ describe('ProjectShowcase', () => {
     getIdeas.mockResolvedValueOnce({ content: [1, 2].map((id) => ({
       id: `photo-${id}`, title: `Photo nominee ${id}`, description: 'Photo loading',
       createdBy: 'creator', category: 'Customer Values', tags: [], attachments: [`/photo-${id}.webp`],
-      projectAttachments: [{ type: 'nomination', name: `Associate ${id}` }],
+      projectAttachments: [{ type: 'nomination', name: `Associate ${id}` },
+        { type: 'screenshot', storageKey: `photo-${id}` }],
       votes: 0, userHasVoted: false, status: 'submitted', createdAt: '', updatedAt: '',
     })) })
+    vi.mocked(StorageService.getPresignedUrl).mockResolvedValue('/photo-2.webp')
     const view = render(<MantineProvider><MemoryRouter initialEntries={["/projects?type=individual"]}><ProjectShowcase /></MemoryRouter></MantineProvider>)
     try {
       await screen.findByText('Photo nominee 2')
+      expect(StorageService.getPresignedUrl).not.toHaveBeenCalled()
       expect(screen.queryByRole('img', { name: /Associate .* nomination/ })).not.toBeInTheDocument()
       act(() => observers[0].notify(false))
       expect(screen.queryByRole('img', { name: 'Associate 1 nomination' })).not.toBeInTheDocument()
       act(() => observers[1].notify(true))
-      const image = screen.getByAltText('Associate 2 nomination')
+      const image = await screen.findByAltText('Associate 2 nomination')
+      expect(StorageService.getPresignedUrl).toHaveBeenCalledExactlyOnceWith('project-attachments', 'photo-2')
       expect(image).toHaveAttribute('src', '/photo-2.webp')
       expect(image).toHaveAttribute('decoding', 'async')
       expect(screen.queryByAltText('Associate 1 nomination')).not.toBeInTheDocument()
       fireEvent.error(image)
       expect(screen.getByText('Photo unavailable')).toBeInTheDocument()
       fireEvent.click(screen.getByRole('button', { name: 'Retry photo' }))
-      const retried = screen.getByAltText('Associate 2 nomination')
+      const retried = await screen.findByAltText('Associate 2 nomination')
       expect(retried).not.toBe(image)
       fireEvent.load(retried)
       expect(retried).toBeVisible()
@@ -851,9 +853,9 @@ describe('ProjectShowcase', () => {
     )
 
     await user.click(await screen.findByRole('radio', { name: /Customer Values/ }))
-    await user.type(screen.getByRole('textbox', { name: /Executive Summary/ }), 'A better customer experience in four clear sentences.')
-    await user.type(screen.getByRole('textbox', { name: /Details of Your Core Achievement in 2026 and Business Impact/ }), 'Reduced service time by 30% and saved RMB 200,000.')
-    await user.type(screen.getByRole('textbox', { name: /How You Demonstrate BD China Culture/ }), 'Listened to users and delivered an end-to-end solution.')
+    fireEvent.change(screen.getByRole('textbox', { name: /Executive Summary/ }), { target: { value: 'A better customer experience in four clear sentences.' } })
+    fireEvent.change(screen.getByRole('textbox', { name: /Details of Your Core Achievement in 2026 and Business Impact/ }), { target: { value: 'Reduced service time by 30% and saved RMB 200,000.' } })
+    fireEvent.change(screen.getByRole('textbox', { name: /How You Demonstrate BD China Culture/ }), { target: { value: 'Listened to users and delivered an end-to-end solution.' } })
     const fileInput = document.querySelector<HTMLInputElement>('input[type="file"]')
     expect(fileInput).not.toBeNull()
     const oversized = new File(['image'], 'large.png', { type: 'image/png' })

@@ -37,7 +37,7 @@ describe('authStore', () => {
     // Reset Zustand store state between tests
     useAuthStore.setState({ user: null, loading: false, initialized: false })
     tokenStore.clear()
-    vi.clearAllMocks()
+    vi.resetAllMocks()
   })
 
   afterEach(() => vi.unstubAllGlobals())
@@ -46,7 +46,6 @@ describe('authStore', () => {
 
   it('login sets user and stores token', async () => {
     mockApi.post.mockResolvedValueOnce({ accessToken: 'jwt-abc', user: PROFILE })
-    mockApi.get.mockResolvedValueOnce({ ...PROFILE })
 
     await useAuthStore.getState().login('alice@test.com', 'secret')
 
@@ -54,6 +53,7 @@ describe('authStore', () => {
     expect(state.user?.email).toBe('alice@test.com')
     expect(state.user?.name).toBe('Alice')
     expect(tokenStore.getAccessToken()).toBe('jwt-abc')
+    expect(mockApi.get).not.toHaveBeenCalled()
     expect(state.loading).toBe(false)
   })
 
@@ -170,6 +170,16 @@ describe('authStore', () => {
   // ── initialize ─────────────────────────────────────────────────────────────
 
   describe('initialize', () => {
+    it('restores a complete refresh profile without fetching it again', async () => {
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue(Response.json({
+        accessToken: 'test-restored-access',
+        user: { ...PROFILE, skills: ['Java'] },
+      })))
+      await useAuthStore.getState().initialize()
+      expect(useAuthStore.getState().user).toMatchObject({ id: PROFILE.id, skills: ['Java'] })
+      expect(mockApi.get).not.toHaveBeenCalled()
+    })
+
     it('restores a recent session from its cookie without interactive sign-in', async () => {
       const fetch = vi.fn().mockResolvedValue(Response.json({ accessToken: 'test-restored-access' }))
       vi.stubGlobal('fetch', fetch)

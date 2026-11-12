@@ -36,7 +36,7 @@ describe('CompanyLogin', () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(Response.json({ enabled: true })))
     renderLogin('/login?redirect=https://example.invalid')
     expect(await screen.findByRole('link', { name: 'Bosch 单点登录' })).toHaveAttribute(
-      'href', '/api/v1/auth/oidc/authorize/bosch?redirect=%2Foverview'
+      'href', '/api/v1/auth/oidc/authorize/bosch?redirect=%2F'
     )
   })
 

@@ -20,6 +20,7 @@ public interface IdeaRepository extends JpaRepository<Idea, UUID> {
 	List<Idea> findAllByHackathonId(UUID hackathonId);
 
 	List<Idea> findByCreatedByOrderByCreatedAtDesc(UUID createdBy);
+	List<Idea> findByCreatedByAndHackathonId(UUID createdBy, UUID hackathonId);
 	List<Idea> findByApprovalHeadKeyOrderByCreatedAtDesc(String approvalHeadKey);
 
 	@Query(value = "select i.* from ideas i where exists (select 1 from jsonb_array_elements("

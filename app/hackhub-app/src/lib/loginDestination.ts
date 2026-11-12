@@ -2,10 +2,10 @@
 export function loginDestination(search: string): string {
   const requested = new URLSearchParams(search).get('redirect')
   if (!requested?.startsWith('/') || requested.startsWith('//') || /[\\\s]/.test(requested)) {
-    return '/overview'
+    return '/'
   }
 
   const path = new URL(requested, 'https://portal.invalid').pathname.replace(/\/+$/, '')
-  if (!path || path === '/login' || path === '/register') return '/overview'
+  if (!path || path === '/login' || path === '/register') return '/'
   return requested
 }

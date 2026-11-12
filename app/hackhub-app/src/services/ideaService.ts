@@ -21,6 +21,7 @@ export interface Idea {
   createdAt: string
   updatedAt: string
   userHasVoted?: boolean
+  nomineeFullName?: string
   approvalStatus?: 'pending' | 'approved' | 'rejected' | null
   approvalReason?: string | null
   approvalReviewedAt?: string | null
@@ -128,9 +129,9 @@ export class IdeaService {
     await api.post('/api/v1/me/nomination-approvals', { items, decision, reason })
   }
 
-  static async getIdeas(hackathonId: string, page = 0, size = 20): Promise<PageResponse<Idea>> {
+  static async getIdeas(hackathonId: string, page = 0, size = 20, showcase = false): Promise<PageResponse<Idea>> {
     const response = await api.get<PageResponse<IdeaResponse>>(
-      `/api/v1/hackathons/${hackathonId}/ideas?page=${page}&size=${size}`
+      `/api/v1/hackathons/${hackathonId}/ideas?page=${page}&size=${size}${showcase ? '&showcase=true' : ''}`
     )
     return { ...response, content: response.content.map(normalizeIdea) }
   }

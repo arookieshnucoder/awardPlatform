@@ -2,6 +2,7 @@ package wtf.hackhub.presentation.auth;
 
 import wtf.hackhub.domain.Profile;
 
+import java.util.List;
 import java.util.UUID;
 
 public record AuthResponse(String accessToken, UserDto user) {
@@ -10,9 +11,9 @@ public record AuthResponse(String accessToken, UserDto user) {
 		return new AuthResponse(accessToken, UserDto.from(profile));
 	}
 
-	public record UserDto(UUID id, String email, String name, String role, String avatarUrl) {
+	public record UserDto(UUID id, String email, String name, String role, String avatarUrl, List<String> skills) {
 		public static UserDto from(Profile p) {
-			return new UserDto(p.getId(), p.getEmail(), p.getName(), p.getRole().toDbValue(), p.getAvatarUrl());
+			return new UserDto(p.getId(), p.getEmail(), p.getName(), p.getRole().toDbValue(), p.getAvatarUrl(), p.getSkills());
 		}
 	}
 }

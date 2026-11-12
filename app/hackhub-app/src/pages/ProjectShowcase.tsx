@@ -90,12 +90,6 @@ interface Project {
   description: string
   nominee_name: string
   nominee_org_code: string
-  team_members: Array<{
-    id: string
-    name: string
-    avatar?: string
-    role?: string
-  }>
   hackathon_id: string
   category: string
   technologies: string[]
@@ -103,6 +97,7 @@ interface Project {
   demo_url?: string
   video_url?: string
   images: string[]
+  photos?: ProjectAttachment[]
   votes: number
   user_vote?: boolean
   nomination_type: 'individual' | 'team'
@@ -189,11 +184,46 @@ function nominationSummary(description: string) {
     ?? sections.find((section) => !section.heading)?.body ?? ''
 }
 
-function NomineePhoto({ src, name }: { src: string; name: string }) {
+function useShowcasePhoto(project: Project | null, enabled: boolean, attempt = 0) {
+  const photos = project?.photos
+  const fallback = project?.images[0]
+  const [resolved, setResolved] = useState<{ photos: ProjectAttachment[]; attempt: number; src: string }>()
+  useEffect(() => {
+    if (!enabled || !photos?.length) return
+    let active = true
+    async function resolve(sources: ProjectAttachment[]) {
+      for (const photo of sources) {
+        if (!active) return
+        const url = photo.storageKey
+          ? await StorageService.getPresignedUrl('project-attachments', photo.storageKey).catch(() => photo.url)
+          : photo.url
+        if (url) {
+          if (active) setResolved({ photos: sources, attempt, src: url })
+          return
+        }
+      }
+      if (active) setResolved({ photos: sources, attempt, src: fallback ?? '' })
+    }
+    void resolve(photos)
+    return () => { active = false }
+  }, [photos, fallback, enabled, attempt])
+  if (!photos?.length) return fallback
+  return resolved?.photos === photos && resolved.attempt === attempt ? resolved.src : undefined
+}
+
+function NomineeAvatar({ project, size }: { project: Project; size: number }) {
+  const photo = useShowcasePhoto(project, true)
+  return <Avatar src={photo || undefined} alt={project.nominee_name} size={size} radius="md"><IconUser /></Avatar>
+}
+
+function NomineePhoto({ project }: { project: Project }) {
   const container = useRef<HTMLDivElement>(null)
   const [visible, setVisible] = useState(false)
   const [status, setStatus] = useState<'loading' | 'loaded' | 'error'>('loading')
   const [attempt, setAttempt] = useState(0)
+  const src = useShowcasePhoto(project, visible, attempt)
+  const failed = status === 'error' || src === ''
+  const name = project.nominee_name
 
   useEffect(() => {
     if (!container.current) return
@@ -214,15 +244,15 @@ function NomineePhoto({ src, name }: { src: string; name: string }) {
 
   return (
     <div ref={container} className="dp-candidate-photo" style={{ position: 'relative' }}>
-      {visible && <Image key={attempt} src={src} alt={`${name} nomination`} fit="contain"
+      {visible && src && <Image key={attempt} src={src} alt={`${name} nomination`} fit="contain"
         decoding="async" w="100%" h="100%"
         onLoad={() => setStatus('loaded')} onError={() => setStatus('error')}
         style={{ visibility: status === 'loaded' ? 'visible' : 'hidden' }} />}
       {status !== 'loaded' && <Stack gap="xs" align="center" justify="center"
         style={{ position: 'absolute', inset: 0 }}>
         <IconUser size={24} aria-hidden="true" />
-        <Text size="sm" role="status">{status === 'error' ? 'Photo unavailable' : 'Loading photo…'}</Text>
-        {status === 'error' && <Button size="compact-xs" variant="subtle" onClick={() => {
+        <Text size="sm" role="status">{failed ? 'Photo unavailable' : 'Loading photo…'}</Text>
+        {failed && <Button size="compact-xs" variant="subtle" onClick={() => {
           setStatus('loading')
           setAttempt((current) => current + 1)
         }}>Retry photo</Button>}
@@ -430,6 +460,7 @@ export function ProjectShowcase({ nominationMode = false, managementMode = false
   const [voteError, setVoteError] = useState<string | null>(null)
   const [selectedProject, setSelectedProject] = useState<Project | null>(null)
   const [modalOpened, setModalOpened] = useState(false)
+  const selectedPhoto = useShowcasePhoto(selectedProject, modalOpened)
   const [uploading, setUploading] = useState(false)
   const uploadBusy = useRef(false)
   const [individualPreviewOpened, setIndividualPreviewOpened] = useState(false)
@@ -591,7 +622,7 @@ export function ProjectShowcase({ nominationMode = false, managementMode = false
           setHackathons(awards)
           const nominations = await Promise.all(awards.map((award) => getAllPages((page) => PublicAwardService.getNominations(award.id, page))))
           if (sequence !== loadSequence.current) return
-          setProjects(nominations.flat().map((nomination) => ({ ...nomination, technologies: parseNominationTags(nomination.technologies.join(',')), team_members: [], user_vote: false, nomination_type: nomination.nomination_type ?? 'individual' })))
+          setProjects(nominations.flat().map((nomination) => ({ ...nomination, technologies: parseNominationTags(nomination.technologies.join(',')), user_vote: false, nomination_type: nomination.nomination_type ?? 'individual' })))
           return
         }
         const loadedHackathons = await getAllPages((page) => HackathonService.getHackathons(page, 100))
@@ -601,11 +632,10 @@ export function ProjectShowcase({ nominationMode = false, managementMode = false
         setUploadForm((current) => current.hackathonId || loadedHackathons.length === 0
           ? current
           : { ...current, hackathonId: currentAward.id })
+        if (nominationMode) return
 
         // Share requests within this refresh only, so votes and account changes stay fresh.
         const profiles = new Map<string, ReturnType<typeof ProfileService.getProfile>>()
-        const imageUrls = new Map<string, Promise<string>>()
-        const imageUpdates: Array<Promise<{ id: string; images: string[] }>> = []
         const getProfile = (id: string) => {
           let request = profiles.get(id)
           if (!request) {
@@ -614,22 +644,10 @@ export function ProjectShowcase({ nominationMode = false, managementMode = false
           }
           return request.catch(() => null)
         }
-        const getImageUrl = (key: string) => {
-          let request = imageUrls.get(key)
-          if (!request) {
-            request = StorageService.getPresignedUrl('project-attachments', key)
-            imageUrls.set(key, request)
-          }
-          return request
-        }
-
         const hackathonData = await Promise.all(loadedHackathons.map(async (hackathon) => {
-          const [ideasPage, teams] = await Promise.all([
-            getAllPages((page) => IdeaService.getIdeas(hackathon.id, page, 100)),
-            TeamService.getTeams(hackathon.id),
-          ])
-
-          const usedTeamIds = new Set(ideasPage.map((idea) => idea.teamId))
+          const ideasPage = await getAllPages((page) => IdeaService.getIdeas(hackathon.id, page, 100, !managementMode))
+          const usedTeamIds = new Set(ideasPage.filter((idea) => !idea.projectAttachments?.some((item) => item.type === 'nomination' && item.name != null)).map((idea) => idea.teamId).filter(Boolean))
+          const teams = usedTeamIds.size ? await TeamService.getTeams(hackathon.id) : []
           const teamsById = new Map(teams.map((team) => [team.id, team]))
           const teamsWithMembers = await Promise.all(teams.filter((team) => usedTeamIds.has(team.id)).map(async (team) => ({
             team,
@@ -641,29 +659,19 @@ export function ProjectShowcase({ nominationMode = false, managementMode = false
             const nomination = idea.projectAttachments?.find((attachment) => attachment.type === 'nomination')
             const team = idea.teamId ? teamsById.get(idea.teamId) : undefined
             const members = team ? membersByTeam.get(team.id) ?? [] : []
-            const teamMembers = await Promise.all(members.map(async (member) => {
-              const profile = await getProfile(member.userId)
-              return {
-                id: member.userId,
-                name: profile?.name ?? member.userId,
-                avatar: profile?.avatarUrl ?? undefined,
-                role: member.role,
-              }
-            }))
+            const firstMember = members[0]
             const screenshots = (idea.projectAttachments ?? [])
               .filter((attachment) => attachment.type === 'screenshot')
-            const images = screenshots.map((attachment) => attachment.url)
-            imageUpdates.push(Promise.all(screenshots.map((attachment) =>
-              attachment.storageKey ? getImageUrl(attachment.storageKey).catch(() => attachment.url) : attachment.url,
-            )).then((resolved) => ({ id: idea.id, images: [...resolved, ...(idea.attachments ?? [])].filter(Boolean) })))
-
-            const creatorProfile = teamMembers.length > 0 || nomination?.name != null
+            const creatorProfile = firstMember || nomination?.name != null
               ? null
               : await getProfile(idea.createdBy)
             const nominationType = idea.teamId || nomination?.nominationType === 'team' ? 'team' : 'individual'
-            const nomineeId = nomination?.nomineeUserId ?? (nomination?.name ? undefined : teamMembers[0]?.id ?? idea.createdBy)
-            const nomineeProfile = !nominationMode && !managementMode && nomineeId ? await getProfile(nomineeId) : null
-            const fullName = nomineeNameFromEmail(nomineeProfile?.email)
+            const nomineeId = nomination?.nomineeUserId ?? (nomination?.name ? undefined : firstMember?.userId ?? idea.createdBy)
+            const [nomineeProfile, memberProfile] = await Promise.all([
+              !managementMode && nomineeId && idea.nomineeFullName == null ? getProfile(nomineeId) : null,
+              firstMember && nomination?.name == null ? getProfile(firstMember.userId) : null,
+            ])
+            const fullName = (idea.nomineeFullName ?? nomineeNameFromEmail(nomineeProfile?.email)) || undefined
 
             return {
               id: idea.id,
@@ -672,15 +680,15 @@ export function ProjectShowcase({ nominationMode = false, managementMode = false
               title: nominationType === 'individual' ? fullName ?? idea.title : idea.title,
               description: idea.description,
               nominee_org_code: nomination?.nomineeOrgCode ?? '',
-              nominee_name: fullName ?? nomination?.name ?? teamMembers[0]?.name ?? creatorProfile?.name ?? team?.name ?? 'Individual Nominee',
-              team_members: teamMembers,
+              nominee_name: fullName ?? nomination?.name ?? memberProfile?.name ?? firstMember?.userId ?? creatorProfile?.name ?? team?.name ?? 'Individual Nominee',
               hackathon_id: hackathon.id,
               category: normalizeDigitalPioneerTrack(idea.category, idea.tags ?? []),
               technologies: parseNominationTags((idea.tags ?? []).join(',')),
               github_url: idea.repositoryUrl ?? undefined,
               demo_url: idea.demoUrl ?? undefined,
+              photos: screenshots.some((attachment) => attachment.storageKey) ? screenshots : undefined,
               images: screenshots.some((attachment) => attachment.storageKey)
-                ? [] : [...images, ...(idea.attachments ?? [])].filter(Boolean),
+                ? (idea.attachments ?? []).filter(Boolean) : [...screenshots.map((photo) => photo.url), ...(idea.attachments ?? [])].filter(Boolean),
               votes: idea.votes ?? 0,
               user_vote: idea.userHasVoted ?? false,
               status: idea.status,
@@ -693,14 +701,6 @@ export function ProjectShowcase({ nominationMode = false, managementMode = false
         }))
         if (sequence !== loadSequence.current) return
         setProjects(hackathonData.flatMap(({ projectList }) => projectList))
-        // Photo URL requests must not hold the nomination list or voting controls open.
-        imageUpdates.forEach((request) => {
-          void request.then(({ id, images }) => {
-            if (sequence !== loadSequence.current) return
-            setProjects((current) => current.map((project) => project.id === id ? { ...project, images } : project))
-            setSelectedProject((current) => current?.id === id ? { ...current, images } : current)
-          })
-        })
       } catch (error) {
         if (sequence !== loadSequence.current) return
         setLoadError(true)
@@ -821,7 +821,6 @@ export function ProjectShowcase({ nominationMode = false, managementMode = false
       })
       setProjectImage(null)
       setUploadForm(emptyUploadForm())
-      await loadProjects()
     } catch (error) {
       notifications.show({
         title: 'Submission failed',
@@ -1490,8 +1489,8 @@ export function ProjectShowcase({ nominationMode = false, managementMode = false
               >
                 <div className="dp-candidate-layout">
                   <div className="dp-card-visual">
-                    {project.images[0] ? (
-                      <NomineePhoto key={project.images[0]} src={project.images[0]} name={project.nominee_name} />
+                    {project.photos?.length || project.images[0] ? (
+                      <NomineePhoto project={project} />
                     ) : (
                       <div className="dp-nominee-placeholder">
                         <IconUser size={24} />
@@ -1636,7 +1635,7 @@ export function ProjectShowcase({ nominationMode = false, managementMode = false
               : submittedProjects.map((project) => <div className="dp-vote-cart-item" key={project.id} onClick={() => locateVotedProject(project)}>
                 <UnstyledButton className="dp-vote-cart-locate" aria-label={`Locate ${project.title}`} onClick={(event) => { event.stopPropagation(); locateVotedProject(project) }}>
                 <Group wrap="nowrap" align="flex-start">
-                  <Avatar src={project.images[0]} alt={project.nominee_name} size={56} radius="md"><IconUser /></Avatar>
+                  <NomineeAvatar project={project} size={56} />
                   <Stack gap={6} style={{ flex: 1, minWidth: 0 }}>
                     <Text fw={700} style={{ overflowWrap: 'anywhere' }} translate="no">{project.title}</Text>
                     <Text size="xs">{project.nomination_type === 'team' ? 'Team' : 'Individual'} · {project.category}</Text>
@@ -1669,7 +1668,7 @@ export function ProjectShowcase({ nominationMode = false, managementMode = false
                 {submittedProjects.length === 0 ? <Text>No submitted votes yet.</Text> : submittedProjects.map((project) => (
                   <Card key={project.id} withBorder>
                     <Group justify="space-between" wrap="nowrap" mb="sm">
-                      <Avatar src={project.images[0]} alt={project.nominee_name} size={48} radius="md"><IconUser /></Avatar>
+                      <NomineeAvatar project={project} size={48} />
                       <Button color="red" variant="light" size="xs" leftSection={<IconTrash size={14} />}
                         aria-label={`Delete voting record for ${project.title}`} disabled={deletingRecord || submitting}
                         onClick={() => { setRecordError(null); setRecordToDelete(project) }}>Delete</Button>
@@ -1740,9 +1739,9 @@ export function ProjectShowcase({ nominationMode = false, managementMode = false
         {selectedProject && (
           <div className="dp-detail-layout">
             <Stack gap="md" className="dp-detail-sidebar">
-              {selectedProject.images[0] ? (
+              {selectedPhoto ? (
                 <Image
-                  src={selectedProject.images[0]}
+                  src={selectedPhoto}
                   alt={`${selectedProject.nominee_name} nomination`}
                   className="dp-candidate-detail-photo"
                   decoding="async"

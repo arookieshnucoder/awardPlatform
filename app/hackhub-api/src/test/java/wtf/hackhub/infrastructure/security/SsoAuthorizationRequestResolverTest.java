@@ -14,7 +14,7 @@ class SsoAuthorizationRequestResolverTest {
 			"/%2fexample.invalid", "/login", "/overview/../login", "/register/", "/api/v1/auth/logout",
 			"/\n//example.invalid"})
 	void rejectsUnsafeDestinations(String destination) {
-		assertEquals("/overview", SsoAuthorizationRequestResolver.safeDestination(destination));
+		assertEquals("/", SsoAuthorizationRequestResolver.safeDestination(destination));
 	}
 
 	@ParameterizedTest

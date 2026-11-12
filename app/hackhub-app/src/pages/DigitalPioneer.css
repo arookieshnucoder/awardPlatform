@@ -1049,6 +1049,7 @@
 }
 
 .dp-nomination-track__name {
+  color: #f5f8ff;
   font-family: var(--dp-body);
   font-size: 1.18rem;
   font-weight: 680;

@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { MantineProvider } from '@mantine/core'
 import { render, screen, waitFor } from '@testing-library/react'
-import { MemoryRouter } from 'react-router-dom'
+import { MemoryRouter, useLocation } from 'react-router-dom'
 import { beforeEach, expect, it, vi } from 'vitest'
 import App from './App'
 
@@ -21,7 +21,15 @@ vi.mock('./pages/DigitalPioneerOverview', () => ({ DigitalPioneerOverview: () =>
 vi.mock('./contexts/RealtimeContext', () => ({ RealtimeProvider: ({ children }: { children: ReactNode }) => children }))
 vi.mock('./hooks/useAwardAccess', () => ({ useAwardAccess: () => ({ canReview: true, loading: false }) }))
 vi.mock('./hooks/useNominationEligibility', () => ({ useNominationEligibility: () => eligibility }))
-vi.mock('./pages/ProjectShowcase', () => ({ ProjectShowcase: () => <div>Candidate list</div> }))
+vi.mock('./lib/preloadShowcase', () => ({
+  loadProjectShowcase: async () => ({ default: () => <div>Candidate list</div> }),
+  preloadedProjectShowcase: undefined,
+  preloadProjectShowcase: vi.fn(),
+}))
+
+function CurrentPath() {
+  return <output aria-label="Current path">{useLocation().pathname}</output>
+}
 
 it('downloads the award page during session restoration without displaying it before authentication', async () => {
   const view = () => <MantineProvider env="test"><MemoryRouter initialEntries={['/awards']}><App /></MemoryRouter></MantineProvider>
@@ -74,7 +82,7 @@ it('lets an administrator open Browse & Vote independently of the roster check',
 })
 
 it.each(['/', '/login'])('restores a recent visit to %s without displaying the sign-in page', async (path) => {
-  const view = () => <MantineProvider env="test"><MemoryRouter initialEntries={[path]}><App /></MemoryRouter></MantineProvider>
+  const view = () => <MantineProvider env="test"><MemoryRouter initialEntries={[path]}><CurrentPath /><App /></MemoryRouter></MantineProvider>
   const rendered = render(view())
   expect(screen.queryByText('Employee SSO sign-in')).not.toBeInTheDocument()
   auth.user = { id: 'employee-1', role: 'participant' }
@@ -82,6 +90,7 @@ it.each(['/', '/login'])('restores a recent visit to %s without displaying the s
   auth.loading = false
   rendered.rerender(view())
   expect(await screen.findByText('CN Award overview')).toBeInTheDocument()
+  expect(screen.getByLabelText('Current path')).toHaveTextContent(/^\/$/)
   expect(screen.queryByText('Employee SSO sign-in')).not.toBeInTheDocument()
 })
 

@@ -56,10 +56,12 @@ public class IdeaController {
 			@ApiResponse(responseCode = "401", description = "Not authenticated")})
 	@GetMapping("/api/v1/hackathons/{hackathonId}/ideas")
 	public Page<IdeaResponse> listByHackathon(@PathVariable UUID hackathonId, Pageable pageable,
-			@AuthenticationPrincipal UUID userId) {
+			@AuthenticationPrincipal UUID userId, @RequestParam(defaultValue = "false") boolean showcase) {
 		var ideas = getIdeasUseCase.listByHackathon(hackathonId, pageable);
 		var votedIds = getIdeasUseCase.votedIdeaIds(ideas.getContent().stream().map(Idea::getId).toList(), userId);
-		return ideas.map(idea -> response(idea, votedIds.contains(idea.getId())));
+		if (!showcase) return ideas.map(idea -> response(idea, votedIds.contains(idea.getId())));
+		var names = nomineeDirectory.showcaseNames(ideas.getContent());
+		return ideas.map(idea -> response(idea, votedIds.contains(idea.getId()), names.get(idea.getId())));
 	}
 
 	@Operation(summary = "Submit a new idea to a hackathon")
@@ -242,6 +244,10 @@ public class IdeaController {
 	public record ApprovalRequest(List<NominationApprovalService.Selection> items, String decision, String reason) { }
 
 	private IdeaResponse response(Idea idea, boolean voted) {
+		return response(idea, voted, null);
+	}
+
+	private IdeaResponse response(Idea idea, boolean voted, String nomineeFullName) {
 		var result = IdeaResponse.from(idea, voted);
 		return new IdeaResponse(result.id(), result.title(), result.description(), result.hackathonId(),
 				result.teamId(), result.createdBy(),
@@ -251,7 +257,7 @@ public class IdeaController {
 				: result.projectAttachments()), result.totalScore(),
 				result.voteCount(), result.userHasVoted(), result.createdAt(), result.updatedAt(),
 				result.approvalStatus(), result.approvalReason(), result.approvalReviewedAt(), result.approvalReviewerName(),
-				result.approvalVersion(), result.approvalHeadName());
+				result.approvalVersion(), result.approvalHeadName(), nomineeFullName);
 	}
 
 	// ── DTOs ──────────────────────────────────────────────────────────────────
@@ -260,14 +266,16 @@ public class IdeaController {
 			String category, List<String> tags, int votes, String status, List<String> attachments,
 			String repositoryUrl, String demoUrl, String projectAttachments, BigDecimal totalScore, int voteCount,
 			boolean userHasVoted, Instant createdAt, Instant updatedAt, String approvalStatus, String approvalReason,
-			Instant approvalReviewedAt, String approvalReviewerName, int approvalVersion, String approvalHeadName) {
+			Instant approvalReviewedAt, String approvalReviewerName, int approvalVersion, String approvalHeadName,
+			@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
+			String nomineeFullName) {
 		static IdeaResponse from(Idea i, boolean userHasVoted) {
 			return new IdeaResponse(i.getId(), i.getTitle(), i.getDescription(), i.getHackathonId(), i.getTeamId(),
 					i.getCreatedBy(), i.getCategory(), i.getTags(), i.getVotes(), i.getStatus().toDbValue(),
 					i.getAttachments(), i.getRepositoryUrl(), i.getDemoUrl(), i.getProjectAttachments(),
 					i.getTotalScore(), i.getVoteCount(), userHasVoted, i.getCreatedAt(), i.getUpdatedAt(),
 					i.getApprovalStatus(), i.getApprovalReason(), i.getApprovalReviewedAt(), i.getApprovalReviewerName(),
-					i.getApprovalVersion(), i.getApprovalHeadName());
+					i.getApprovalVersion(), i.getApprovalHeadName(), null);
 		}
 	}
 

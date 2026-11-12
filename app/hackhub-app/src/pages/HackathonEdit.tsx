@@ -16,6 +16,7 @@ import {
   LoadingOverlay,
 } from '@mantine/core'
 import { DateTimePicker } from '@mantine/dates'
+import '@mantine/dates/styles.css'
 import {
   IconArrowLeft,
   IconDeviceFloppy,

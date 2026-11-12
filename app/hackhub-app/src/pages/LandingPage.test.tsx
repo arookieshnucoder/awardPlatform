@@ -106,11 +106,12 @@ describe('LandingPage', () => {
     if (role === 'admin') expect(screen.getByRole('menuitem', { name: 'Manage nominees' })).toHaveAttribute('href', '/admin/nominees')
   })
 
-  it('retains the reference background with immediate poster and loaded video', () => {
+  it('renders the poster immediately and defers the background video', async () => {
     const { container } = renderPage()
     const video = container.querySelector('video')!
     expect(video).toHaveAttribute('poster', '/media/tech-blue-poster.jpg')
-    expect(video.querySelector('source')).toHaveAttribute('src', '/media/tech-blue-loop.mp4')
+    expect(video).not.toHaveAttribute('src')
+    await waitFor(() => expect(video).toHaveAttribute('src', '/media/tech-blue-loop.mp4'))
     fireEvent.loadedData(video)
     expect(video).toHaveClass('is-ready')
     expect(container.querySelector('.award-landing__program-mark')).not.toBeInTheDocument()

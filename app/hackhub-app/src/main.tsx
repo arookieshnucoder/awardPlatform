@@ -7,7 +7,6 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { BrowserRouter } from 'react-router-dom'
 // Import Mantine styles
 import '@mantine/core/styles.css'
-import '@mantine/dates/styles.css'
 import '@mantine/notifications/styles.css'
 import './index.css'
 import App from './App.tsx'

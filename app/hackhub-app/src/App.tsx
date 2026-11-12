@@ -1,6 +1,6 @@
 import { Routes, Route, Navigate, useLocation, useParams } from 'react-router-dom'
 import { Alert, Container, LoadingOverlay } from '@mantine/core'
-import { lazy, Suspense, useEffect, useState, type ComponentType, type ReactNode } from 'react'
+import { lazy, Suspense, useEffect, useState, type ComponentProps, type ComponentType, type ReactNode } from 'react'
 import { useAuthStore } from './store/authStore'
 import { RealtimeProvider } from './contexts/RealtimeContext'
 import { DigitalPioneerOverview } from './pages/DigitalPioneerOverview'
@@ -10,6 +10,7 @@ import { loginDestination } from './lib/loginDestination'
 import { HackathonAccess } from './components/HackathonAccess'
 import { useNominationEligibility } from './hooks/useNominationEligibility'
 import { votingAccessNotice } from './config/votingWindow'
+import { loadProjectShowcase, preloadedProjectShowcase, preloadProjectShowcase } from './lib/preloadShowcase'
 
 let preloadedAwardManagement: ComponentType | undefined
 const loadAwardManagement = () => import('./pages/AwardManagement').then((module) => {
@@ -24,7 +25,11 @@ function AwardManagement() {
 }
 const CreateHackathon = lazy(() => import('./pages/CreateHackathon'))
 const HackathonEdit = lazy(() => import('./pages/HackathonEdit').then((module) => ({ default: module.HackathonEdit })))
-const ProjectShowcase = lazy(() => import('./pages/ProjectShowcase').then((module) => ({ default: module.ProjectShowcase })))
+const LazyProjectShowcase = lazy(loadProjectShowcase)
+function ProjectShowcase(props: ComponentProps<typeof LazyProjectShowcase>) {
+  const [Page] = useState(() => preloadedProjectShowcase ?? LazyProjectShowcase)
+  return <Page {...props} />
+}
 const NominationApprovals = lazy(() => import('./pages/NominationApprovals').then((module) => ({ default: module.NominationApprovals })))
 const Profile = lazy(() => import('./pages/Profile').then((module) => ({ default: module.Profile })))
 const Login = lazy(() => import('./pages/Login').then((module) => ({ default: module.Login })))
@@ -75,6 +80,7 @@ function App() {
     if (/^\/(awards(?:\/[^/]+)?|committee|hackathons)$/.test(location.pathname)) {
       void loadAwardManagement().catch(() => { /* The lazy route handles import failures when rendered. */ })
     }
+    if (/^\/(nominate|projects)\/?$/.test(location.pathname)) preloadProjectShowcase()
   }, [location.pathname])
 
   // Keep the login form mounted while submitting so failed attempts retain their input.
@@ -96,6 +102,8 @@ function App() {
       </Suspense>
     )
   }
+
+  if (location.pathname === '/login') return <Navigate to={loginDestination(location.search)} replace />
 
   // Website sections share the original layout after authentication.
   if (['/', '/overview', '/nominate', '/projects'].includes(location.pathname)) {
@@ -144,7 +152,6 @@ function App() {
             <Route path="/hackathons/:hackathonId/judge" element={<ReviewAccess><JudgingPanel /></ReviewAccess>} />
             <Route path="/hackathons/:hackathonId/leaderboard" element={<ReviewAccess><Leaderboard /></ReviewAccess>} />
             <Route path="/invite/:token" element={<AcceptInvitation />} />
-            <Route path="/login" element={<Navigate to={loginDestination(location.search)} replace />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Suspense>

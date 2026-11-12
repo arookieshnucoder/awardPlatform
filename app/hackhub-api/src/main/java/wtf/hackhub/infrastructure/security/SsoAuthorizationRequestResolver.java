@@ -43,18 +43,18 @@ public class SsoAuthorizationRequestResolver implements OAuth2AuthorizationReque
 	public static String safeDestination(String requested) {
 		if (requested == null || requested.length() > 2048 || !requested.startsWith("/") || requested.startsWith("//")
 				|| requested.matches(".*[\\\\\\s\\p{Cntrl}%].*")) {
-			return "/overview";
+			return "/";
 		}
 		try {
 			var uri = URI.create(requested).normalize();
 			String path = uri.getPath().replaceAll("/+$", "");
 			if (uri.getHost() != null || path.isEmpty() || path.equals("/login") || path.equals("/register")
 					|| path.startsWith("/api/")) {
-				return "/overview";
+				return "/";
 			}
 			return uri.toString();
 		} catch (IllegalArgumentException ex) {
-			return "/overview";
+			return "/";
 		}
 	}
 }

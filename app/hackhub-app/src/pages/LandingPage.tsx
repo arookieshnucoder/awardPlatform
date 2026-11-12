@@ -14,6 +14,7 @@ import { useNominationType } from '../hooks/useNominationType'
 import { Link, useLocation } from 'react-router-dom'
 import { AwardBrand } from '../components/Layout/AwardBrand'
 import { useTechBackground } from '../hooks/useTechBackground'
+import { preloadProjectShowcase } from '../lib/preloadShowcase'
 import { votingEntryNotice } from '../config/votingWindow'
 import './LandingPage.css'
 
@@ -30,6 +31,7 @@ export function LandingPage({ children }: { children?: ReactNode }) {
   const showHero = pathname === '/' || pathname === '/overview'
   const [menuOpen, setMenuOpen] = useState(false)
   const [videoReady, setVideoReady] = useState(false)
+  const [loadVideo, setLoadVideo] = useState(false)
   const backdropRef = useRef<HTMLDivElement>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
   const entryPoints = [
@@ -57,6 +59,12 @@ export function LandingPage({ children }: { children?: ReactNode }) {
   useTechBackground(backdropRef, videoRef)
 
   useEffect(() => {
+    // Give the navigation and page content a chance to paint before fetching the loop.
+    const timer = window.setTimeout(() => setLoadVideo(true), 650)
+    return () => window.clearTimeout(timer)
+  }, [])
+
+  useEffect(() => {
     if (!menuOpen) return undefined
 
     const closeOnEscape = (event: KeyboardEvent) => {
@@ -76,15 +84,14 @@ export function LandingPage({ children }: { children?: ReactNode }) {
           muted
           loop
           playsInline
-          preload="auto"
+          preload={loadVideo ? 'auto' : 'none'}
+          src={loadVideo ? landingVideoSrc : undefined}
           poster={landingPosterSrc}
           onLoadedData={() => setVideoReady(true)}
           onCanPlay={() => setVideoReady(true)}
           onPlaying={() => setVideoReady(true)}
           onError={() => setVideoReady(false)}
-        >
-          <source src={landingVideoSrc} type="video/mp4" />
-        </video>
+        />
       </div>
 
       <header className="award-landing__header">
@@ -96,6 +103,8 @@ export function LandingPage({ children }: { children?: ReactNode }) {
               className={item.active ? 'award-landing__nav-link is-active' : 'award-landing__nav-link'}
               to={item.to}
               onClick={item.to === '/projects' ? checkVotingEntry : undefined}
+              onPointerEnter={item.to.startsWith('/nominate') || item.to === '/projects' ? preloadProjectShowcase : undefined}
+              onFocus={item.to.startsWith('/nominate') || item.to === '/projects' ? preloadProjectShowcase : undefined}
               aria-current={item.active ? 'page' : undefined}
               key={item.label}
             >
@@ -149,7 +158,7 @@ export function LandingPage({ children }: { children?: ReactNode }) {
           />
           <nav className="award-landing__mobile-menu" id="award-mobile-menu" aria-label="Mobile navigation">
             {entryPoints.map((item) => (
-              <Link to={item.to} key={item.label} onClick={(event) => {
+              <Link to={item.to} key={item.label} onPointerEnter={item.to.startsWith('/nominate') || item.to === '/projects' ? preloadProjectShowcase : undefined} onFocus={item.to.startsWith('/nominate') || item.to === '/projects' ? preloadProjectShowcase : undefined} onClick={(event) => {
                 if (item.to === '/projects') checkVotingEntry(event)
                 setMenuOpen(false)
               }}>

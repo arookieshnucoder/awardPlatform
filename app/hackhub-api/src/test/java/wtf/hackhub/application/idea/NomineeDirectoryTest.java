@@ -1,6 +1,7 @@
 package wtf.hackhub.application.idea;
 
 import org.junit.jupiter.api.Test;
+import org.springframework.test.util.ReflectionTestUtils;
 import wtf.hackhub.domain.*;
 import wtf.hackhub.infrastructure.persistence.auth.ProfileRepository;
 import wtf.hackhub.infrastructure.persistence.idea.VotingParticipantRepository;
@@ -12,6 +13,32 @@ class NomineeDirectoryTest {
 	ProfileRepository profiles = mock(ProfileRepository.class);
 	VotingParticipantRepository participants = mock(VotingParticipantRepository.class);
 	NomineeDirectory directory = new NomineeDirectory(profiles, participants);
+
+	@Test
+	void resolves_showcase_names_in_one_lookup_for_legacy_and_approved_nominations() {
+		var legacy = mock(Idea.class);
+		var approved = mock(Idea.class);
+		var creatorId = UUID.randomUUID();
+		var nomineeId = UUID.randomUUID();
+		var legacyId = UUID.randomUUID();
+		var approvedId = UUID.randomUUID();
+		when(legacy.getId()).thenReturn(legacyId);
+		when(legacy.getCreatedBy()).thenReturn(creatorId);
+		when(approved.getId()).thenReturn(approvedId);
+		when(approved.getApprovalStatus()).thenReturn("approved");
+		when(approved.getProjectAttachments()).thenReturn(
+				"[{\"type\":\"nomination\",\"nomineeUserId\":\"" + nomineeId + "\"}]");
+		var creator = new Profile("fixed-term.Alex.WANG@example.test", "Display Name", "hash");
+		var nominee = new Profile("xiao.ming2@example.test", "Another Name", "hash");
+		ReflectionTestUtils.setField(creator, "id", creatorId);
+		ReflectionTestUtils.setField(nominee, "id", nomineeId);
+		when(profiles.findAllById(Set.of(creatorId, nomineeId))).thenReturn(List.of(creator, nominee));
+
+		assertThat(directory.showcaseNames(List.of(legacy, approved)))
+				.containsExactlyInAnyOrderEntriesOf(Map.of(legacyId, "Alex WANG", approvedId, "xiao ming"));
+		verify(profiles).findAllById(Set.of(creatorId, nomineeId));
+		verifyNoMoreInteractions(profiles);
+	}
 	@Test
 	void roster_lookup_does_not_use_the_profiles_org_code_as_membership() {
 		Profile profile = new Profile("outsider@bosch.com", "Outside Employee", "hash");
