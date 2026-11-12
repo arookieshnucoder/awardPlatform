@@ -57,53 +57,42 @@ async function transact<T>(mode: IDBTransactionMode, action: (store: IDBObjectSt
 }
 
 export const NominationDraftStore = {
-  async load<T>(key: string): Promise<NominationDraft<T> | null> {
+  async list<T>(key: string, categories: readonly string[]): Promise<Record<string, NominationDraft<T>>> {
     const database = await openDatabase()
-    let record: NominationDraft<T> | undefined
+    const records: Record<string, NominationDraft<T>> = {}
     try {
       await new Promise<void>((resolve, reject) => {
         const scope: string[] = JSON.parse(key)
-        const prefix = JSON.stringify(scope.slice(0, 4))
         const transaction = database.transaction('drafts', 'readwrite')
         const store = transaction.objectStore('drafts')
-        const consider = (draft: NominationDraft<T>, category: string | undefined) => {
-          if ((!scope[4] || category === scope[4]) && (!record || draft.savedAt >= record.savedAt)) record = draft
-        }
-        // 顺便迁移旧草稿，并在未选赛道时找到最近保存的草稿入口。
-        const cursor = store.openCursor()
-        cursor.onsuccess = () => {
-          const entry = cursor.result
-          if (!entry) return
-          const storedScope: string[] = JSON.parse(String(entry.key))
-          if (JSON.stringify(storedScope.slice(0, 4)) === prefix) {
-            const draft = entry.value as NominationDraft<T>
-            const data = draft.data as { category?: string; form?: { category?: string } } | undefined
-            const category = storedScope[4] ?? data?.category ?? data?.form?.category
-            if (storedScope.length === 4 && category) {
-              const migratedKey = JSON.stringify([...storedScope, category])
-              // 已有独立草稿优先，避免旧版本覆盖新内容。
-              const existing = store.get(migratedKey)
-              existing.onsuccess = () => {
-                if (!existing.result) {
-                  store.put(draft, migratedKey)
-                  consider(draft, category)
-                }
-              }
-              entry.delete()
-            } else consider(draft, category)
+        const validDraft = (draft: NominationDraft<T> | undefined): draft is NominationDraft<T> =>
+          draft?.version === 1 && typeof draft.savedAt === 'string' && Boolean(draft.data)
+        for (const category of categories) {
+          const request = store.get(JSON.stringify([...scope, category]))
+          request.onsuccess = () => {
+            if (validDraft(request.result)) records[category] = request.result
           }
-          entry.continue()
+        }
+        // Read the old unscoped record last so it can be compared with the saved track.
+        const legacy = store.get(key)
+        legacy.onsuccess = () => {
+          const draft = legacy.result as NominationDraft<T> | undefined
+          if (!validDraft(draft)) return
+          const data = draft.data as { category?: string; form?: { category?: string } }
+          const category = data.category ?? data.form?.category
+          if (!category || !categories.includes(category)) return
+          if (!records[category] || draft.savedAt > records[category].savedAt) {
+            records[category] = draft
+            store.put(draft, JSON.stringify([...scope, category]))
+          }
+          store.delete(key)
         }
         transaction.oncomplete = () => resolve()
         transaction.onerror = () => reject(new Error('Unable to read draft storage.'))
         transaction.onabort = () => reject(new Error('Draft storage was interrupted. Please retry.'))
       })
     } finally { database.close() }
-    if (!record) return null
-    if (record.version !== 1 || typeof record.savedAt !== 'string' || !record.data) {
-      throw new Error('This draft cannot be restored. Please save a new draft.')
-    }
-    return record
+    return records
   },
   async save<T>(key: string, data: T): Promise<NominationDraft<T>> {
     const record: NominationDraft<T> = { version: 1, savedAt: new Date().toISOString(), data }

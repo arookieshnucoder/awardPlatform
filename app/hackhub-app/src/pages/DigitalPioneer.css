@@ -1027,7 +1027,7 @@
 
 #nomination-track-description .dp-standard-list { margin-top: 12px; }
 #nomination-track-description .dp-standard-list li { padding: 10px 0; line-height: 1.5; }
-.dp-status-toast { background-color: #152447; border: 1px solid #516488; }
+.mantine-Notification-root.dp-status-toast { background-color: #152447; border: 1px solid #516488; }
 .dp-status-toast .mantine-Notification-description,
 .dp-status-toast .mantine-Notification-closeButton { color: #fff; }
 
@@ -1151,6 +1151,10 @@
 .dp-nomination-flow > .dp-form-shell .dp-primary-button {
   background: #ffffff;
   color: #000000;
+}
+
+.dp-nomination-flow > .dp-form-shell .mantine-InputWrapper-label {
+  font-weight: 700;
 }
 
 .dp-nomination-flow > .dp-form-shell :where(.mantine-Input-input, .mantine-Textarea-input)::placeholder {

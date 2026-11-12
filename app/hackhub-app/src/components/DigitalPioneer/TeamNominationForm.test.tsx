@@ -2,7 +2,7 @@ import { MantineProvider } from '@mantine/core'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { TeamNominationForm } from './TeamNominationForm'
+import { TeamNominationForm, type TeamNominationDraft } from './TeamNominationForm'
 import { TeamService, type Team, type TeamMember } from '../../services/teamService'
 import { IdeaService, type Idea } from '../../services/ideaService'
 import { StorageService } from '../../services/storageService'
@@ -12,7 +12,7 @@ import { setNominationField } from '../../test/nominationFields'
 
 vi.mock('../../services/nominationDraftStore', async (importOriginal) => ({
   ...await importOriginal<typeof import('../../services/nominationDraftStore')>(),
-  NominationDraftStore: { load: vi.fn(), save: vi.fn(), remove: vi.fn() },
+  NominationDraftStore: { save: vi.fn(), remove: vi.fn() },
 }))
 
 vi.mock('../../services/teamMemberService', () => ({ TeamMemberService: { search: vi.fn() } }))
@@ -36,10 +36,13 @@ const existing = {
 Element.prototype.scrollIntoView = vi.fn()
 vi.stubGlobal('ResizeObserver', class { observe() {} unobserve() {} disconnect() {} })
 const onSubmitted = vi.fn()
-function show(editing?: Idea) {
+const onDraftSaved = vi.fn()
+const onDraftRestored = vi.fn()
+function show(editing?: Idea, restoredDraft?: TeamNominationDraft) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   return render(<MantineProvider env="test"><QueryClientProvider client={client}><TeamNominationForm user={user}
-    hackathonId="campaign" category="customer-values" onCategoryChange={vi.fn()} canSubmit editing={editing} onSubmitted={onSubmitted} />
+    hackathonId="campaign" category="customer-values" onCategoryChange={vi.fn()} canSubmit editing={editing}
+    restoredDraft={restoredDraft} onDraftSaved={onDraftSaved} onDraftRestored={onDraftRestored} onSubmitted={onSubmitted} />
   </QueryClientProvider></MantineProvider>)
 }
 async function fill(view: ReturnType<typeof show>, summary = 'Test-only achievement summary') {
@@ -54,7 +57,6 @@ async function fill(view: ReturnType<typeof show>, summary = 'Test-only achievem
 
 beforeEach(() => {
   vi.clearAllMocks()
-  vi.mocked(NominationDraftStore.load).mockResolvedValue(null)
   vi.mocked(NominationDraftStore.save).mockImplementation(async (_key, data) => ({ version: 1, savedAt: '2026-11-09T10:00:00.000Z', data }))
   vi.mocked(NominationDraftStore.remove).mockResolvedValue(undefined)
   vi.mocked(TeamMemberService.search).mockResolvedValue([])
@@ -109,8 +111,8 @@ describe('Team nomination form', () => {
   it('lists only the required team fields that are missing and keeps the member example visible', async () => {
     show()
     fireEvent.change(await screen.findByRole('textbox', { name: 'Project Name' }), { target: { value: 'Project ready' } })
-    fireEvent.change(screen.getByRole('textbox', { name: 'Core Team Member' }), { target: { value: 'Alex Wang;Sam Li' } })
-    expect(screen.getByText(/Example: Alex Wang;Sam Li/)).toBeVisible()
+    fireEvent.change(screen.getByRole('textbox', { name: /Core Team Member/ }), { target: { value: 'Alex Wang;Sam Li' } })
+    expect(screen.getByText('Core Team Member (Example: Alex Wang; Sam Li)')).toBeVisible()
     fireEvent.click(screen.getByRole('button', { name: 'Submit nomination' }))
     expect(screen.getByRole('alert')).toHaveTextContent('Please add: achievement summary, business impact, culture example, team photo.')
     expect(IdeaService.createIdea).not.toHaveBeenCalled()
@@ -195,13 +197,13 @@ describe('Team nomination form', () => {
     const [key, data] = vi.mocked(NominationDraftStore.save).mock.calls[0]
     expect(key).toBe(nominationDraftKey({ userId: user.id, hackathonId: 'campaign', nominationType: 'team', category: 'customer-values' }))
     expect(data).toEqual(expect.objectContaining({ projectName: 'Test project', photo: expect.objectContaining({ name: 'team.png' }), document: pdf }))
+    expect(onDraftSaved).toHaveBeenCalledWith('customer-values', expect.objectContaining({ data }))
     expect(IdeaService.createIdea).not.toHaveBeenCalled()
     expect(StorageService.uploadFile).not.toHaveBeenCalled()
     view.unmount()
-    vi.mocked(NominationDraftStore.load).mockResolvedValueOnce({ version: 1, savedAt: '2026-11-09T10:00:00.000Z', data })
-    show()
-    fireEvent.click(await screen.findByRole('button', { name: 'Restore Draft' }))
-    expect(screen.getByText(/Draft restored/).closest('.mantine-Alert-message')).toHaveStyle({ color: '#fff' })
+    show(undefined, data as TeamNominationDraft)
+    expect(onDraftRestored).toHaveBeenCalled()
+    expect(screen.queryByRole('button', { name: 'Restore Draft' })).not.toBeInTheDocument()
     expect(screen.getByRole('textbox', { name: /Project Name/ })).toHaveValue('Test project')
     expect(screen.getByRole('textbox', { name: /Core Team Member/ })).toHaveValue('Member One;Member Two')
     expect(screen.queryByTitle('Selected PDF preview: draft.pdf')).not.toBeInTheDocument()
@@ -217,15 +219,6 @@ describe('Team nomination form', () => {
     expect((await screen.findByText(/Unable to save your draft/)).closest('.mantine-Alert-message')).toHaveStyle({ color: '#fff' })
     expect(screen.queryByText('Draft saved successfully.')).not.toBeInTheDocument()
     expect(IdeaService.createIdea).not.toHaveBeenCalled()
-  })
-
-  it('keeps the latest rejected nomination when a saved draft has an older approval version', async () => {
-    vi.mocked(NominationDraftStore.load).mockResolvedValueOnce({ version: 1, savedAt: '2026-11-09T10:00:00.000Z', data: { approvalVersion: 3 } })
-    show(existing)
-    fireEvent.click(await screen.findByRole('button', { name: 'Restore Draft' }))
-    expect(screen.getByText(/This nomination has changed since the draft/)).toBeInTheDocument()
-    expect(screen.getByRole('textbox', { name: /Project Name/ })).toHaveValue('Real project')
-    expect(screen.getByRole('textbox', { name: /Achievement Summary/ })).toHaveTextContent('Actual submitted summary')
   })
 
 })

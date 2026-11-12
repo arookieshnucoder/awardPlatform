@@ -8,16 +8,17 @@ import { MantineProvider } from '@mantine/core'
 import { Notifications, notifications } from '@mantine/notifications'
 import { nominationFieldValue, setNominationField } from '../test/nominationFields'
 import { ApiError } from '../lib/apiClient'
-import { MemoryRouter } from 'react-router-dom'
+import { MemoryRouter, useLocation } from 'react-router-dom'
 import { ProjectShowcase } from './ProjectShowcase'
 import { ProfileService } from '../services/profileService'
 import { StorageService } from '../services/storageService'
 import { TeamService } from '../services/teamService'
+import { IdeaService } from '../services/ideaService'
 
-const { loadDraft, saveDraft, removeDraft } = vi.hoisted(() => ({ loadDraft: vi.fn(), saveDraft: vi.fn(), removeDraft: vi.fn() }))
+const { listDrafts, saveDraft, removeDraft } = vi.hoisted(() => ({ listDrafts: vi.fn(), saveDraft: vi.fn(), removeDraft: vi.fn() }))
 vi.mock('../services/nominationDraftStore', async (importOriginal) => ({
   ...await importOriginal<typeof import('../services/nominationDraftStore')>(),
-  NominationDraftStore: { load: loadDraft, save: saveDraft, remove: removeDraft },
+  NominationDraftStore: { list: listDrafts, save: saveDraft, remove: removeDraft },
 }))
 
 const { createIdea, getIdea, createTeam, getOrCreateNominationTeam, getComments, addComment, getIdeas, getHackathons, updateIdea, uploadFile, voteIdea, clearMyVotes, clearTrackVotes, submitVotes, deleteVoteRecord, deleteIdea, deleteIdeas, currentUser, listNominees } = vi.hoisted(() => ({
@@ -140,7 +141,7 @@ describe('ProjectShowcase', () => {
     localStorage.clear(); sessionStorage.clear(); vi.clearAllMocks()
     nominationEligibility.canStartNomination = true
     nominationEligibility.canSubmit = true
-    loadDraft.mockResolvedValue(null)
+    listDrafts.mockResolvedValue({})
     saveDraft.mockImplementation(async (_key: string, data: unknown) => ({ version: 1, savedAt: '2026-11-09T00:00:00Z', data }))
     removeDraft.mockResolvedValue(undefined)
   })
@@ -160,7 +161,7 @@ describe('ProjectShowcase', () => {
     expect(document.getElementById('nomination-track-description')).toBeNull()
     expect(document.getElementById('nomination-form')).toBeNull()
     expect(screen.queryByRole('button', { name: 'Save Draft' })).not.toBeInTheDocument()
-    expect(loadDraft).not.toHaveBeenCalled()
+    expect(listDrafts).not.toHaveBeenCalled()
   })
 
   it.each([
@@ -715,9 +716,13 @@ describe('ProjectShowcase', () => {
       form: { hackathonId: 'hackathon-1', category: 'Customer Values', executiveSummary: 'Saved summary', achievementImpact: 'Saved impact', cultureDemonstration: 'Saved culture', technologies: 'Customer' },
       photo, document: documentFile,
     }
-    loadDraft.mockResolvedValueOnce({ version: 1, savedAt: '2026-11-09T00:00:00Z', data })
+    listDrafts.mockResolvedValueOnce({ 'Customer Values': { version: 1, savedAt: '2026-11-09T00:00:00Z', data } })
     const user = userEvent.setup()
-    render(<MantineProvider env="test"><MemoryRouter initialEntries={['/nominate?type=individual']}><ProjectShowcase nominationMode /></MemoryRouter></MantineProvider>)
+    const CurrentLocation = () => {
+      const { pathname, search } = useLocation()
+      return <output data-testid="current-location">{pathname}{search}</output>
+    }
+    render(<MantineProvider env="test"><MemoryRouter initialEntries={['/nominate?type=individual']}><ProjectShowcase nominationMode /><CurrentLocation /></MemoryRouter></MantineProvider>)
     const restore = await screen.findByRole('button', { name: 'Restore Draft' })
     expect(screen.queryByRole('textbox', { name: /Executive Summary/ })).not.toBeInTheDocument()
     await user.click(restore)
@@ -745,6 +750,9 @@ describe('ProjectShowcase', () => {
     await waitFor(() => expect(createIdea).toHaveBeenCalledTimes(1))
     expect(uploadFile).toHaveBeenCalledWith(documentFile, 'project-attachments', 'nominations/hackathon-1/user-1')
     expect(removeDraft).toHaveBeenCalledWith('["user-1","hackathon-1","individual","new","Customer Values"]')
+    expect(screen.queryByRole('button', { name: 'Restore Draft' })).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'My Nominations' }))
+    expect(screen.getByTestId('current-location').textContent).toBe('/my-nominations')
   })
 
   it('saves an incomplete form without uploading or submitting and reports storage failures', async () => {
@@ -761,16 +769,52 @@ describe('ProjectShowcase', () => {
     expect(screen.queryByText('Draft saved successfully.')).not.toBeInTheDocument()
   })
 
-  it('discards the specific saved category from the draft reminder before a track is chosen', async () => {
-    loadDraft.mockResolvedValueOnce({
+  it.each(['individual', 'team'])('lists all %s drafts in track order and restores only the chosen track', async (type) => {
+    const categories = ['Customer Values', 'Innovation Breakthrough', 'Collaboration to Win']
+    listDrafts.mockResolvedValueOnce(Object.fromEntries([...categories].reverse().map((category) => [category, {
       version: 1, savedAt: '2026-11-09T00:00:00Z',
-      data: { form: { category: 'Innovation Breakthrough' } },
-    })
+      data: type === 'team' ? { category, projectName: `Draft ${category}`, coreTeamMembers: '', achievementSummary: '',
+        teamAchievementImpact: '', cultureDemonstration: '', photo: null, document: null }
+        : { form: { category, executiveSummary: `Draft ${category}`, achievementImpact: '', cultureDemonstration: '', technologies: '' },
+          photo: null, document: null },
+    }])))
+    render(<MantineProvider env="test"><MemoryRouter initialEntries={[`/nominate?type=${type}`]}><ProjectShowcase nominationMode /></MemoryRouter></MantineProvider>)
+    const buttons = await screen.findAllByRole('button', { name: 'Restore Draft' })
+    expect(buttons.map((button) => button.closest('[role="group"]')?.getAttribute('aria-label'))).toEqual(categories)
+    expect(screen.queryByRole('button', { name: /Discard Draft|Delete Draft/ })).not.toBeInTheDocument()
+    await userEvent.click(screen.getByRole('radio', { name: /Customer Values/ }))
+    const name = type === 'team' ? 'Project Name' : /Executive Summary/
+    expect(nominationFieldValue(await screen.findByRole('textbox', { name }))).toBe('')
+    expect(screen.getAllByRole('button', { name: 'Restore Draft' })).toHaveLength(3)
+    await userEvent.click(within(screen.getByRole('group', { name: 'Innovation Breakthrough' })).getByRole('button', { name: 'Restore Draft' }))
+    expect(nominationFieldValue(await screen.findByRole('textbox', { name }))).toBe('Draft Innovation Breakthrough')
+    expect(screen.getByRole('radio', { name: /Innovation Breakthrough/ })).toHaveAttribute('aria-checked', 'true')
+    expect(screen.getAllByRole('button', { name: 'Restore Draft' })).toHaveLength(3)
+    expect(removeDraft).not.toHaveBeenCalled()
+  })
+
+  it('shows My Nominations above the tracks and omits drafts for a submitted slot', async () => {
+    vi.mocked(IdeaService.getMyNominations).mockResolvedValueOnce([{ id: 'submitted', hackathonId: 'hackathon-1', teamId: null }] as Awaited<ReturnType<typeof IdeaService.getMyNominations>>)
     render(<MantineProvider env="test"><MemoryRouter initialEntries={['/nominate?type=individual']}><ProjectShowcase nominationMode /></MemoryRouter></MantineProvider>)
-    await userEvent.click(await screen.findByRole('button', { name: 'Discard Draft' }))
-    expect(removeDraft).toHaveBeenCalledWith('["user-1","hackathon-1","individual","new","Innovation Breakthrough"]')
-    expect(await screen.findByText(/Saved draft removed/)).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Restore Draft' })).not.toBeInTheDocument()
+    const status = await screen.findByText('Nomination Already Submitted')
+    expect(status.compareDocumentPosition(screen.getByRole('radiogroup')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'My Nominations' })).toBeVisible()
+    expect(listDrafts).not.toHaveBeenCalled()
+  })
+
+  it('keeps the latest rejected team nomination when its saved draft belongs to an older revision', async () => {
+    getIdea.mockResolvedValueOnce({
+      id: 'revision', createdBy: 'user-1', hackathonId: 'hackathon-1', category: 'Customer Values', tags: [],
+      description: 'Current details', approvalStatus: 'rejected', approvalVersion: 4,
+      projectAttachments: [{ type: 'nomination', nominationType: 'team', projectName: 'Current project' }],
+    })
+    listDrafts.mockResolvedValueOnce({ 'Customer Values': {
+      version: 1, savedAt: '2026-11-09T00:00:00Z', data: { category: 'Customer Values', projectName: 'Old project', approvalVersion: 3 },
+    } })
+    render(<MantineProvider env="test"><MemoryRouter initialEntries={['/nominate?edit=revision']}><ProjectShowcase nominationMode /></MemoryRouter></MantineProvider>)
+    await userEvent.click(await screen.findByRole('button', { name: 'Restore Draft' }))
+    expect(screen.getByText(/This draft belongs to an earlier revision/)).toBeVisible()
+    expect(screen.getByRole('textbox', { name: 'Project Name' })).toHaveValue('Current project')
   })
 
   it('isolates individual questions and attachments by track through both category controls', async () => {

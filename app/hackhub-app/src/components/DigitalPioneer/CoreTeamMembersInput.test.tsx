@@ -23,7 +23,7 @@ beforeEach(() => {
 describe('Core team member lookup', () => {
   it('searches an @ roster name and preserves other members', async () => {
     render(<Field initial="Existing Member" />)
-    const input = screen.getByRole('textbox', { name: 'Core Team Member' })
+    const input = screen.getByRole('textbox', { name: /Core Team Member/ })
     fireEvent.change(input, { target: { value: 'Existing Member;@Alice Zhang' } })
     fireEvent.click(await screen.findByRole('option', { name: /Alice Zhang/ }))
     expect(TeamMemberService.search).toHaveBeenCalledWith('Alice Zhang', expect.any(AbortSignal))
@@ -32,7 +32,7 @@ describe('Core team member lookup', () => {
 
   it('supports keyboard selection by name and keeps following members when replacing a middle token', async () => {
     render(<Field initial="First Member;@Ali;Last Member" />)
-    const input = screen.getByRole('textbox', { name: 'Core Team Member' }) as HTMLTextAreaElement
+    const input = screen.getByRole('textbox', { name: /Core Team Member/ }) as HTMLTextAreaElement
     input.setSelectionRange(16, 16)
     fireEvent.click(input)
     await screen.findByRole('option', { name: /Alice Zhang/ })
@@ -46,7 +46,7 @@ describe('Core team member lookup', () => {
     const member = { id: 'wang', name: 'WANG Weimin', orgUnit: 'BD/SLP-CO' }
     vi.mocked(TeamMemberService.search).mockResolvedValue([member])
     render(<Field />)
-    const input = screen.getByRole('textbox', { name: 'Core Team Member' })
+    const input = screen.getByRole('textbox', { name: /Core Team Member/ })
     fireEvent.change(input, { target: { value: 'Existing Member；＠王' } })
     fireEvent.click(await screen.findByRole('option', { name: /WANG Weimin/ }))
     expect(TeamMemberService.search).toHaveBeenCalledWith('王', expect.any(AbortSignal))
@@ -55,7 +55,7 @@ describe('Core team member lookup', () => {
 
   it('waits for Chinese composition to finish before searching or selecting a member', async () => {
     render(<Field />)
-    const input = screen.getByRole('textbox', { name: 'Core Team Member' })
+    const input = screen.getByRole('textbox', { name: /Core Team Member/ })
     fireEvent.compositionStart(input)
     fireEvent.change(input, { target: { value: '@wang' } })
     fireEvent.keyDown(input, { key: 'Enter', code: 'Enter', isComposing: true })
@@ -74,7 +74,7 @@ describe('Core team member lookup', () => {
     vi.mocked(TeamMemberService.search).mockReturnValueOnce(new Promise((resolve) => { finishFirst = resolve }))
       .mockResolvedValueOnce([{ id: 'bob', name: 'Bob Chen', orgUnit: 'BD/HR' }])
     render(<Field />)
-    const input = screen.getByRole('textbox', { name: 'Core Team Member' })
+    const input = screen.getByRole('textbox', { name: /Core Team Member/ })
     fireEvent.change(input, { target: { value: '@Alice' } })
     await waitFor(() => expect(TeamMemberService.search).toHaveBeenCalledTimes(1))
     const firstSignal = vi.mocked(TeamMemberService.search).mock.calls[0][1]!
@@ -89,7 +89,7 @@ describe('Core team member lookup', () => {
   it('shows a recoverable search failure and searches again after editing', async () => {
     vi.mocked(TeamMemberService.search).mockRejectedValueOnce(new Error('Unavailable'))
     render(<Field />)
-    const input = screen.getByRole('textbox', { name: 'Core Team Member' })
+    const input = screen.getByRole('textbox', { name: /Core Team Member/ })
     fireEvent.change(input, { target: { value: '@Al' } })
     await screen.findByText('Unable to search team members. Edit the name to retry.')
     fireEvent.change(input, { target: { value: '@Alice' } })

@@ -20,6 +20,9 @@ interface Props {
   onCategoryChange: (category: string) => void
   canSubmit: boolean
   editing?: Idea | null
+  restoredDraft?: TeamNominationDraft | null
+  onDraftRestored: () => void
+  onDraftSaved: (category: string, draft: NominationDraft<TeamNominationDraft>) => void
   onSubmitted: (idea: Idea, draftWarning?: string) => void
 }
 
@@ -28,7 +31,7 @@ const countWords = (text: string) => text.trim() ? text.trim().split(/\s+/u).len
 const validateTeamPhoto = (file: File | null) => file && file.size > 10 * 1024 * 1024
   ? 'Team photo exceeds 10 MB. Please choose a smaller photo.' : validatePersonalPhoto(file)
 
-interface TeamDraft {
+export interface TeamNominationDraft {
   category: string
   projectName: string
   coreTeamMembers: string
@@ -41,27 +44,28 @@ interface TeamDraft {
   approvalVersion?: number
 }
 
-export function TeamNominationForm({ user, hackathonId, category, onCategoryChange, canSubmit, editing, onSubmitted }: Props) {
+export function TeamNominationForm({
+  user, hackathonId, category, onCategoryChange, canSubmit, editing,
+  restoredDraft, onDraftRestored, onDraftSaved, onSubmitted,
+}: Props) {
   const metadata = editing?.projectAttachments?.find((item) => item.type === 'nomination')
   const draftKey = nominationDraftKey({ userId: user.id, hackathonId, nominationType: 'team', editId: editing?.id, category })
   const currentDraftKey = useRef(draftKey)
   currentDraftKey.current = draftKey
-  const [categoryForms, setCategoryForms] = useState<Record<string, TeamDraft>>({})
-  const initialForm: TeamDraft = {
+  const [categoryForms, setCategoryForms] = useState<Record<string, TeamNominationDraft>>({})
+  const initialForm: TeamNominationDraft = {
     category, projectName: metadata?.projectName ?? '', coreTeamMembers: metadata?.coreTeamMembers ?? '',
     achievementSummary: metadata?.achievementSummary ?? '', teamAchievementImpact: metadata?.teamAchievementImpact ?? '',
     cultureDemonstration: metadata?.cultureDemonstration ?? '', formats: metadata?.formattedAnswers, photo: null, document: null,
   }
   const { projectName, coreTeamMembers, achievementSummary, teamAchievementImpact, cultureDemonstration, formats, photo, document } = categoryForms[draftKey] ?? initialForm
-  const updateForm = (fields: Partial<TeamDraft>) => setCategoryForms((current) => ({
+  const updateForm = (fields: Partial<TeamNominationDraft>) => setCategoryForms((current) => ({
     ...current, [draftKey]: { ...(current[draftKey] ?? initialForm), ...fields },
   }))
   const [photoPreview, setPhotoPreview] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [reviewOpened, setReviewOpened] = useState(false)
-  const [savedDraft, setSavedDraft] = useState<NominationDraft<TeamDraft> | null>(null)
-  const [draftLoading, setDraftLoading] = useState(true)
   const [draftSaving, setDraftSaving] = useState(false)
   const [draftMessage, setDraftMessage] = useState<string | null>(null)
   const [draftError, setDraftError] = useState<string | null>(null)
@@ -74,66 +78,36 @@ export function TeamNominationForm({ user, hackathonId, category, onCategoryChan
   const summaryWords = countWords(achievementSummary)
 
   useEffect(() => {
-    let active = true
-    setDraftLoading(true)
-    setSavedDraft(null)
     setDraftMessage(null)
     setDraftError(null)
     setError(null)
     setReviewOpened(false)
-    void NominationDraftStore.load<TeamDraft>(draftKey).then((draft) => {
-      if (active) setSavedDraft(draft)
-    }).catch(() => {
-      if (active) setDraftError('Unable to read your saved draft. You can continue editing and retry Save Draft.')
-    }).finally(() => { if (active) setDraftLoading(false) })
-    return () => { active = false }
   }, [draftKey])
 
+  useEffect(() => {
+    if (!restoredDraft || restoredDraft.category !== category) return
+    setCategoryForms((current) => ({ ...current, [draftKey]: restoredDraft }))
+    onDraftRestored()
+  }, [category, draftKey, restoredDraft, onDraftRestored])
+
   const saveDraft = async () => {
-    if (draftSaving || draftLoading || busy) return
+    if (draftSaving || busy) return
     setDraftSaving(true)
     setDraftError(null)
     setDraftMessage(null)
     try {
-      const draft = await NominationDraftStore.save<TeamDraft>(draftKey, {
+      const draft = await NominationDraftStore.save<TeamNominationDraft>(draftKey, {
         category, projectName, coreTeamMembers, achievementSummary, teamAchievementImpact, cultureDemonstration,
         formats, photo, document, approvalVersion: editing?.approvalVersion,
       })
+      onDraftSaved(category, draft)
       if (currentDraftKey.current === draftKey) {
-        setSavedDraft(draft)
         setDraftMessage('Draft saved successfully.')
         notifications.show({ message: 'Draft saved successfully.', color: 'green', autoClose: 4000, className: 'dp-status-toast' })
       }
     } catch {
       if (currentDraftKey.current === draftKey) setDraftError('Unable to save your draft. Check available browser storage and retry before leaving.')
     } finally { setDraftSaving(false) }
-  }
-
-  const restoreDraft = () => {
-    if (!savedDraft || busy || draftSaving) return
-    const draft = savedDraft.data
-    // 编辑退回提名时保留最新审批版本，旧版本草稿不能覆盖新审核结果。
-    if (editing && draft.approvalVersion !== editing.approvalVersion) {
-      setDraftError('This nomination has changed since the draft was saved. Discard the old draft and use the latest nomination.')
-      return
-    }
-    updateForm({ ...draft, formats: draft.formats })
-    setDraftError(null)
-    setDraftMessage('Draft restored. Review your information before submitting.')
-  }
-
-  const discardDraft = async () => {
-    if (draftSaving || busy) return
-    setDraftSaving(true)
-    try {
-      await NominationDraftStore.remove(draftKey)
-      if (currentDraftKey.current === draftKey) {
-        setSavedDraft(null)
-        setDraftError(null)
-        setDraftMessage('Saved draft deleted. Your current form is unchanged.')
-      }
-    } catch { if (currentDraftKey.current === draftKey) setDraftError('Unable to delete the saved draft. Please retry.') }
-    finally { setDraftSaving(false) }
   }
 
   useEffect(() => {
@@ -212,7 +186,7 @@ export function TeamNominationForm({ user, hackathonId, category, onCategoryChan
       let draftWarning: string | undefined
       // 提交已成功时，草稿清理失败只提示用户，不重复提交提名。
       await NominationDraftStore.remove(draftKey).catch(() => {
-        draftWarning = 'Your nomination was submitted, but its saved draft could not be removed. Delete that draft when you return to the nomination page.'
+        draftWarning = 'Your nomination was submitted, but its saved draft could not be removed.'
       })
       setReviewOpened(false)
       onSubmitted(result, draftWarning)
@@ -228,12 +202,6 @@ export function TeamNominationForm({ user, hackathonId, category, onCategoryChan
     <Title order={3}>Team Nomination</Title>
     {draftError && <Alert color="red" c="white" styles={{ message: { color: '#fff' } }}>{draftError}</Alert>}
     {draftMessage && <Alert color="blue" c="white" role="status" styles={{ message: { color: '#fff' } }}>{draftMessage}</Alert>}
-    {savedDraft && <Alert color="blue" c="white" title="Saved Draft Available" styles={{ title: { color: '#fff' }, message: { color: '#fff' } }}>
-      <Stack gap="xs"><Text c="white" size="sm">Saved {new Date(savedDraft.savedAt).toLocaleString()}. Restore it to continue editing.</Text>
-        <Group><Button variant="light" c="white" disabled={busy || draftSaving} onClick={restoreDraft}>Restore Draft</Button>
-          <Button variant="subtle" c="white" disabled={busy || draftSaving} onClick={() => void discardDraft()}>Delete Draft</Button></Group>
-      </Stack>
-    </Alert>}
       <Grid gutter="md">
         <Grid.Col span={{ base: 12, sm: 6 }}><TextInput label="Nominator Name" value={metadata?.nominatorName ?? user.name} readOnly required /></Grid.Col>
         <Grid.Col span={{ base: 12, sm: 6 }}><Select label="Award Category" required allowDeselect={false} disabled={busy || Boolean(editing)}
@@ -267,7 +235,7 @@ export function TeamNominationForm({ user, hackathonId, category, onCategoryChan
         {!document && savedDocuments.map((item) => <Stack key={item.storageKey ?? item.url} gap="xs"><Text size="sm">Retained attachment: {item.name}</Text><NominationEvidence attachment={item} /></Stack>)}
       </div>
       {error && !reviewOpened && <Alert color="red" role="alert">{error}</Alert>}
-      <Group justify="flex-end"><Button className="dp-primary-button" loading={draftSaving} disabled={busy || draftLoading} onClick={() => void saveDraft()}>Save Draft</Button>
+      <Group justify="flex-end"><Button className="dp-primary-button" loading={draftSaving} disabled={busy} onClick={() => void saveDraft()}>Save Draft</Button>
         <Button className="dp-primary-button" loading={busy}
         disabled={!canSubmit || summaryWords > 200 || Boolean(photoError || documentError)} onClick={() => void submit()}>
         {editing ? 'Resubmit nomination' : 'Submit nomination'}
