@@ -125,7 +125,11 @@ export function NominationApprovals({ reviewMode = false }: { reviewMode?: boole
             {reviewMode && <Group justify="space-between"><Checkbox label="Select all pending" checked={pending.length > 0 && selectedPending.length === pending.length} indeterminate={selectedPending.length > 0 && selectedPending.length < pending.length} disabled={pending.length === 0 || busy} onChange={(event) => setSelected(event.currentTarget.checked ? pending.map((idea) => idea.id) : [])} />{actions}</Group>}
             <Table.ScrollContainer minWidth={650}><Table verticalSpacing="md" highlightOnHover>
               <Table.Thead><Table.Tr>{reviewMode && <Table.Th>Select</Table.Th>}<Table.Th>Nomination</Table.Th><Table.Th>Created</Table.Th><Table.Th>State</Table.Th></Table.Tr></Table.Thead>
-              <Table.Tbody>{ideas.map((idea) => <Table.Tr key={idea.id}>
+              <Table.Tbody>{ideas.map((idea) => <Table.Tr
+                key={idea.id}
+                onDoubleClick={reviewMode ? undefined : () => open(idea.id)}
+                style={reviewMode ? undefined : { cursor: 'pointer' }}
+              >
                 {reviewMode && <Table.Td><Checkbox aria-label={`Select ${idea.title}`} disabled={idea.approvalStatus !== 'pending' || busy} checked={selected.includes(idea.id)} onChange={(event) => { const checked = event.currentTarget.checked; setSelected((ids) => checked ? [...ids, idea.id] : ids.filter((id) => id !== idea.id)) }} /></Table.Td>}
                 <Table.Td><Anchor component="button" onClick={() => open(idea.id)} ta="left" c="inherit"><Text fw={700}>{trackName(idea)}</Text><Text>{idea.projectAttachments?.find((item) => item.type === 'nomination')?.name || idea.title}</Text></Anchor></Table.Td>
                 <Table.Td>{new Date(idea.createdAt).toLocaleString()}</Table.Td><Table.Td>{nominationState(idea)}</Table.Td>

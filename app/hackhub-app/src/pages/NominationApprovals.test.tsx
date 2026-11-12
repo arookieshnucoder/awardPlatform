@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MantineProvider } from '@mantine/core'
 import { MemoryRouter } from 'react-router-dom'
@@ -92,5 +92,24 @@ describe('Nominating HoD approval inbox', () => {
     show(false, '/?id=team')
     expect(await screen.findByText(/Submitted text team/)).toBeVisible()
     expect(screen.queryByText('Submitted tag')).not.toBeInTheDocument()
+  })
+})
+
+describe('My Nominations', () => {
+  it('opens the matching detail on a row double-click and keeps the nomination button clickable', async () => {
+    const user = userEvent.setup()
+    show(false, '/my-nominations')
+    const row = await screen.findByRole('row', { name: /Employee done/ })
+    const state = within(row).getByRole('cell', { name: /approved/i })
+
+    await user.click(state)
+    expect(screen.getByRole('table')).toBeVisible()
+
+    await user.dblClick(state)
+    expect(await screen.findByText(/Submitted text done/)).toBeVisible()
+
+    await user.click(screen.getByRole('button', { name: 'Go back' }))
+    await user.click(await screen.findByRole('button', { name: /Customer Values Employee two/ }))
+    expect(await screen.findByText(/Submitted text two/)).toBeVisible()
   })
 })
