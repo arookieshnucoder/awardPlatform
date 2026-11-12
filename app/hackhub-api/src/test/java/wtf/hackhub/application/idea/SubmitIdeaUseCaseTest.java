@@ -114,14 +114,14 @@ class SubmitIdeaUseCaseTest {
 		stubValidSubmit();
 		when(ideaRepository.save(any())).thenAnswer(call -> call.getArgument(0));
 		Idea result = useCase.execute("title", "desc", HACKATHON_ID, null, USER_ID, "AI",
-				List.of(" IoT、Digital Twin，AI,Impact、IoT、 ", "Cloud"));
+				List.of(" IoT、Digital Twin，AI;Impact；IoT、 ", "Cloud"));
 		assertThat(result.getTags()).containsExactly("IoT", "Digital Twin", "AI", "Impact", "Cloud");
 	}
 
 	@Test
 	void rejects_more_than_five_tags_on_create_and_update() {
 		stubValidSubmit();
-		List<String> tags = List.of("one、two，three,four、five、six");
+		List<String> tags = List.of("one、two，three,four;five；six");
 		assertThatThrownBy(() -> useCase.execute("title", "desc", HACKATHON_ID, null, USER_ID, "AI", tags))
 				.isInstanceOf(IllegalArgumentException.class).hasMessageContaining("5 tags");
 		Idea existing = idea(USER_ID);

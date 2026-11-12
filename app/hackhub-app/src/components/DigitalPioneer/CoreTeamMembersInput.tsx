@@ -67,6 +67,7 @@ export function CoreTeamMembersInput({ value, onChange, disabled }: Props) {
   return <Combobox store={combobox} onOptionSubmit={chooseMember}>
     <Combobox.Target>
       <Textarea ref={input} label="Core Team Member" required autosize minRows={3} resize="vertical" disabled={disabled}
+        description={<Text component="span" c="#d9e7fa">Example: Alex Wang;Sam Li. Type @ to look up a teammate.</Text>}
         placeholder={'Type @ followed by a Chinese or English name keyword; separate members with “;”. Only BDCN team employees may be included. 输入 @ 加中文或英文姓名关键词搜索，多位员工用“;”分隔。'}
         value={value} onChange={(event) => {
           // 全角分号转为等长的英文分号，保留原有提交格式和光标位置。

@@ -21,7 +21,6 @@ import {
   Image,
   FileInput,
   Input,
-  Textarea,
   UnstyledButton,
   Checkbox,
   Slider,
@@ -57,6 +56,9 @@ import { IdeaService, type Idea, type CreateIdeaInput, type ProjectAttachment } 
 import { useRealtime } from '../hooks/useRealtime'
 import { useNominationEligibility } from '../hooks/useNominationEligibility'
 import { NominationProgress } from '../components/DigitalPioneer/NominationProgress'
+import { NominationAnswerBody, NominationAnswerDetails, NominationAnswerEditor } from '../components/DigitalPioneer/NominationAnswer'
+import { NominationReview } from '../components/DigitalPioneer/NominationReview'
+import { answerText, formattedAnswers, individualAnswerHeadings as nominationHeadings, type AnswerFormats, type FormattedAnswers } from '../lib/nominationFormatting'
 import { validateNominationPdf } from '../services/storageService'
 import { NominationEvidence } from '../components/DigitalPioneer/NominationEvidence'
 import { LocalNominationAttachment } from '../components/DigitalPioneer/LocalNominationAttachment'
@@ -102,6 +104,7 @@ interface Project {
   user_vote?: boolean
   nomination_type: 'individual' | 'team'
   documents?: ProjectAttachment[]
+  formattedAnswers?: FormattedAnswers
   status: 'draft' | 'submitted' | 'in-progress' | 'completed'
   created_at: string
   submission_date: string
@@ -118,6 +121,7 @@ interface ProjectUploadForm {
   executiveSummary: string
   achievementImpact: string
   cultureDemonstration: string
+  formats?: AnswerFormats
   category: string
   technologies: string
 }
@@ -138,16 +142,12 @@ const emptyUploadForm = (): ProjectUploadForm => ({
   technologies: '',
 })
 
-const parseNominationTags = (value: string): string[] =>
-  [...new Set(value.split(/[,，、]/).map((tag) => tag.trim()).filter(Boolean))]
+const parseNominationTags = (value: string, separators = /[,，、;；]/): string[] =>
+  [...new Set(value.split(separators).map((tag) => tag.trim()).filter(Boolean))]
 
-const tagHint = 'Add up to 5 tags, separated by 、, ， or commas (,).'
+const tagHint = 'Add up to 5 tags. Use 、 , ， ; or ； to separate them.'
 
-const nominationHeadings = [
-  'Executive Summary (the Elevator Pitch)',
-  'Details of Your Core Achievement in 2026 and Business Impact (Including Financial Figures)',
-  'How You Demonstrate BD China Culture (Especially in Your Applied Category)',
-]
+const individualAnswerFields = ['executiveSummary', 'achievementImpact', 'cultureDemonstration'] as const
 
 function parseNominationDescription(description: string, nominationType: 'individual' | 'team' = 'individual') {
   const sections: Array<{ heading: string; body: string }> = []
@@ -158,7 +158,7 @@ function parseNominationDescription(description: string, nominationType: 'indivi
     const index = /^Executive Summary(?: \(The Elevator Pitch\))?$/i.test(label) ? 0
       : label.toLowerCase() === nominationHeadings[1].toLowerCase() ? 1
       : /^How you demonstrate (?:Bosch|BD) China culture \(especially (?:in your|on you) applied category\)\s*\??$/i.test(label) ? 2
-      : -1
+      : undefined
     // 团队历史提交使用不同的固定标题，仅在详情中规范显示，不改写保存的正文。
     const teamHeading = nominationType === 'team'
       ? /^Achievement Summary$/i.test(label) ? 'Achievement Summary'
@@ -166,9 +166,10 @@ function parseNominationDescription(description: string, nominationType: 'indivi
         : /^How you demonstrate (?:Bosch|BD) China culture(?: \(especially (?:in your|on you) applied category\))?\s*\??$/i.test(label) ? 'How You Demonstrate BD China Culture'
         : ''
       : ''
-    if (teamHeading || index >= 0) {
+    const individualHeading = index === undefined ? '' : nominationHeadings[index]
+    if (teamHeading || individualHeading) {
       if (heading || lines.join('\n').trim()) sections.push({ heading, body: lines.join('\n').trim() })
-      heading = teamHeading || nominationHeadings[index]
+      heading = teamHeading || individualHeading
       lines = []
     } else {
       lines.push(line)
@@ -592,13 +593,18 @@ export function ProjectShowcase({ nominationMode = false, managementMode = false
       if (!active) return
       if (idea.createdBy !== user.id || idea.approvalStatus !== 'rejected') throw new Error('Only your rejected nominations can be revised here.')
       const sections = parseNominationDescription(idea.description)
+      const formats = idea.projectAttachments?.find((item) => item.type === 'nomination')?.formattedAnswers
+      const readAnswer = (index: 0 | 1 | 2) => formats
+        ? answerText(formats[index])
+        : sections.find((section) => section.heading === nominationHeadings[index])?.body ?? ''
       setEditingNomination(idea)
       setUploadForm({
         hackathonId: idea.hackathonId,
         category: idea.category,
-        executiveSummary: sections.find((section) => section.heading === nominationHeadings[0])?.body ?? '',
-        achievementImpact: sections.find((section) => section.heading === nominationHeadings[1])?.body ?? '',
-        cultureDemonstration: sections.find((section) => section.heading === nominationHeadings[2])?.body ?? '',
+        executiveSummary: readAnswer(0),
+        achievementImpact: readAnswer(1),
+        cultureDemonstration: readAnswer(2),
+        formats,
         technologies: idea.tags.join(', '),
       })
     }).catch((error) => { if (active) setEditError(error instanceof Error ? error.message : 'Unable to load your nomination.') })
@@ -622,7 +628,7 @@ export function ProjectShowcase({ nominationMode = false, managementMode = false
           setHackathons(awards)
           const nominations = await Promise.all(awards.map((award) => getAllPages((page) => PublicAwardService.getNominations(award.id, page))))
           if (sequence !== loadSequence.current) return
-          setProjects(nominations.flat().map((nomination) => ({ ...nomination, technologies: parseNominationTags(nomination.technologies.join(',')), user_vote: false, nomination_type: nomination.nomination_type ?? 'individual' })))
+          setProjects(nominations.flat().map((nomination) => ({ ...nomination, technologies: parseNominationTags(nomination.technologies.join(','), /[,，、]/), user_vote: false, nomination_type: nomination.nomination_type ?? 'individual' })))
           return
         }
         const loadedHackathons = await getAllPages((page) => HackathonService.getHackathons(page, 100))
@@ -677,13 +683,14 @@ export function ProjectShowcase({ nominationMode = false, managementMode = false
               id: idea.id,
               nomination_type: nominationType,
               documents: idea.projectAttachments?.filter((item) => item.type === 'document') ?? [],
+              formattedAnswers: nomination?.formattedAnswers,
               title: nominationType === 'individual' ? fullName ?? idea.title : idea.title,
               description: idea.description,
               nominee_org_code: nomination?.nomineeOrgCode ?? '',
               nominee_name: fullName ?? nomination?.name ?? memberProfile?.name ?? firstMember?.userId ?? creatorProfile?.name ?? team?.name ?? 'Individual Nominee',
               hackathon_id: hackathon.id,
               category: normalizeDigitalPioneerTrack(idea.category, idea.tags ?? []),
-              technologies: parseNominationTags((idea.tags ?? []).join(',')),
+              technologies: parseNominationTags((idea.tags ?? []).join(','), /[,，、]/),
               github_url: idea.repositoryUrl ?? undefined,
               demo_url: idea.demoUrl ?? undefined,
               photos: screenshots.some((attachment) => attachment.storageKey) ? screenshots : undefined,
@@ -745,13 +752,20 @@ export function ProjectShowcase({ nominationMode = false, managementMode = false
   const handleProjectUpload = async (confirmed = false) => {
     if (!user || !canNominate || uploading || uploadBusy.current || (!editId && (ownNominations.isPending || ownNominations.isError || existingNomination))) return
     if (editId && editingNomination?.id !== editId) return
-    if (!uploadForm.hackathonId || !uploadForm.executiveSummary.trim()
-      || !uploadForm.achievementImpact.trim() || !uploadForm.cultureDemonstration.trim()
-      || !uploadForm.category.trim() || (!projectImage && !editingNomination?.projectAttachments?.some((item) => item.type === 'screenshot'))) {
+    const missing = [
+      !uploadForm.hackathonId && 'award',
+      !uploadForm.category.trim() && 'award category',
+      !uploadForm.executiveSummary.trim() && 'executive summary',
+      !uploadForm.achievementImpact.trim() && 'business impact',
+      !uploadForm.cultureDemonstration.trim() && 'culture example',
+      !projectImage && !editingNomination?.projectAttachments?.some((item) => item.type === 'screenshot') && 'your photo',
+    ].filter(Boolean)
+    if (missing.length) {
       notifications.show({
         title: 'Missing Information',
-        message: 'Complete all required fields and select a nominee photo.',
+        message: `Please add: ${missing.join(', ')}.`,
         color: 'orange',
+        className: 'dp-status-toast',
       })
       return
     }
@@ -792,7 +806,8 @@ export function ProjectShowcase({ nominationMode = false, managementMode = false
         category: uploadForm.category.trim(),
         tags: technologies,
         status: 'submitted',
-        projectAttachments: [{ type: 'nomination', nominationType: 'individual', url: '', name: nomineeName, nomineeUserId },
+        projectAttachments: [{ type: 'nomination', nominationType: 'individual', url: '', name: nomineeName, nomineeUserId,
+          formattedAnswers: formattedAnswers([uploadForm.executiveSummary, uploadForm.achievementImpact, uploadForm.cultureDemonstration], uploadForm.formats) },
           ...(uploadedImage && projectImage ? [{ type: 'screenshot' as const, url: uploadedImage.url, name: projectImage.name, storageKey: uploadedImage.key }]
             : editingNomination?.projectAttachments?.filter((item) => item.type === 'screenshot') ?? []),
           ...(uploadedDocument && individualDocument ? [{ type: 'document' as const, url: uploadedDocument.url, name: individualDocument.name, storageKey: uploadedDocument.key }]
@@ -1059,12 +1074,12 @@ export function ProjectShowcase({ nominationMode = false, managementMode = false
   }
 
   if (nominationMode) {
-    if (submittedNomination) return <Container size={1240} py="xl" className="dp-page"><Card className="dp-form-shell" p="xl"><Stack gap="lg">
+    if (submittedNomination) return <Container size={1240} py="xl" className="dp-page"><Card className="dp-form-shell dp-light-surface" p="xl"><Stack gap="lg">
       <Title order={2}>Nomination Submitted Successfully</Title>
       <Title order={3}>{DIGITAL_PIONEER_TRACKS.find((track) => track.value === submittedNomination.category)?.label ?? submittedNomination.category}</Title>
-      <Text c="white">Name: {user?.email ?? submittedNomination.title}</Text>
+      <Text>Name: {user?.email ?? submittedNomination.title}</Text>
       <Text>Your nomination has been submitted.</Text>
-      {submissionDraftWarning && <Text c="white" role="status">{submissionDraftWarning}</Text>}
+      {submissionDraftWarning && <Text role="status">{submissionDraftWarning}</Text>}
       <NominationProgress idea={submittedNomination} />
       {submittedNomination.approvalStatus && <Text>Your Nominating HoD will review the information you submitted. Check My nominations for the decision and any requested changes.</Text>}
       <Group><Button variant="light" onClick={() => navigate('/')}>Home</Button><Button onClick={() => navigate(`/my-nominations?id=${encodeURIComponent(submittedNomination.id)}`)}>My nominations</Button></Group>
@@ -1074,33 +1089,23 @@ export function ProjectShowcase({ nominationMode = false, managementMode = false
         {photoToCrop && <PersonalPhotoCrop file={photoToCrop} language={language}
           onClose={() => setPhotoToCrop(null)}
           onConfirm={(file) => { setProjectImage(file); setPhotoToCrop(null) }} />}
-        <Modal opened={individualPreviewOpened} className="dp-nomination-review" onClose={() => { if (!uploading) setIndividualPreviewOpened(false) }}
-          title="Review Individual Nomination" size="lg" centered closeOnClickOutside={!uploading} closeOnEscape={!uploading}
-          withCloseButton={!uploading}>
+        <NominationReview opened={individualPreviewOpened} title="Review Individual Nomination" busy={uploading} canSubmit={canNominate}
+          onClose={() => setIndividualPreviewOpened(false)} onConfirm={() => void handleProjectUpload(true)}>
           <Stack gap="lg" style={{ minWidth: 0, overflowWrap: 'anywhere' }}>
             <Title order={3}>{selectedNominationTrack?.label}</Title>
             <Text><strong>Name:</strong> {user?.email}</Text>
             <Text><strong>Nomination Type:</strong> Individual</Text>
             {photoPreview ? <Image src={photoPreview} alt="Nomination Review Photo" fit="contain" w="100%" h={280} />
               : editingNomination?.projectAttachments?.filter((item) => item.type === 'screenshot').map((item) => <RetainedNominationPhoto key={item.storageKey ?? item.url} attachment={item} />)}
-            {[
-              { heading: nominationHeadings[0], body: uploadForm.executiveSummary },
-              { heading: nominationHeadings[1], body: uploadForm.achievementImpact },
-              { heading: nominationHeadings[2], body: uploadForm.cultureDemonstration },
-            ].map((section) => <section key={section.heading}>
-              <Title order={4}>{section.heading}</Title>
-              <Text mt="xs" style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{section.body}</Text>
+            {([0, 1, 2] as const).map((index) => <section key={nominationHeadings[index]}>
+              <Title order={4}>{nominationHeadings[index]}</Title>
+              <NominationAnswerBody text={uploadForm[individualAnswerFields[index]]} format={uploadForm.formats?.[index]} />
             </section>)}
             {nominationTags.length > 0 && <div><Title order={4}>Tags</Title><Text>{nominationTags.join(', ')}</Text></div>}
             {individualDocument ? <LocalNominationAttachment file={individualDocument} />
               : editingNomination?.projectAttachments?.filter((item) => item.type === 'document').map((item) => <NominationEvidence key={item.storageKey ?? item.url} attachment={item} />)}
-            <Text>Please confirm the information above. Your nomination will then be sent to your assigned HoD for review.</Text>
-            <Group justify="flex-end">
-              <Button variant="light" disabled={uploading} onClick={() => setIndividualPreviewOpened(false)}>Back to Edit</Button>
-              <Button loading={uploading} disabled={!canNominate} onClick={() => void handleProjectUpload(true)}>Confirm and Submit</Button>
-            </Group>
           </Stack>
-        </Modal>
+        </NominationReview>
         <section className="dp-nomination-flow" aria-labelledby="track-choice-title">
           {eligibility.isError && <Alert color="red">Unable to verify your nomination eligibility. Please refresh.</Alert>}
           {eligibility.data && !canNominate && (canStartNomination || editId) && <Alert color="orange">{eligibility.data.message || 'Your signed-in account could not be matched to an eligible employee and Nominating HoD.'}</Alert>}
@@ -1268,63 +1273,29 @@ export function ProjectShowcase({ nominationMode = false, managementMode = false
                     </Grid>
                   </div>
 
-                  <div className="dp-fieldset" translate="no">
-                    <div className="dp-nomination-question">
-                      <div style={{ minWidth: 0 }}>
-                        <Textarea
-                          label={<><span className="dp-question-number" aria-hidden="true">01</span><span>Executive Summary (the Elevator Pitch)</span></>}
-                          required
-                          minRows={4}
-                          maxLength={1200}
-                          placeholder="中英文输入都可"
-                          classNames={{ input: 'dp-bilingual-input' }}
-                          value={uploadForm.executiveSummary}
-                          onChange={(event) => setUploadForm((current) => ({ ...current, executiveSummary: event.target.value }))}
-                        />
+                  {([0, 1, 2] as const).map((index) => {
+                    const field = individualAnswerFields[index]
+                    return <div className="dp-fieldset" translate="no" key={field}>
+                      <div className="dp-nomination-question">
+                        <div style={{ minWidth: 0 }}>
+                          <NominationAnswerEditor
+                            label={<><span className="dp-question-number" aria-hidden="true">0{index + 1}</span><span>{nominationHeadings[index]}</span></>}
+                            maxLength={[1200, 2400, 2000][index]} placeholder="中英文输入都可" disabled={uploading}
+                            value={uploadForm[field]} format={uploadForm.formats?.[index]}
+                            onChange={(value, format) => setUploadForm((current) => ({
+                              ...current, [field]: value, formats: { ...current.formats, [index]: format },
+                            }))}
+                          />
+                        </div>
                       </div>
                     </div>
-                  </div>
-
-                  <div className="dp-fieldset" translate="no">
-                    <div className="dp-nomination-question">
-                      <div style={{ minWidth: 0 }}>
-                        <Textarea
-                          label={<><span className="dp-question-number" aria-hidden="true">02</span><span>{nominationHeadings[1]}</span></>}
-                          required
-                          minRows={4}
-                          maxLength={2400}
-                          placeholder="中英文输入都可"
-                          classNames={{ input: 'dp-bilingual-input' }}
-                          value={uploadForm.achievementImpact}
-                          onChange={(event) => setUploadForm((current) => ({ ...current, achievementImpact: event.target.value }))}
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="dp-fieldset" translate="no">
-                    <div className="dp-nomination-question">
-                      <div style={{ minWidth: 0 }}>
-                        <Textarea
-                          label={<><span className="dp-question-number" aria-hidden="true">03</span><span>{nominationHeadings[2]}</span></>}
-                          required
-                          minRows={4}
-                          maxLength={2000}
-                          placeholder="中英文输入都可"
-                          classNames={{ input: 'dp-bilingual-input' }}
-                          value={uploadForm.cultureDemonstration}
-                          onChange={(event) => setUploadForm((current) => ({ ...current, cultureDemonstration: event.target.value }))}
-                        />
-                      </div>
-                    </div>
-                  </div>
+                  })}
 
                   <div className="dp-fieldset" translate="no">
                     <div className="dp-nomination-question">
                       <div style={{ minWidth: 0 }}>
                         <TextInput
-                          label={<><span className="dp-question-number" aria-hidden="true">04</span><span>Tags You Want to Add (Add up to 5 Tags: 、 , ，)</span></>}
-                          styles={{ label: { whiteSpace: 'nowrap' } }}
+                          label={<><span className="dp-question-number" aria-hidden="true">04</span><span>Tags You Want to Add (Up to 5 Tags, separated by 、 , ， ; ；)</span></>}
                           error={tooManyTags ? tagHint : undefined}
                           placeholder="中英文输入都可"
                           classNames={{ input: 'dp-bilingual-input' }}
@@ -1346,7 +1317,7 @@ export function ProjectShowcase({ nominationMode = false, managementMode = false
                     {!individualDocument && editingNomination?.projectAttachments?.filter((item) => item.type === 'document').map((item) => <NominationEvidence key={item.storageKey ?? item.url} attachment={item} />)}
                   </div>
                   <Group justify="flex-end" align="center" pt="lg">
-                    <Button variant="light" c="white" loading={savingDraft} disabled={uploading || !individualDraftKey}
+                    <Button className="dp-primary-button" loading={savingDraft} disabled={uploading || !individualDraftKey}
                       onClick={() => void saveIndividualDraft()}>Save Draft</Button>
                     <Button
                       className="dp-primary-button"
@@ -1835,7 +1806,8 @@ export function ProjectShowcase({ nominationMode = false, managementMode = false
             </Stack>
             {/* Description */}
             <div className="dp-candidate-detail-sections">
-              {parseNominationDescription(selectedProject.description, selectedProject.nomination_type).map((section, index) => (
+              {selectedProject.formattedAnswers ? <NominationAnswerDetails answers={selectedProject.formattedAnswers} team={selectedProject.nomination_type === 'team'} />
+                : parseNominationDescription(selectedProject.description, selectedProject.nomination_type).map((section, index) => (
                 <section className="dp-candidate-detail-section" key={index}>
                   {section.heading && <Title order={3} className="dp-candidate-detail-heading">{section.heading}</Title>}
                   {section.body.split(/\n\s*\n/).map((paragraph, paragraphIndex) => (

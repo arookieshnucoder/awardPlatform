@@ -8,6 +8,7 @@ import { useAuthStore } from '../store/authStore'
 import { useNominationEligibility } from '../hooks/useNominationEligibility'
 import { DIGITAL_PIONEER_TRACKS } from '../config/digitalPioneer'
 import { NominationProgress } from '../components/DigitalPioneer/NominationProgress'
+import { NominationAnswerDetails } from '../components/DigitalPioneer/NominationAnswer'
 import { nominationState } from '../lib/nominationStatus'
 import './DigitalPioneer.css'
 
@@ -35,6 +36,7 @@ export function NominationApprovals({ reviewMode = false }: { reviewMode?: boole
   })
   const ideas = nominations.data ?? []
   const current = ideas.find((idea) => idea.id === params.get('id'))
+  const currentMetadata = current?.projectAttachments?.find((item) => item.type === 'nomination')
   const pending = ideas.filter((idea) => idea.approvalStatus === 'pending')
   const selectedPending = pending.filter((idea) => selected.includes(idea.id))
   const targets = current ? (current.approvalStatus === 'pending' ? [current] : []) : selectedPending
@@ -101,7 +103,9 @@ export function NominationApprovals({ reviewMode = false }: { reviewMode?: boole
                     {item.nomineePosition && <Text><strong>Position: </strong>{item.nomineePosition}</Text>}
                     {item.nominatingHead && <Text><strong>Nominating HoD: </strong>{item.nominatingHead}</Text>}
                   </Stack>)}
-                  <Text style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{current.description}</Text>
+                  {currentMetadata?.formattedAnswers
+                    ? <NominationAnswerDetails answers={currentMetadata.formattedAnswers} team={currentMetadata.nominationType === 'team'} />
+                    : <Text style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{current.description}</Text>}
                   {!current.teamId && !current.projectAttachments?.some((item) => item.type === 'nomination' && item.nominationType === 'team') && <Group>{current.tags.map((tag) => <Badge key={tag}>{tag}</Badge>)}</Group>}
                 </Stack></Tabs.Panel>
                 <Tabs.Panel value="activity" pt="lg"><Stack>

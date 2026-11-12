@@ -8,6 +8,7 @@ import { IdeaService, type Idea } from '../../services/ideaService'
 import { StorageService } from '../../services/storageService'
 import { TeamMemberService } from '../../services/teamMemberService'
 import { NominationDraftStore, nominationDraftKey } from '../../services/nominationDraftStore'
+import { setNominationField } from '../../test/nominationFields'
 
 vi.mock('../../services/nominationDraftStore', async (importOriginal) => ({
   ...await importOriginal<typeof import('../../services/nominationDraftStore')>(),
@@ -45,9 +46,9 @@ async function fill(view: ReturnType<typeof show>, summary = 'Test-only achievem
   await screen.findByRole('textbox', { name: /Project Name/ })
   fireEvent.change(screen.getByRole('textbox', { name: /Project Name/ }), { target: { value: 'Test project' } })
   fireEvent.change(screen.getByRole('textbox', { name: /Core Team Member/ }), { target: { value: 'Member One;Member Two' } })
-  fireEvent.change(screen.getByRole('textbox', { name: /Achievement Summary/ }), { target: { value: summary } })
-  fireEvent.change(screen.getByRole('textbox', { name: /Details of Your Team/ }), { target: { value: 'Measurable test impact' } })
-  fireEvent.change(screen.getByRole('textbox', { name: /How You Demonstrate/i }), { target: { value: 'Test culture evidence' } })
+  setNominationField(screen.getByRole('textbox', { name: /Achievement Summary/ }), summary)
+  setNominationField(screen.getByRole('textbox', { name: /Details of Your Team/ }), 'Measurable test impact')
+  setNominationField(screen.getByRole('textbox', { name: /How You Demonstrate/i }), 'Test culture evidence')
   fireEvent.change(view.container.querySelector('input[type="file"]')!, { target: { files: [new File(['photo'], 'team.png', { type: 'image/png' })] } })
 }
 
@@ -74,21 +75,45 @@ describe('Team nomination form', () => {
   it('submits the captain’s actual structured fields and original team photo without cropping', async () => {
     const view = show()
     await fill(view)
+    const summary = screen.getByRole('textbox', { name: /Achievement Summary/ })
+    const bold = document.createElement('b')
+    bold.textContent = 'Test-only achievement summary'
+    summary.replaceChildren(bold)
+    fireEvent.input(summary)
     expect(screen.getByRole('textbox', { name: 'Nominator Name' })).toHaveAttribute('readonly')
     expect(screen.getByRole('textbox', { name: 'Nominator Name' })).toHaveValue(user.name)
     expect(screen.getByPlaceholderText(/Only BDCN team employees/)).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Submit nomination' }))
-    expect(await screen.findByRole('dialog', { name: 'Review Team Nomination' })).toHaveTextContent('Measurable test impact')
+    const review = await screen.findByRole('dialog', { name: 'Review Team Nomination' })
+    expect(review).toHaveTextContent('Measurable test impact')
+    expect(review.querySelector('.dp-nomination-answer strong')).toHaveTextContent('Test-only achievement summary')
+    expect(review).toHaveTextContent(/sent to your assigned HoD/)
     expect(StorageService.uploadFile).not.toHaveBeenCalled()
     expect(IdeaService.createIdea).not.toHaveBeenCalled()
     fireEvent.click(screen.getByRole('button', { name: 'Confirm and Submit' }))
     await waitFor(() => expect(IdeaService.createIdea).toHaveBeenCalledOnce())
     expect(StorageService.uploadFile).toHaveBeenCalledWith(expect.objectContaining({ name: 'team.png' }), 'project-attachments', 'nominations/campaign/captain')
     expect(IdeaService.createIdea).toHaveBeenCalledWith(expect.objectContaining({ teamId: undefined,
-      projectAttachments: expect.arrayContaining([expect.objectContaining({ nominationType: 'team', projectName: 'Test project', coreTeamMembers: 'Member One;Member Two', achievementSummary: 'Test-only achievement summary', teamAchievementImpact: 'Measurable test impact', cultureDemonstration: 'Test culture evidence' })]),
+      projectAttachments: expect.arrayContaining([expect.objectContaining({ nominationType: 'team', projectName: 'Test project', coreTeamMembers: 'Member One;Member Two', achievementSummary: 'Test-only achievement summary', teamAchievementImpact: 'Measurable test impact', cultureDemonstration: 'Test culture evidence',
+        formattedAnswers: [
+          [{ runs: [{ text: 'Test-only achievement summary', bold: true }] }],
+          [{ runs: [{ text: 'Measurable test impact' }] }],
+          [{ runs: [{ text: 'Test culture evidence' }] }],
+        ],
+      })]),
     }))
     expect(TeamService.createTeam).not.toHaveBeenCalled()
     expect(NominationDraftStore.remove).toHaveBeenCalledWith(nominationDraftKey({ userId: user.id, hackathonId: 'campaign', nominationType: 'team', category: 'customer-values' }))
+  })
+
+  it('lists only the required team fields that are missing and keeps the member example visible', async () => {
+    show()
+    fireEvent.change(await screen.findByRole('textbox', { name: 'Project Name' }), { target: { value: 'Project ready' } })
+    fireEvent.change(screen.getByRole('textbox', { name: 'Core Team Member' }), { target: { value: 'Alex Wang;Sam Li' } })
+    expect(screen.getByText(/Example: Alex Wang;Sam Li/)).toBeVisible()
+    fireEvent.click(screen.getByRole('button', { name: 'Submit nomination' }))
+    expect(screen.getByRole('alert')).toHaveTextContent('Please add: achievement summary, business impact, culture example, team photo.')
+    expect(IdeaService.createIdea).not.toHaveBeenCalled()
   })
   it('blocks a summary over 200 words before uploading or submitting', async () => {
     const view = show()
@@ -111,10 +136,10 @@ describe('Team nomination form', () => {
     show(existing)
     await screen.findByRole('textbox', { name: /Project Name/ })
     expect(screen.getByRole('textbox', { name: /Project Name/ })).toHaveValue('Real project')
-    expect(screen.getByRole('textbox', { name: /Achievement Summary/ })).toHaveValue('Actual submitted summary')
+    expect(screen.getByRole('textbox', { name: /Achievement Summary/ })).toHaveTextContent('Actual submitted summary')
     expect(screen.getByRole('textbox', { name: 'Nominator Name' })).toHaveValue('Saved nominator')
     expect(screen.getByText('Retained attachment: evidence.pdf')).toBeInTheDocument()
-    fireEvent.change(screen.getByRole('textbox', { name: /Achievement Summary/ }), { target: { value: 'Revised actual summary' } })
+    setNominationField(screen.getByRole('textbox', { name: /Achievement Summary/ }), 'Revised actual summary')
     fireEvent.click(screen.getByRole('button', { name: 'Resubmit nomination' }))
     expect(IdeaService.updateIdea).not.toHaveBeenCalled()
     fireEvent.click(await screen.findByRole('button', { name: 'Confirm and Submit' }))
@@ -154,7 +179,7 @@ describe('Team nomination form', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Submit nomination' }))
     fireEvent.click(await screen.findByRole('button', { name: 'Back to Edit' }))
     await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Review Team Nomination' })).not.toBeInTheDocument())
-    expect(screen.getByRole('textbox', { name: /Achievement Summary/ })).toHaveValue('Test-only achievement summary')
+    expect(screen.getByRole('textbox', { name: /Achievement Summary/ })).toHaveTextContent('Test-only achievement summary')
     expect(StorageService.uploadFile).not.toHaveBeenCalled()
     expect(IdeaService.createIdea).not.toHaveBeenCalled()
   })
@@ -200,7 +225,7 @@ describe('Team nomination form', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Restore Draft' }))
     expect(screen.getByText(/This nomination has changed since the draft/)).toBeInTheDocument()
     expect(screen.getByRole('textbox', { name: /Project Name/ })).toHaveValue('Real project')
-    expect(screen.getByRole('textbox', { name: /Achievement Summary/ })).toHaveValue('Actual submitted summary')
+    expect(screen.getByRole('textbox', { name: /Achievement Summary/ })).toHaveTextContent('Actual submitted summary')
   })
 
 })

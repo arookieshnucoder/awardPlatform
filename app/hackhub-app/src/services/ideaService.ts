@@ -1,4 +1,5 @@
 import { api } from '../lib/apiClient'
+import type { FormattedAnswers } from '../lib/nominationFormatting'
 import type { PageResponse } from './hackathonService'
 
 export interface Idea {
@@ -48,6 +49,7 @@ export interface ProjectAttachment {
   achievementSummary?: string
   teamAchievementImpact?: string
   cultureDemonstration?: string
+  formattedAnswers?: FormattedAnswers
 }
 
 export interface CreateIdeaInput {

@@ -950,6 +950,8 @@
 /* 提交确认预览独立于旧详情布局，照片和文字按文档顺序展示。 */
 .dp-nomination-review .mantine-Modal-content,
 .dp-nomination-review .mantine-Modal-header { background: #fff; color: #111; }
+.dp-nomination-review .mantine-Modal-header { border-bottom: 2px solid #555; }
+.dp-nomination-review .mantine-Modal-body { padding-top: var(--mantine-spacing-lg); }
 .dp-nomination-review .mantine-Modal-body { overflow-wrap: anywhere; }
 .dp-nomination-review :is(.mantine-Text-root, .mantine-Title-root, .mantine-Modal-title, .mantine-CloseButton-root),
 .dp-nomination-review .mantine-Button-root[data-variant='light'] { color: #111 !important; }
@@ -958,6 +960,41 @@
 .dp-detail-modal .mantine-Text-root { font-family: var(--app-font-body); font-size: 1rem; font-weight: 400; line-height: 1.8; }
 .dp-nomination-review :is(.mantine-Title-root, .mantine-Modal-title),
 .dp-detail-modal :is(.mantine-Title-root, .mantine-Modal-title) { font-family: var(--app-font-body); font-size: 1.125rem; font-weight: 700; line-height: 1.5; }
+.dp-nomination-review .dp-nomination-review-notice { color: #b42318 !important; font-weight: 700; }
+
+.dp-nomination-answer,
+.dp-answer-editor {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.55;
+}
+.dp-nomination-answer { margin-top: 0.4rem; }
+.dp-nomination-flow .dp-answer-editor {
+  position: relative;
+  height: auto;
+  border-width: 1px;
+  border-style: solid;
+  padding-block: 0.55rem;
+  overflow: auto;
+  resize: vertical;
+}
+.dp-answer-editor[data-empty='true']::before {
+  content: attr(data-placeholder);
+  color: #b7bfcc;
+  font-size: 0.75rem;
+  pointer-events: none;
+  position: absolute;
+}
+.dp-answer-editor[aria-invalid='true'] { outline: 1px solid var(--mantine-color-red-6); }
+.dp-answer-editor[aria-disabled='true'] { opacity: 0.65; }
+.dp-answer-toolbar { margin-block: 0.25rem; }
+.dp-answer-toolbar button { color: #f5f8ff; }
+:is(.dp-answer-editor, .dp-nomination-answer) :is(ul, ol) {
+  padding-inline-start: 1.65em;
+  margin-block: 0.25em;
+}
+:is(.dp-answer-editor, .dp-nomination-answer) ul { list-style: disc; }
+:is(.dp-answer-editor, .dp-nomination-answer) ol { list-style: decimal; }
 
 /* 下拉通过 Portal 渲染，单独设置深色背景及足够对比度。 */
 .dp-member-dropdown { background: #071b3b; border-color: #8da6ca; color: #eef5ff; }
@@ -1795,7 +1832,8 @@
 @keyframes dp-submit-check { to { stroke-dashoffset: 0; } }
 
 /* Keep nomination reviews and award result tables readable on light surfaces. */
-.dp-page .dp-light-surface {
+.dp-page .dp-light-surface,
+.dp-nomination-review .dp-light-surface {
   --mantine-color-text: #111;
   --mantine-color-dimmed: #111;
   --mantine-color-body: #fff;

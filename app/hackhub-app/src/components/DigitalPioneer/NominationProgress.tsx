@@ -14,6 +14,9 @@ export function NominationProgress({ idea }: { idea: Idea }) {
       <Stepper.Step label={finished ? nominationState(idea) : 'Decision'} />
     </Stepper>
     <Group><Badge color={idea.approvalStatus === 'rejected' ? 'red' : idea.approvalStatus === 'approved' ? 'green' : 'blue'}>{nominationState(idea)}</Badge></Group>
-    {idea.approvalReason && <Text mt="sm" style={{ whiteSpace: 'pre-wrap' }}>{idea.approvalReason}</Text>}
+    {idea.approvalReason && <Text mt="sm" style={{ whiteSpace: 'pre-wrap' }}>
+      {idea.approvalStatus === 'approved' && <Text component="strong" fw={700} c="#111">HoD Comment </Text>}
+      {idea.approvalReason}
+    </Text>}
   </>
 }

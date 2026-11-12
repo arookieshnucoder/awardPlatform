@@ -1,4 +1,4 @@
-import { Alert, Button, Card, FileInput, Grid, Group, Image, Modal, Select, Stack, Text, Textarea, TextInput, Title } from '@mantine/core'
+import { Alert, Button, Card, FileInput, Grid, Group, Image, Select, Stack, Text, TextInput, Title } from '@mantine/core'
 import { useEffect, useRef, useState } from 'react'
 import { notifications } from '@mantine/notifications'
 import { getDigitalPioneerTracks } from '../../config/digitalPioneer'
@@ -9,6 +9,9 @@ import { CoreTeamMembersInput } from './CoreTeamMembersInput'
 import { NominationDraftStore, nominationDraftKey, type NominationDraft } from '../../services/nominationDraftStore'
 import { LocalNominationAttachment } from './LocalNominationAttachment'
 import { NominationEvidence } from './NominationEvidence'
+import { NominationAnswerBody, NominationAnswerEditor } from './NominationAnswer'
+import { NominationReview } from './NominationReview'
+import { formattedAnswers, teamAnswerHeadings, type AnswerFormats } from '../../lib/nominationFormatting'
 
 interface Props {
   user: AuthUser
@@ -32,6 +35,7 @@ interface TeamDraft {
   achievementSummary: string
   teamAchievementImpact: string
   cultureDemonstration: string
+  formats?: AnswerFormats
   photo: File | null
   document: File | null
   approvalVersion?: number
@@ -46,9 +50,9 @@ export function TeamNominationForm({ user, hackathonId, category, onCategoryChan
   const initialForm: TeamDraft = {
     category, projectName: metadata?.projectName ?? '', coreTeamMembers: metadata?.coreTeamMembers ?? '',
     achievementSummary: metadata?.achievementSummary ?? '', teamAchievementImpact: metadata?.teamAchievementImpact ?? '',
-    cultureDemonstration: metadata?.cultureDemonstration ?? '', photo: null, document: null,
+    cultureDemonstration: metadata?.cultureDemonstration ?? '', formats: metadata?.formattedAnswers, photo: null, document: null,
   }
-  const { projectName, coreTeamMembers, achievementSummary, teamAchievementImpact, cultureDemonstration, photo, document } = categoryForms[draftKey] ?? initialForm
+  const { projectName, coreTeamMembers, achievementSummary, teamAchievementImpact, cultureDemonstration, formats, photo, document } = categoryForms[draftKey] ?? initialForm
   const updateForm = (fields: Partial<TeamDraft>) => setCategoryForms((current) => ({
     ...current, [draftKey]: { ...(current[draftKey] ?? initialForm), ...fields },
   }))
@@ -93,7 +97,7 @@ export function TeamNominationForm({ user, hackathonId, category, onCategoryChan
     try {
       const draft = await NominationDraftStore.save<TeamDraft>(draftKey, {
         category, projectName, coreTeamMembers, achievementSummary, teamAchievementImpact, cultureDemonstration,
-        photo, document, approvalVersion: editing?.approvalVersion,
+        formats, photo, document, approvalVersion: editing?.approvalVersion,
       })
       if (currentDraftKey.current === draftKey) {
         setSavedDraft(draft)
@@ -113,7 +117,7 @@ export function TeamNominationForm({ user, hackathonId, category, onCategoryChan
       setDraftError('This nomination has changed since the draft was saved. Discard the old draft and use the latest nomination.')
       return
     }
-    updateForm(draft)
+    updateForm({ ...draft, formats: draft.formats })
     setDraftError(null)
     setDraftMessage('Draft restored. Review your information before submitting.')
   }
@@ -152,9 +156,17 @@ export function TeamNominationForm({ user, hackathonId, category, onCategoryChan
   const submit = async (confirmed = false) => {
     if (!canSubmit || busyRef.current) return
     setError(null)
-    if (!projectName.trim() || !category || !coreTeamMembers.trim() || !achievementSummary.trim()
-      || !teamAchievementImpact.trim() || !cultureDemonstration.trim() || (!photo && !savedPhoto)) {
-      setError('Complete all required fields and upload a team photo.')
+    const missing = [
+      !projectName.trim() && 'project name',
+      !category && 'award category',
+      !coreTeamMembers.trim() && 'team members',
+      !achievementSummary.trim() && 'achievement summary',
+      !teamAchievementImpact.trim() && 'business impact',
+      !cultureDemonstration.trim() && 'culture example',
+      !photo && !savedPhoto && 'team photo',
+    ].filter(Boolean)
+    if (missing.length) {
+      setError(`Please add: ${missing.join(', ')}.`)
       return
     }
     if (summaryWords > 200 || photoError || documentError) {
@@ -179,6 +191,7 @@ export function TeamNominationForm({ user, hackathonId, category, onCategoryChan
         type: 'nomination', nominationType: 'team', url: '', name: projectName.trim(), nomineeUserId: user.id,
         projectName: projectName.trim(), coreTeamMembers: coreTeamMembers.trim(), achievementSummary: achievementSummary.trim(),
         teamAchievementImpact: teamAchievementImpact.trim(), cultureDemonstration: cultureDemonstration.trim(),
+        formattedAnswers: formattedAnswers([achievementSummary, teamAchievementImpact, cultureDemonstration], formats),
       }]
       if (uploadedPhoto && photo) attachments.push({ type: 'screenshot', name: photo.name, url: uploadedPhoto.url, storageKey: uploadedPhoto.key })
       else if (savedPhoto) attachments.push(savedPhoto)
@@ -213,7 +226,6 @@ export function TeamNominationForm({ user, hackathonId, category, onCategoryChan
 
   return <Card className="dp-form-shell dp-team-nomination-form" p={{ base: 'lg', md: 38 }}><Stack gap="lg" id="nomination-form">
     <Title order={3}>Team Nomination</Title>
-    {error && <Alert color="red" role="alert">{error}</Alert>}
     {draftError && <Alert color="red" c="white" styles={{ message: { color: '#fff' } }}>{draftError}</Alert>}
     {draftMessage && <Alert color="blue" c="white" role="status" styles={{ message: { color: '#fff' } }}>{draftMessage}</Alert>}
     {savedDraft && <Alert color="blue" c="white" title="Saved Draft Available" styles={{ title: { color: '#fff' }, message: { color: '#fff' } }}>
@@ -237,47 +249,45 @@ export function TeamNominationForm({ user, hackathonId, category, onCategoryChan
         <Grid.Col span={12}><CoreTeamMembersInput disabled={busy}
           value={coreTeamMembers} onChange={(coreTeamMembers) => updateForm({ coreTeamMembers })} /></Grid.Col>
       </Grid>
-      <div className="dp-fieldset" translate="no"><Textarea label="Achievement Summary (≤ 200 words)" required autosize minRows={8} resize="vertical" disabled={busy}
+      <div className="dp-fieldset" translate="no"><NominationAnswerEditor label="Achievement Summary (≤ 200 words)" minRows={8} disabled={busy}
         placeholder="Summarize the achievement, the value created, and why it deserves the 2026 Digital Pioneer Award in this track."
-        value={achievementSummary} error={summaryWords > 200 ? 'Maximum 200 words.' : undefined}
-        onChange={(event) => updateForm({ achievementSummary: event.currentTarget.value })} />
+        value={achievementSummary} format={formats?.[0]} error={summaryWords > 200 ? 'Maximum 200 words.' : undefined}
+        onChange={(value, format) => updateForm({ achievementSummary: value, formats: { ...formats, 0: format } })} />
       </div>
-      <div className="dp-fieldset" translate="no"><Textarea label="Details of Your Team Achievement in 2026 and Business Impact" required autosize minRows={4} resize="vertical" disabled={busy}
+      <div className="dp-fieldset" translate="no"><NominationAnswerEditor label={teamAnswerHeadings[1]} disabled={busy}
         placeholder="What were the measurable outcomes in 2026? including financial figures"
-        value={teamAchievementImpact} onChange={(event) => updateForm({ teamAchievementImpact: event.currentTarget.value })} /></div>
-      <div className="dp-fieldset" translate="no"><Textarea label="How You Demonstrate BD China Culture (Especially in Your Applied Category)" required autosize minRows={4} resize="vertical" disabled={busy}
+        value={teamAchievementImpact} format={formats?.[1]} onChange={(value, format) => updateForm({ teamAchievementImpact: value, formats: { ...formats, 1: format } })} /></div>
+      <div className="dp-fieldset" translate="no"><NominationAnswerEditor label={teamAnswerHeadings[2]} disabled={busy}
         placeholder="Describe how the /team demonstrated the culture pillar of this track."
-        value={cultureDemonstration} onChange={(event) => updateForm({ cultureDemonstration: event.currentTarget.value })} /></div>
+        value={cultureDemonstration} format={formats?.[2]} onChange={(value, format) => updateForm({ cultureDemonstration: value, formats: { ...formats, 2: format } })} /></div>
       <div className="dp-fieldset" translate="no"><FileInput className="dp-team-file-input dp-team-attachment" label="Attachment" clearable disabled={busy} accept={documentAccept}
         placeholder="Optional supplementary materials, document size less than 20 MB"
         value={document} onChange={(document) => updateForm({ document })} error={documentError} />
         {document && !documentError && <LocalNominationAttachment file={document} />}
         {!document && savedDocuments.map((item) => <Stack key={item.storageKey ?? item.url} gap="xs"><Text size="sm">Retained attachment: {item.name}</Text><NominationEvidence attachment={item} /></Stack>)}
       </div>
-      <Group justify="flex-end"><Button variant="light" c="white" loading={draftSaving} disabled={busy || draftLoading} onClick={() => void saveDraft()}>Save Draft</Button>
+      {error && !reviewOpened && <Alert color="red" role="alert">{error}</Alert>}
+      <Group justify="flex-end"><Button className="dp-primary-button" loading={draftSaving} disabled={busy || draftLoading} onClick={() => void saveDraft()}>Save Draft</Button>
         <Button className="dp-primary-button" loading={busy}
         disabled={!canSubmit || summaryWords > 200 || Boolean(photoError || documentError)} onClick={() => void submit()}>
         {editing ? 'Resubmit nomination' : 'Submit nomination'}
       </Button></Group>
-      <Modal opened={reviewOpened} onClose={() => { if (!busy) setReviewOpened(false) }} title="Review Team Nomination" size="lg" centered
-        closeOnClickOutside={!busy} closeOnEscape={!busy} withCloseButton={!busy} className="dp-nomination-review">
+      <NominationReview opened={reviewOpened} title="Review Team Nomination" busy={busy} canSubmit={canSubmit}
+        onClose={() => setReviewOpened(false)} onConfirm={() => void submit(true)}>
         <Stack gap="lg" style={{ minWidth: 0 }}>
-          <Text>Review all information below. Confirm to submit it to your Nominating HoD.</Text>
           {error && <Alert color="red" role="alert">{error}</Alert>}
           <Title order={3}>{getDigitalPioneerTracks('team').find((track) => track.value === category)?.label ?? category}</Title>
           <Text><strong>Name:</strong> {metadata?.nominatorName ?? user.name}</Text>
           <Text style={{ overflowWrap: 'anywhere' }}><strong>Project Name:</strong> {projectName}</Text>
           {photoPreview && <Image src={photoPreview} alt="Team nomination photo" fit="contain" w="100%" h={280} style={{ display: 'block', position: 'static', maxWidth: '100%' }} />}
-          {[
-            ['Core Team Member', coreTeamMembers],
-            ['Achievement Summary', achievementSummary],
-            ['Details of Your Team Achievement in 2026 and Business Impact', teamAchievementImpact],
-            ['How You Demonstrate BD China Culture', cultureDemonstration],
-          ].map(([label, value]) => <Stack gap="xs" key={label} style={{ minWidth: 0 }}><Title order={4}>{label}</Title><Text style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{value}</Text></Stack>)}
+          <section><Title order={4}>Core Team Member</Title><NominationAnswerBody text={coreTeamMembers} /></section>
+          {([0, 1, 2] as const).map((index) => (
+            <section key={teamAnswerHeadings[index]}><Title order={4}>{teamAnswerHeadings[index]}</Title>
+              <NominationAnswerBody text={[achievementSummary, teamAchievementImpact, cultureDemonstration][index]} format={formats?.[index]} />
+            </section>
+          ))}
           {document ? <LocalNominationAttachment file={document} /> : savedDocuments.map((item) => <NominationEvidence key={item.storageKey ?? item.url} attachment={item} />)}
-          <Group justify="flex-end"><Button variant="light" disabled={busy} onClick={() => setReviewOpened(false)}>Back to Edit</Button>
-            <Button loading={busy} disabled={!canSubmit || busy} onClick={() => void submit(true)}>Confirm and Submit</Button></Group>
         </Stack>
-      </Modal>
+      </NominationReview>
   </Stack></Card>
 }

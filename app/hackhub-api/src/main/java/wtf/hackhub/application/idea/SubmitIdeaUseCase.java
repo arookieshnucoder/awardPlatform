@@ -112,7 +112,11 @@ public class SubmitIdeaUseCase {
 			description = teamDescription(metadata);
 			projectAttachments = teamDisplayMetadata(projectAttachments);
 			if (teamId == null) teamId = resolveTeam(hackathonId, createdBy, title);
-		} else validateIndividualDocuments(projectAttachments, hackathonId, createdBy);
+		} else {
+			var items = attachmentItems(projectAttachments);
+			description = NominationFormatting.individualDescription(items, description);
+			validateIndividualDocuments(items, hackathonId, createdBy);
+		}
 		Idea idea = new Idea(title, description, hackathonId, teamId, createdBy, category);
 		idea.update(title, description, category, tags == null ? List.of() : tags,
 				employeeSubmission ? Idea.Status.SUBMITTED : status == null ? Idea.Status.DRAFT : status, repositoryUrl, demoUrl, projectAttachments);
@@ -169,7 +173,11 @@ public class SubmitIdeaUseCase {
 			title = metadata.path("projectName").asText();
 			description = teamDescription(metadata);
 			projectAttachments = teamDisplayMetadata(projectAttachments);
-		} else if (idea.getTeamId() == null) validateIndividualDocuments(projectAttachments, idea.getHackathonId(), requestingUserId);
+		} else if (idea.getTeamId() == null) {
+			var items = attachmentItems(projectAttachments);
+			description = NominationFormatting.individualDescription(items, description);
+			validateIndividualDocuments(items, idea.getHackathonId(), requestingUserId);
+		}
 		if (idea.getVotes() > 0 || !judgeScoreRepository.findAllByIdeaId(ideaId).isEmpty()) {
 			Idea proposed = new Idea(title, description, idea.getHackathonId(), idea.getTeamId(), idea.getCreatedBy(),
 					category);
@@ -243,8 +251,8 @@ public class SubmitIdeaUseCase {
 		return createTeam.execute(projectName, "", campaignId, userId).getId();
 	}
 
-	private void validateIndividualDocuments(String attachments, UUID campaignId, UUID ownerId) {
-		for (var item : attachmentItems(attachments)) {
+	private void validateIndividualDocuments(com.fasterxml.jackson.databind.JsonNode attachments, UUID campaignId, UUID ownerId) {
+		for (var item : attachments) {
 			if (!"document".equals(item.path("type").asText())) continue;
 			String key = item.path("storageKey").asText();
 			if (!key.startsWith("nominations/" + campaignId + "/" + ownerId + "/")
@@ -316,6 +324,7 @@ public class SubmitIdeaUseCase {
 		if (nomination.path("achievementSummary").asText().strip().split("(?U)\\s+").length > 200)
 			throw new IllegalArgumentException("Achievement Summary must not exceed 200 words");
 		if (!photo) throw new IllegalArgumentException("Team Photo is required");
+		NominationFormatting.validateTeamAnswers(nomination);
 		return nomination;
 	}
 
@@ -342,10 +351,10 @@ public class SubmitIdeaUseCase {
 		if (tags == null)
 			return List.of();
 		List<String> normalized = tags.stream().filter(java.util.Objects::nonNull)
-				.flatMap(tag -> java.util.Arrays.stream(tag.split("[,，、]")))
+				.flatMap(tag -> java.util.Arrays.stream(tag.split("[,，、;；]")))
 				.map(String::strip).filter(tag -> !tag.isEmpty()).distinct().toList();
 		if (normalized.size() > 5)
-			throw new IllegalArgumentException("Add up to 5 tags, separated by 、, ， or commas (,).");
+			throw new IllegalArgumentException("Add up to 5 tags. Use 、 , ， ; or ； to separate them.");
 		return normalized;
 	}
 
