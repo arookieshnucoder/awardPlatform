@@ -16,8 +16,10 @@ NS = {'m': 'http://schemas.openxmlformats.org/spreadsheetml/2006/main'}
 
 def extract(path):
     with zipfile.ZipFile(path) as archive:
-        strings = [''.join(t.text or '' for t in node.findall('.//m:t', NS))
-                   for node in ET.fromstring(archive.read('xl/sharedStrings.xml')).findall('m:si', NS)]
+        strings = []
+        if 'xl/sharedStrings.xml' in archive.namelist():
+            strings = [''.join(t.text or '' for t in node.findall('.//m:t', NS))
+                       for node in ET.fromstring(archive.read('xl/sharedStrings.xml')).findall('m:si', NS)]
         rows = []
         for row in ET.fromstring(archive.read('xl/worksheets/sheet1.xml')).findall('.//m:sheetData/m:row', NS):
             cells = {}
@@ -33,11 +35,13 @@ def extract(path):
     expected = {'A': 'Pers.No.', 'B': 'Organizational Unit', 'C': 'Personnel Number'}
     if not rows or any(rows[0].get(key) != value for key, value in expected.items()):
         raise ValueError('名册表头不匹配，请先检查源文件')
+    return build_directory((row.get('A', ''), row.get('B', ''), row.get('C', ''))
+                           for row in rows[1:] if any(row.values()))
+
+
+def build_directory(people):
     entries = {}
-    for row in rows[1:]:
-        if not any(row.values()):
-            continue
-        number, full_name, org = row.get('A', ''), row.get('C', ''), row.get('B', '')
+    for number, org, full_name in people:
         if not number or not full_name or not org:
             raise ValueError('名册存在缺少员工编号、姓名或部门的记录')
         # 英文姓名来自原始姓名列的斜杠后部分；不从经理姓名列扩充成员。

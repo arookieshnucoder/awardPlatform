@@ -497,6 +497,7 @@
 @media (max-width: 720px) {
   .award-landing__header { flex-wrap: wrap; }
   .award-landing__account { margin-left: auto; }
+  .award-landing__account .award-landing__account-avatar { display: none; }
   .award-landing__content { padding: 4px; border-radius: 20px; }
   .award-landing__hero { min-height: calc(100svh - 130px); }
 }

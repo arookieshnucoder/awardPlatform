@@ -686,6 +686,26 @@ describe('ProjectShowcase', () => {
     expect(await screen.findByText(/Your nomination was submitted, but its saved draft could not be removed/)).toBeInTheDocument()
   })
 
+  it('shows the roster department error in blue inside the individual review', async () => {
+    const message = 'Nominee department is missing or ambiguous in the associate roster. Please contact an administrator.'
+    getIdea.mockResolvedValueOnce({
+      id: 'rejected-1', createdBy: 'user-1', hackathonId: 'hackathon-1', category: 'Customer Values',
+      description: 'Executive Summary\nOriginal summary\n\nDetails of Your Core Achievement in 2026 and Business Impact (including financial figures)\nOriginal impact\n\nHow You Demonstrate Bosch China Culture (Especially in Your Applied Category)\nOriginal culture',
+      tags: [], approvalStatus: 'rejected', approvalVersion: 4,
+      projectAttachments: [{ type: 'screenshot', url: '/existing-photo.png', name: 'existing-photo.png' }],
+    })
+    updateIdea.mockRejectedValueOnce(new ApiError(400, 'Invalid nomination', message))
+    const user = userEvent.setup()
+    render(<MantineProvider env="test"><MemoryRouter initialEntries={['/nominate?edit=rejected-1']}><ProjectShowcase nominationMode /></MemoryRouter></MantineProvider>)
+    await user.click(await screen.findByRole('button', { name: 'Resubmit nomination' }))
+    const review = await screen.findByRole('dialog', { name: 'Review Individual Nomination' })
+    await user.click(within(review).getByRole('button', { name: 'Confirm and Submit' }))
+    const alert = await within(review).findByRole('alert')
+    expect(alert).toHaveTextContent(message)
+    expect(within(alert).getByText(message)).toHaveStyle('color: var(--mantine-color-blue-9)')
+    expect(removeDraft).not.toHaveBeenCalled()
+  })
+
   it('keeps team submission successful and displays a warning when its draft cannot be removed', async () => {
     removeDraft.mockRejectedValueOnce(new Error('Draft storage unavailable'))
     getIdea.mockResolvedValueOnce({

@@ -63,7 +63,7 @@
     "id": "66ddfd2c-0825-5ff0-aeb2-f3d5350d8654",
     "name": "CAO Jane",
     "fullName": "Ms. 曹纬坤/CAO Jane",
-    "orgUnit": "BD/TOA-IDE1"
+    "orgUnit": "BD/TOA-IDE1-J1"
   },
   {
     "id": "840c39e3-eba5-5428-9a3e-0aac6eb07ba9",
@@ -192,6 +192,12 @@
     "orgUnit": "BD/ISA-GOC7"
   },
   {
+    "id": "aa6f6ba8-8fa3-54c9-a670-2920c04c2fd2",
+    "name": "CHEN Peiyi",
+    "fullName": "Ms. 陈培艺/CHEN Peiyi",
+    "orgUnit": "BD/CNA-IPM1"
+  },
+  {
     "id": "4465428d-ae30-539e-8e27-97c3efd475cb",
     "name": "CHEN Richard",
     "fullName": "Mr. 陈以锋/CHEN Richard",
@@ -312,12 +318,6 @@
     "orgUnit": "BD/SLP-CO1"
   },
   {
-    "id": "0b3ea020-9199-5f4c-bc6e-2854b717745d",
-    "name": "CHU Kexin",
-    "fullName": "Ms. 储可欣/CHU Kexin",
-    "orgUnit": "BD/CTA-GXI"
-  },
-  {
     "id": "cdb8bb61-17df-594d-9150-52092fcaf6a4",
     "name": "CHUNG Keith",
     "fullName": "Mr. 鍾建龍/CHUNG Keith",
@@ -333,7 +333,7 @@
     "id": "45943034-a240-51b2-867c-0024c1e0d429",
     "name": "CUI Jiaxin",
     "fullName": "Ms. 崔佳欣/CUI Jiaxin",
-    "orgUnit": "BD/PTD-B2P3"
+    "orgUnit": "BD/ERA-IPM1"
   },
   {
     "id": "226d3d53-a818-5d6d-90eb-b823541d067b",
@@ -786,12 +786,6 @@
     "orgUnit": "BD/ERA-AMS3"
   },
   {
-    "id": "7eaf71be-9b19-51b9-9d9d-ccd8cf9c2927",
-    "name": "JI Shunyan",
-    "fullName": "Ms. 季顺艳/JI Shunyan",
-    "orgUnit": "BD/PTD-I2D2"
-  },
-  {
     "id": "23ce9924-b26e-5671-bc81-de8ab38bf973",
     "name": "JI Yanjun Eric",
     "fullName": "Mr. 纪艳军/JI Yanjun Eric",
@@ -1182,12 +1176,6 @@
     "orgUnit": "BD/ISA-NSL2"
   },
   {
-    "id": "1206dd4d-626a-5f95-943d-847aafaf9f40",
-    "name": "LIU Athena",
-    "fullName": "Ms. 刘智慧/LIU Athena",
-    "orgUnit": "BD/ISA-GOC3"
-  },
-  {
     "id": "d8486f59-0751-53c8-8127-ef15b9c0ffee",
     "name": "LIU Bing",
     "fullName": "Mr. 刘兵/LIU Bing",
@@ -1336,12 +1324,6 @@
     "name": "LU Nova",
     "fullName": "Mr. 陆凡/LU Nova",
     "orgUnit": "BD/ISA-PRC1"
-  },
-  {
-    "id": "57fb592d-29f2-5078-bbd4-fb3b9a9aaaac",
-    "name": "LU Tim",
-    "fullName": "Mr. 陆铤杰/LU Tim",
-    "orgUnit": "BD/PTD-B2P3"
   },
   {
     "id": "efbe0a98-860b-5a81-a660-db6251ddb795",
@@ -1851,7 +1833,7 @@
     "id": "ee0e3b57-368c-5db2-9eba-154ce66772b9",
     "name": "SUN Keda",
     "fullName": "Mr. 孙克达/SUN Keda",
-    "orgUnit": "BD/CNA-CNS"
+    "orgUnit": "BD/CNA-IPM2"
   },
   {
     "id": "adb0a8f7-f06c-5617-8165-8a6a906444b6",
@@ -2058,12 +2040,6 @@
     "orgUnit": "BD/DAD-DEN2"
   },
   {
-    "id": "44f76084-8ec4-5796-9799-4757c0a687f2",
-    "name": "WANG Jianguo",
-    "fullName": "Mr. 王建国/WANG Jianguo",
-    "orgUnit": "BD/BA-CN"
-  },
-  {
     "id": "4a14c072-5a4b-5b9a-b97f-6f20e2b99d42",
     "name": "WANG Jianxin",
     "fullName": "Mr. 王建新/WANG Jianxin",
@@ -2235,7 +2211,7 @@
     "id": "df1aeae9-1ef1-5c69-8580-a7bf58708e19",
     "name": "WANG Winnie",
     "fullName": "Ms. 王杨/WANG Winnie",
-    "orgUnit": "BD/ERA-EXL"
+    "orgUnit": "BD/ERA-GTC3"
   },
   {
     "id": "5cbeb0cd-abac-5988-b2c0-53b1c97d48a5",
@@ -2934,12 +2910,6 @@
     "orgUnit": "BD/ERA-SPO1"
   },
   {
-    "id": "19af399a-8b4c-5aa7-a2ca-b1986dec5637",
-    "name": "ZHANG Shuran",
-    "fullName": "Ms. 张舒然/ZHANG Shuran",
-    "orgUnit": "BD/SLP-CO3"
-  },
-  {
     "id": "9866a376-9a2a-5e3d-bf48-f784438897d6",
     "name": "ZHANG Stephen",
     "fullName": "Mr. 张广帅/ZHANG Stephen",
@@ -3286,6 +3256,12 @@
     "name": "ZHU Kate",
     "fullName": "Ms. 朱嫣然/ZHU Kate",
     "orgUnit": "BD/QMM3"
+  },
+  {
+    "id": "8f5ea953-803f-5b7a-a1fc-976f664f242f",
+    "name": "ZHU Leon",
+    "fullName": "Mr. 朱翊弘/ZHU Leon",
+    "orgUnit": "BD/SLP-CO1"
   },
   {
     "id": "9fc2150e-efb0-5fe8-85b5-69488ef34257",

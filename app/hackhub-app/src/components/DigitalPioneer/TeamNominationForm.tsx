@@ -11,6 +11,7 @@ import { LocalNominationAttachment } from './LocalNominationAttachment'
 import { NominationEvidence } from './NominationEvidence'
 import { NominationAnswerBody, NominationAnswerEditor } from './NominationAnswer'
 import { NominationReview } from './NominationReview'
+import { isNomineeDepartmentWarning } from '../../lib/nominationStatus'
 import { formattedAnswers, teamAnswerHeadings, type AnswerFormats } from '../../lib/nominationFormatting'
 
 interface Props {
@@ -63,7 +64,7 @@ export function TeamNominationForm({
     ...current, [draftKey]: { ...(current[draftKey] ?? initialForm), ...fields },
   }))
   const [photoPreview, setPhotoPreview] = useState<string | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  const [reviewError, setReviewError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [reviewOpened, setReviewOpened] = useState(false)
   const [draftSaving, setDraftSaving] = useState(false)
@@ -80,7 +81,7 @@ export function TeamNominationForm({
   useEffect(() => {
     setDraftMessage(null)
     setDraftError(null)
-    setError(null)
+    setReviewError(null)
     setReviewOpened(false)
   }, [draftKey])
 
@@ -129,7 +130,7 @@ export function TeamNominationForm({
 
   const submit = async (confirmed = false) => {
     if (!canSubmit || busyRef.current) return
-    setError(null)
+    setReviewError(null)
     const missing = [
       !projectName.trim() && 'project name',
       !category && 'award category',
@@ -140,15 +141,21 @@ export function TeamNominationForm({
       !photo && !savedPhoto && 'team photo',
     ].filter(Boolean)
     if (missing.length) {
-      setError(`Please add: ${missing.join(', ')}.`)
+      notifications.show({
+        title: 'Missing Information',
+        message: `Please add: ${missing.join(', ')}.`,
+        color: 'orange',
+        position: 'bottom-right',
+        className: 'dp-status-toast dp-missing-information-toast',
+      })
       return
     }
     if (summaryWords > 200 || photoError || documentError) {
-      setError(photoError || documentError || 'Achievement Summary must be 200 words or fewer.')
+      notifications.show({ title: 'Invalid nomination', message: photoError || documentError || 'Achievement Summary must be 200 words or fewer.', color: 'orange', position: 'bottom-right' })
       return
     }
     if (coreTeamMembers.split(';').some((name) => !name.trim()) || /[；\n\r]/u.test(coreTeamMembers)) {
-      setError('Enter Outlook names separated by semicolons (;), without empty names.')
+      notifications.show({ title: 'Invalid team members', message: 'Enter Outlook names separated by semicolons (;), without empty names.', color: 'orange', position: 'bottom-right' })
       return
     }
     // 首次点击只展示确认页，第二次确认才沿用原上传和提交审批流程。
@@ -191,7 +198,12 @@ export function TeamNominationForm({
       setReviewOpened(false)
       onSubmitted(result, draftWarning)
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Unable to submit the team nomination. Please retry.')
+      const message = cause instanceof Error ? cause.message : 'Unable to submit the team nomination. Please retry.'
+      if (isNomineeDepartmentWarning(message)) {
+        setReviewError(message)
+      } else {
+        notifications.show({ title: 'Submission failed', message, color: 'red', position: 'bottom-right' })
+      }
     } finally {
       busyRef.current = false
       setBusy(false)
@@ -234,16 +246,14 @@ export function TeamNominationForm({
         {document && !documentError && <LocalNominationAttachment file={document} />}
         {!document && savedDocuments.map((item) => <Stack key={item.storageKey ?? item.url} gap="xs"><Text size="sm">Retained attachment: {item.name}</Text><NominationEvidence attachment={item} /></Stack>)}
       </div>
-      {error && !reviewOpened && <Alert color="red" role="alert">{error}</Alert>}
       <Group justify="flex-end"><Button className="dp-primary-button" loading={draftSaving} disabled={busy} onClick={() => void saveDraft()}>Save Draft</Button>
         <Button className="dp-primary-button" loading={busy}
         disabled={!canSubmit || summaryWords > 200 || Boolean(photoError || documentError)} onClick={() => void submit()}>
         {editing ? 'Resubmit nomination' : 'Submit nomination'}
       </Button></Group>
-      <NominationReview opened={reviewOpened} title="Review Team Nomination" busy={busy} canSubmit={canSubmit}
+      <NominationReview opened={reviewOpened} title="Review Team Nomination" busy={busy} canSubmit={canSubmit} submissionError={reviewError}
         onClose={() => setReviewOpened(false)} onConfirm={() => void submit(true)}>
         <Stack gap="lg" style={{ minWidth: 0 }}>
-          {error && <Alert color="red" role="alert">{error}</Alert>}
           <Title order={3}>{getDigitalPioneerTracks('team').find((track) => track.value === category)?.label ?? category}</Title>
           <Text><strong>Name:</strong> {metadata?.nominatorName ?? user.name}</Text>
           <Text style={{ overflowWrap: 'anywhere' }}><strong>Project Name:</strong> {projectName}</Text>

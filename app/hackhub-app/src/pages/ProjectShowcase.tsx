@@ -15,6 +15,7 @@ import {
   TextInput,
   SimpleGrid,
   Modal,
+  Portal,
   CloseButton,
   Center,
   Alert,
@@ -58,6 +59,7 @@ import { useNominationEligibility } from '../hooks/useNominationEligibility'
 import { NominationProgress } from '../components/DigitalPioneer/NominationProgress'
 import { NominationAnswerBody, NominationAnswerDetails, NominationAnswerEditor } from '../components/DigitalPioneer/NominationAnswer'
 import { NominationReview } from '../components/DigitalPioneer/NominationReview'
+import { isNomineeDepartmentWarning } from '../lib/nominationStatus'
 import { answerText, formattedAnswers, individualAnswerHeadings as nominationHeadings, type AnswerFormats, type FormattedAnswers } from '../lib/nominationFormatting'
 import { validateNominationPdf } from '../services/storageService'
 import { NominationEvidence } from '../components/DigitalPioneer/NominationEvidence'
@@ -467,6 +469,7 @@ export function ProjectShowcase({ nominationMode = false, managementMode = false
   const [uploading, setUploading] = useState(false)
   const uploadBusy = useRef(false)
   const [individualPreviewOpened, setIndividualPreviewOpened] = useState(false)
+  const [individualReviewError, setIndividualReviewError] = useState<string | null>(null)
   const [draftListing, setDraftListing] = useState<{ scope: string; drafts: Record<string, TrackDraft> } | null>(null)
   const [teamRestore, setTeamRestore] = useState<{ scope: string; data: TeamNominationDraft } | null>(null)
   const [savingDraft, setSavingDraft] = useState(false)
@@ -771,7 +774,7 @@ export function ProjectShowcase({ nominationMode = false, managementMode = false
         title: 'Missing Information',
         message: `Please add: ${missing.join(', ')}.`,
         color: 'orange',
-        className: 'dp-status-toast',
+        className: 'dp-status-toast dp-missing-information-toast',
       })
       return
     }
@@ -787,6 +790,7 @@ export function ProjectShowcase({ nominationMode = false, managementMode = false
     }
 
     // 第一次点击仅展示完整预览，二次确认后才沿用原有上传和审批提交流程。
+    setIndividualReviewError(null)
     if (!confirmed) { setIndividualPreviewOpened(true); return }
 
     const nomineeUserId = user.id
@@ -840,13 +844,12 @@ export function ProjectShowcase({ nominationMode = false, managementMode = false
       setProjectImage(null)
       setUploadForm(emptyUploadForm())
     } catch (error) {
-      notifications.show({
-        title: 'Submission failed',
-        message: error instanceof ApiError || error instanceof Error
-          ? error.message
-          : 'Unable to submit the nomination',
-        color: 'red',
-      })
+      const message = error instanceof Error ? error.message : 'Unable to submit the nomination'
+      if (isNomineeDepartmentWarning(message)) {
+        setIndividualReviewError(message)
+      } else {
+        notifications.show({ title: 'Submission failed', message, color: 'red' })
+      }
     } finally {
       uploadBusy.current = false
       setUploading(false)
@@ -1091,7 +1094,7 @@ export function ProjectShowcase({ nominationMode = false, managementMode = false
         {photoToCrop && <PersonalPhotoCrop file={photoToCrop} language={language}
           onClose={() => setPhotoToCrop(null)}
           onConfirm={(file) => { setProjectImage(file); setPhotoToCrop(null) }} />}
-        <NominationReview opened={individualPreviewOpened} title="Review Individual Nomination" busy={uploading} canSubmit={canNominate}
+        <NominationReview opened={individualPreviewOpened} title="Review Individual Nomination" busy={uploading} canSubmit={canNominate} submissionError={individualReviewError}
           onClose={() => setIndividualPreviewOpened(false)} onConfirm={() => void handleProjectUpload(true)}>
           <Stack gap="lg" style={{ minWidth: 0, overflowWrap: 'anywhere' }}>
             <Title order={3}>{selectedNominationTrack?.label}</Title>
@@ -1351,7 +1354,7 @@ export function ProjectShowcase({ nominationMode = false, managementMode = false
   }
 
   return (
-    <Container size={1240} pt={{ base: 'sm', md: 'lg' }} className={`dp-page dp-voting-page${cartOpened ? ' dp-voting-page--cart-open' : ''}`}>
+    <Container size={1240} pt={{ base: 'sm', md: 'lg' }} className="dp-page dp-voting-page">
       <Stack gap="lg">
         {loadError && <Alert color="red" title="Unable to Load Nominations"><Button variant="subtle" onClick={() => void loadProjects()}>Retry</Button></Alert>}
         <div className="dp-selection-header">
@@ -1591,6 +1594,7 @@ export function ProjectShowcase({ nominationMode = false, managementMode = false
         </>
         )}
 
+        <Portal>
         {!canDelete && <Button
           className="dp-vote-cart-button"
           leftSection={<IconThumbUp size={22} />}
@@ -1635,6 +1639,7 @@ export function ProjectShowcase({ nominationMode = false, managementMode = false
               </div>)}
           </Stack></div>
         </section>}
+        </Portal>
         <Modal opened={Boolean(voteError)} onClose={() => setVoteError(null)} title="Vote Not Submitted" centered zIndex={400}>
           <Stack><Alert color="red" role="alert">{voteError}</Alert><Button onClick={() => setVoteError(null)}>OK</Button></Stack>
         </Modal>

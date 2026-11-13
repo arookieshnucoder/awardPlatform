@@ -83,12 +83,15 @@ describe('LandingPage', () => {
     expect(screen.queryByRole('heading', { name: '2026 BDCN Digital Pioneer Award' })).not.toBeInTheDocument()
   })
 
-  it('uses the full sign-in email for the account display without changing the profile name', () => {
+  it('shows MENU as the account entry and opens the existing account dropdown', async () => {
     state.user = { id: 'u1', name: 'Lynette', email: 'Lynette.LI@cn.bosch.com', role: 'participant' }
     renderPage('/projects')
-    expect(screen.getByRole('button', { name: 'Lynette.LI@cn.bosch.com' })).toHaveTextContent('Lynette.LI@cn.bosch.com')
-    expect(screen.queryByText('Lynette', { exact: true })).not.toBeInTheDocument()
-    expect(state.user.name).toBe('Lynette')
+    const menu = screen.getByRole('button', { name: 'MENU' })
+    expect(menu).toHaveTextContent('MENU')
+    expect(screen.queryByText(state.user.email!)).not.toBeInTheDocument()
+    fireEvent.click(menu)
+    expect(await screen.findByRole('menuitem', { name: 'My nominations' })).toHaveAttribute('href', '/my-nominations')
+    expect(screen.getByRole('menuitem', { name: 'Profile' })).toHaveAttribute('href', '/profile')
   })
 
   it.each([
@@ -98,7 +101,7 @@ describe('LandingPage', () => {
     state.judge = judge
     renderPage()
     expect(screen.queryByRole('button', { name: /Switch to Chinese|切换到英文/ })).not.toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: 'Associate' }))
+    fireEvent.click(screen.getByRole('button', { name: 'MENU' }))
     expect(await screen.findByRole('menuitem', { name: 'My voting records' })).toHaveAttribute('href', '/projects?view=voting-records')
     await waitFor(() => expect(Boolean(screen.queryByRole('menuitem', { name: /Award management|Committee scoring/ }))).toBe(visible))
     await waitFor(() => expect(Boolean(screen.queryByRole('menuitem', { name: 'Manage Users' }))).toBe(role === 'admin'))

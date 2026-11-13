@@ -37,7 +37,6 @@
   .dp-award-brand__logo { width: 88px; }
   .dp-award-brand__divider { height: 23px; }
   .dp-award-brand__title { font-size: 18px; letter-spacing: -0.5px; }
-  .dp-header-user-copy { display: none; }
 }
 
 @media (max-width: 24em) {

@@ -116,10 +116,10 @@ export function LandingPage({ children }: { children?: ReactNode }) {
         <Group className="award-landing__account" gap="sm" wrap="nowrap">
           {user && <Menu shadow="md" zIndex={350} width={220}>
             <Menu.Target>
-              <UnstyledButton aria-label={user.email || user.name}>
+              <UnstyledButton>
                 <Group gap="sm" wrap="nowrap">
-                  <Avatar src={user.avatar} size="sm" radius="xl" />
-                  <Text className="dp-header-user-copy" size="sm" fw={500}>{user.email || user.name}</Text>
+                  <Avatar className="award-landing__account-avatar" src={user.avatar} size="sm" radius="xl" aria-hidden="true" />
+                  <Text size="sm" fw={500} translate="no">MENU</Text>
                 </Group>
               </UnstyledButton>
             </Menu.Target>

@@ -1,6 +1,7 @@
 import { MantineProvider } from '@mantine/core'
+import { Notifications, notifications } from '@mantine/notifications'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { TeamNominationForm, type TeamNominationDraft } from './TeamNominationForm'
 import { TeamService, type Team, type TeamMember } from '../../services/teamService'
@@ -40,7 +41,7 @@ const onDraftSaved = vi.fn()
 const onDraftRestored = vi.fn()
 function show(editing?: Idea, restoredDraft?: TeamNominationDraft) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
-  return render(<MantineProvider env="test"><QueryClientProvider client={client}><TeamNominationForm user={user}
+  return render(<MantineProvider env="test"><Notifications /><QueryClientProvider client={client}><TeamNominationForm user={user}
     hackathonId="campaign" category="customer-values" onCategoryChange={vi.fn()} canSubmit editing={editing}
     restoredDraft={restoredDraft} onDraftSaved={onDraftSaved} onDraftRestored={onDraftRestored} onSubmitted={onSubmitted} />
   </QueryClientProvider></MantineProvider>)
@@ -57,6 +58,7 @@ async function fill(view: ReturnType<typeof show>, summary = 'Test-only achievem
 
 beforeEach(() => {
   vi.clearAllMocks()
+  notifications.clean()
   vi.mocked(NominationDraftStore.save).mockImplementation(async (_key, data) => ({ version: 1, savedAt: '2026-11-09T10:00:00.000Z', data }))
   vi.mocked(NominationDraftStore.remove).mockResolvedValue(undefined)
   vi.mocked(TeamMemberService.search).mockResolvedValue([])
@@ -114,8 +116,24 @@ describe('Team nomination form', () => {
     fireEvent.change(screen.getByRole('textbox', { name: /Core Team Member/ }), { target: { value: 'Alex Wang;Sam Li' } })
     expect(screen.getByText('Core Team Member (Example: Alex Wang; Sam Li)')).toBeVisible()
     fireEvent.click(screen.getByRole('button', { name: 'Submit nomination' }))
-    expect(screen.getByRole('alert')).toHaveTextContent('Please add: achievement summary, business impact, culture example, team photo.')
+    const notice = await screen.findByText('Please add: achievement summary, business impact, culture example, team photo.')
+    expect(notice.closest('[data-position="bottom-right"]')).toBeInTheDocument()
+    expect(document.getElementById('nomination-form')).not.toContainElement(notice)
     expect(IdeaService.createIdea).not.toHaveBeenCalled()
+  })
+
+  it('shows the roster department error in blue inside the team review', async () => {
+    const message = 'Nominee department is missing or ambiguous in the associate roster. Please contact an administrator.'
+    vi.mocked(IdeaService.createIdea).mockRejectedValueOnce(new Error(message))
+    const view = show()
+    await fill(view)
+    fireEvent.click(screen.getByRole('button', { name: 'Submit nomination' }))
+    const review = await screen.findByRole('dialog', { name: 'Review Team Nomination' })
+    fireEvent.click(within(review).getByRole('button', { name: 'Confirm and Submit' }))
+    const alert = await within(review).findByRole('alert')
+    expect(alert).toHaveTextContent(message)
+    expect(within(alert).getByText(message)).toHaveStyle('color: var(--mantine-color-blue-9)')
+    expect(onSubmitted).not.toHaveBeenCalled()
   })
   it('blocks a summary over 200 words before uploading or submitting', async () => {
     const view = show()
@@ -193,7 +211,8 @@ describe('Team nomination form', () => {
     fireEvent.change(view.container.querySelectorAll('input[type="file"]')[1], { target: { files: [pdf] } })
     await waitFor(() => expect(screen.getByRole('button', { name: 'Save Draft' })).toBeEnabled())
     fireEvent.click(screen.getByRole('button', { name: 'Save Draft' }))
-    expect((await screen.findByText('Draft saved successfully.')).closest('.mantine-Alert-message')).toHaveStyle({ color: '#fff' })
+    const form = document.getElementById('nomination-form')!
+    expect(await within(form).findByText('Draft saved successfully.')).toHaveStyle({ color: '#fff' })
     const [key, data] = vi.mocked(NominationDraftStore.save).mock.calls[0]
     expect(key).toBe(nominationDraftKey({ userId: user.id, hackathonId: 'campaign', nominationType: 'team', category: 'customer-values' }))
     expect(data).toEqual(expect.objectContaining({ projectName: 'Test project', photo: expect.objectContaining({ name: 'team.png' }), document: pdf }))
