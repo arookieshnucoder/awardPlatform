@@ -68,6 +68,28 @@ class NominationApprovalIT extends PostgresIntegrationTest {
 	NominationApprovalService.Selection selection(Idea idea) {
 		return new NominationApprovalService.Selection(idea.getId(), idea.getApprovalVersion());
 	}
+	@Test
+	void admin_can_list_and_delete_pending_and_rejected_nominations() {
+		UUID admin = UUID.fromString(insertProfile("cleanup-admin@example.invalid", "Cleanup Admin", "admin"));
+		Idea pending = nomination("Pending nomination");
+		Idea rejected = submitTeam(null, employee, teamMetadata(employee));
+		approvals.decide(hod, List.of(selection(rejected)), "rejected", "Add evidence");
+		Idea published = submit.executeNomination("Published", "Evidence", campaign, null, admin, "Customer Values",
+				List.of(), Idea.Status.SUBMITTED, null, null, null);
+		published.submitForApproval(roster.hodEmail(), roster.nominatingHead());
+		ideas.saveAndFlush(published);
+		approvals.decide(hod, List.of(selection(published)), "approved", null);
+		var page = PageRequest.of(0, 10);
+		assertThat(getIdeas.listByHackathon(campaign, page)).extracting(Idea::getId).containsExactly(published.getId());
+		assertThat(getIdeas.listForManagement(campaign, page)).extracting(Idea::getId)
+				.containsExactlyInAnyOrder(pending.getId(), rejected.getId(), published.getId());
+
+		submit.deleteMany(List.of(pending.getId(), rejected.getId(), published.getId()), admin);
+		assertThat(getIdeas.listForManagement(campaign, page)).isEmpty();
+		assertThat(jdbc.queryForObject("SELECT count(*) FROM nomination_approval_events WHERE idea_id IN (?, ?)",
+				Integer.class, pending.getId(), rejected.getId())).isZero();
+	}
+
 	UUID team(UUID creator) {
 		UUID id = jdbc.queryForObject("INSERT INTO teams(name,description,hackathon_id,created_by) VALUES (?,?,?,?) RETURNING id",
 				UUID.class, "Team " + UUID.randomUUID(), "Test-only team", campaign, creator);

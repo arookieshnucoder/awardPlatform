@@ -13,6 +13,7 @@ import java.util.UUID;
 public interface IdeaRepository extends JpaRepository<Idea, UUID> {
 	@Query("select i from Idea i where i.hackathonId = :hackathonId and (i.approvalStatus is null or i.approvalStatus = 'approved') order by i.createdAt desc")
 	Page<Idea> findByHackathonIdOrderByCreatedAtDesc(UUID hackathonId, Pageable pageable);
+	Page<Idea> findByHackathonIdOrderByCreatedAtDescIdDesc(UUID hackathonId, Pageable pageable);
 	@Query("select i from Idea i where i.hackathonId = :hackathonId and i.status <> :status and (i.approvalStatus is null or i.approvalStatus = 'approved') order by i.createdAt desc")
 	Page<Idea> findByHackathonIdAndStatusNotOrderByCreatedAtDesc(UUID hackathonId, Idea.Status status,
 			Pageable pageable);

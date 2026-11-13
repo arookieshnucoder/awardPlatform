@@ -125,6 +125,25 @@ class IdeaControllerTest {
 	}
 
 	@Test
+	void only_admin_can_list_unpublished_nominations_for_management() throws Exception {
+		String path = "/api/v1/admin/hackathons/" + HACKATHON_ID + "/nominations";
+		mvc.perform(get(path)).andExpect(status().isUnauthorized());
+		mvc.perform(get(path).with(MockAuthHelper.asParticipant(USER_ID))).andExpect(status().isForbidden());
+		verifyNoInteractions(getIdeasUseCase);
+
+		Idea pending = idea();
+		pending.submitForApproval("hod@example.invalid", "HoD");
+		Idea rejected = idea();
+		rejected.submitForApproval("hod@example.invalid", "HoD");
+		rejected.decideApproval("rejected", "Revise", "HoD");
+		when(getIdeasUseCase.listForManagement(eq(HACKATHON_ID), any()))
+				.thenReturn(new PageImpl<>(List.of(pending, rejected)));
+		mvc.perform(get(path).with(MockAuthHelper.asAdmin(USER_ID))).andExpect(status().isOk())
+				.andExpect(jsonPath("$.content[0].approvalStatus").value("pending"))
+				.andExpect(jsonPath("$.content[1].approvalStatus").value("rejected"));
+	}
+
+	@Test
 	void get_by_id_found() throws Exception {
 		when(ideaRepository.findById(IDEA_ID)).thenReturn(java.util.Optional.of(idea()));
 		when(approvalService.canRead(any(), any())).thenReturn(true);

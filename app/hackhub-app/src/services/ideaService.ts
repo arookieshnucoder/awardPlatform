@@ -142,6 +142,13 @@ export class IdeaService {
     return normalizeIdea(await api.get<IdeaResponse>(`/api/v1/ideas/${id}`))
   }
 
+  static async getManagedNominations(hackathonId: string, page: number): Promise<PageResponse<Idea>> {
+    const response = await api.get<PageResponse<IdeaResponse>>(
+      `/api/v1/admin/hackathons/${hackathonId}/nominations?page=${page}&size=100`
+    )
+    return { ...response, content: response.content.map(normalizeIdea) }
+  }
+
   static async createIdea(data: CreateIdeaInput): Promise<Idea> {
     const payload = {
       ...data,

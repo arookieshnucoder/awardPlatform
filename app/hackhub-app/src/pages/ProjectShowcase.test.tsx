@@ -94,6 +94,7 @@ vi.mock('../services/ideaService', () => ({
     getMyNominations: vi.fn().mockResolvedValue([]),
     getIdea,
     getIdeas,
+    getManagedNominations: getIdeas,
     voteIdea,
     clearMyVotes,
     submitVotes,
@@ -1025,9 +1026,16 @@ describe('Nominee deletion', () => {
   it.each(['selected', 'all'])('deletes %s nominations in one batch after confirmation', async (mode) => {
     currentUser.role = 'admin'
     const original = await getIdeas()
-    getIdeas.mockResolvedValueOnce({ content: [original.content[0], { ...original.content[0], id: 'idea-2', title: 'Second nomination' }] })
+    getIdeas.mockClear()
+    getIdeas.mockResolvedValueOnce({ content: [
+      { ...original.content[0], approvalStatus: 'pending' },
+      { ...original.content[0], id: 'idea-2', title: 'Second nomination', approvalStatus: 'rejected' },
+    ] })
     renderManagement()
     await screen.findByText('Second nomination')
+    expect(getIdeas).toHaveBeenCalledWith('hackathon-1', 0)
+    expect(screen.getByText('In approval')).toBeVisible()
+    expect(screen.getByText('Rejected — revise')).toBeVisible()
     if (mode === 'selected') await userEvent.click(screen.getByRole('checkbox', { name: 'Select all results (2)' }))
     await userEvent.click(screen.getByRole('button', { name: mode === 'selected' ? 'Delete selected (2)' : 'Delete all (2)' }))
     const dialog = await screen.findByRole('dialog', { name: 'Confirm Nomination Deletion' })

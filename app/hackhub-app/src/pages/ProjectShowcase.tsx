@@ -59,7 +59,7 @@ import { useNominationEligibility } from '../hooks/useNominationEligibility'
 import { NominationProgress } from '../components/DigitalPioneer/NominationProgress'
 import { NominationAnswerBody, NominationAnswerDetails, NominationAnswerEditor } from '../components/DigitalPioneer/NominationAnswer'
 import { NominationReview } from '../components/DigitalPioneer/NominationReview'
-import { isNomineeDepartmentWarning } from '../lib/nominationStatus'
+import { isNomineeDepartmentWarning, nominationState } from '../lib/nominationStatus'
 import { answerText, formattedAnswers, individualAnswerHeadings as nominationHeadings, type AnswerFormats, type FormattedAnswers } from '../lib/nominationFormatting'
 import { validateNominationPdf } from '../services/storageService'
 import { NominationEvidence } from '../components/DigitalPioneer/NominationEvidence'
@@ -107,6 +107,7 @@ interface Project {
   nomination_type: 'individual' | 'team'
   documents?: ProjectAttachment[]
   formattedAnswers?: FormattedAnswers
+  approvalStatus?: Idea['approvalStatus']
   status: 'draft' | 'submitted' | 'in-progress' | 'completed'
   created_at: string
   submission_date: string
@@ -117,6 +118,8 @@ interface ProjectFilters {
   category: string
   department: string
 }
+
+const nominationStateZh = { approved: '审核通过', pending: '审核中', rejected: '审核未通过' }
 
 interface ProjectUploadForm {
   hackathonId: string
@@ -660,7 +663,9 @@ export function ProjectShowcase({ nominationMode = false, managementMode = false
           return request.catch(() => null)
         }
         const hackathonData = await Promise.all(loadedHackathons.map(async (hackathon) => {
-          const ideasPage = await getAllPages((page) => IdeaService.getIdeas(hackathon.id, page, 100, !managementMode))
+          const ideasPage = await getAllPages((page) => canDelete
+            ? IdeaService.getManagedNominations(hackathon.id, page)
+            : IdeaService.getIdeas(hackathon.id, page, 100, !managementMode))
           const usedTeamIds = new Set(ideasPage.filter((idea) => !idea.projectAttachments?.some((item) => item.type === 'nomination' && item.name != null)).map((idea) => idea.teamId).filter(Boolean))
           const teams = usedTeamIds.size ? await TeamService.getTeams(hackathon.id) : []
           const teamsById = new Map(teams.map((team) => [team.id, team]))
@@ -708,6 +713,7 @@ export function ProjectShowcase({ nominationMode = false, managementMode = false
               votes: idea.votes ?? 0,
               user_vote: idea.userHasVoted ?? false,
               status: idea.status,
+              approvalStatus: idea.approvalStatus,
               created_at: idea.createdAt,
               submission_date: idea.updatedAt,
             }
@@ -729,7 +735,7 @@ export function ProjectShowcase({ nominationMode = false, managementMode = false
       } finally {
         if (sequence === loadSequence.current) setLoading(false)
       }
-  }, [user, nominationMode, managementMode])
+  }, [user, nominationMode, managementMode, canDelete])
 
   useEffect(() => {
     setRecordToDelete(null)
@@ -1509,6 +1515,9 @@ export function ProjectShowcase({ nominationMode = false, managementMode = false
                       })
                     }} />}
                   <Title order={3} translate="no">{project.title}</Title>
+                  {canDelete && <Badge variant="light" mt="xs">{language === 'zh'
+                    ? (project.approvalStatus ? nominationStateZh[project.approvalStatus] : '已提交')
+                    : nominationState(project)}</Badge>}
                   <Text className="dp-candidate-summary-title" fw={700} mt="md">Summary</Text>
                   <Text size="sm" className="dp-candidate-description" tabIndex={0} role="region" aria-label={`${project.nominee_name} Summary`}>{nominationSummary(project.description)}</Text>
 

@@ -29,6 +29,11 @@ public class GetIdeasUseCase {
 	}
 
 	@Transactional(readOnly = true)
+	public Page<Idea> listForManagement(UUID hackathonId, Pageable pageable) {
+		return ideaRepository.findByHackathonIdOrderByCreatedAtDescIdDesc(hackathonId, pageable);
+	}
+
+	@Transactional(readOnly = true)
 	public Idea getById(UUID id) {
 		var idea = ideaRepository.findById(id).orElseThrow(() -> new VoteIdeaUseCase.IdeaNotFoundException(id));
 		idea.requireApprovalPublished();

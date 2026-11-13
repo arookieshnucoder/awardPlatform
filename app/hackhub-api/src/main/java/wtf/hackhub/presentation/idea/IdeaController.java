@@ -64,6 +64,13 @@ public class IdeaController {
 		return ideas.map(idea -> response(idea, votedIds.contains(idea.getId()), names.get(idea.getId())));
 	}
 
+	@Operation(summary = "List nominations in all approval states for an administrator")
+	@GetMapping("/api/v1/admin/hackathons/{hackathonId}/nominations")
+	@PreAuthorize("hasRole('ADMIN')")
+	public Page<IdeaResponse> listForManagement(@PathVariable UUID hackathonId, Pageable pageable) {
+		return getIdeasUseCase.listForManagement(hackathonId, pageable).map(idea -> response(idea, false));
+	}
+
 	@Operation(summary = "Submit a new idea to a hackathon")
 	@ApiResponses({@ApiResponse(responseCode = "201", description = "Idea submitted"),
 			@ApiResponse(responseCode = "400", description = "Validation failed"),
