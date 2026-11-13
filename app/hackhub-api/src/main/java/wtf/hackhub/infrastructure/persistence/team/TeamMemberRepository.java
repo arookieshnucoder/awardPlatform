@@ -14,6 +14,9 @@ public interface TeamMemberRepository extends JpaRepository<TeamMember, UUID> {
 	Optional<TeamMember> findByTeamIdAndUserId(UUID teamId, UUID userId);
 	boolean existsByTeamIdAndUserId(UUID teamId, UUID userId);
 	List<TeamMember> findAllByUserId(UUID userId);
+
+	@Query("SELECT tm FROM TeamMember tm JOIN Team t ON tm.teamId = t.id WHERE t.hackathonId = :hackathonId AND tm.userId = :userId")
+	List<TeamMember> findAllByHackathonIdAndUserId(@Param("hackathonId") UUID hackathonId, @Param("userId") UUID userId);
 	void deleteAllByTeamId(UUID teamId);
 
 	@Query("SELECT COUNT(tm) > 0 FROM TeamMember tm JOIN Team t ON tm.teamId = t.id WHERE t.hackathonId = :hackathonId AND tm.userId = :userId")

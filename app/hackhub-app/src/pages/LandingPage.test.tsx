@@ -24,6 +24,18 @@ beforeEach(() => {
 afterEach(() => vi.restoreAllMocks())
 
 describe('LandingPage', () => {
+  it('shows the voting window reminder from the account menu without opening vote records', async () => {
+    state.user = { id: 'employee', name: 'Associate', role: 'participant' }
+    vi.mocked(Date.now).mockReturnValue(Date.parse('2026-11-29T15:59:59Z'))
+    const notify = vi.spyOn(notifications, 'show').mockReturnValue('voting-menu-test')
+    function CurrentPage() { return <p>Page {useLocation().pathname}</p> }
+    render(<MantineProvider env="test"><MemoryRouter><LandingPage><CurrentPage /></LandingPage></MemoryRouter></MantineProvider>)
+    fireEvent.click(screen.getByRole('button', { name: 'MENU' }))
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'My voting records' }))
+    expect(notify).toHaveBeenCalledWith(expect.objectContaining({ message: 'The “Browse & Vote” section is coming soon' }))
+    expect(screen.getByText('Page /')).toBeInTheDocument()
+  })
+
   it.each(['Main navigation', 'Mobile navigation'])('blocks a roster outsider at the %s entry during voting', (navigation) => {
     state.user = { id: 'outsider', name: 'Associate', role: 'participant' }
     state.onVotingRoster = false

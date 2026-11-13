@@ -434,7 +434,7 @@ export function ProjectShowcase({ nominationMode = false, managementMode = false
   const nomineeToOpen = searchParams.get('nominee')
   const eligibility = useNominationEligibility()
   const canNominate = eligibility.data?.canSubmit === true
-  const canStartNomination = !user || user.role === 'admin' || eligibility.data?.canStartNomination === true
+  const canStartNomination = !user || eligibility.data?.canStartNomination === true
   const ownNominations = useQuery({
     queryKey: ['my-nomination-slots', user?.id], queryFn: () => IdeaService.getMyNominations(),
     enabled: nominationMode && Boolean(user), staleTime: 0, retry: false,

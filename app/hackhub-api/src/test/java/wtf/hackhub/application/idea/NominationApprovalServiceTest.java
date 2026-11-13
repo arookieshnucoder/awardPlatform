@@ -15,7 +15,6 @@ import wtf.hackhub.infrastructure.persistence.idea.VotingParticipantRepository;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 class NominationApprovalServiceTest {
@@ -52,12 +51,15 @@ class NominationApprovalServiceTest {
 	}
 
 	@Test
-	void admin_can_start_without_roster_membership() {
+	void admin_needs_roster_membership_for_submission_but_can_open_review() {
 		profile.changeRole(Profile.Role.ADMIN);
 		when(profiles.findById(userId)).thenReturn(Optional.of(profile));
 
 		assertThat(service.eligibility(userId)).isEqualTo(new NominationApprovalService.Eligibility(
-				true, false, null, null, true));
-		verifyNoInteractions(roster);
+				false, true, null, NominationApprovalService.BD_NOMINATION_MESSAGE, false));
+		when(roster.findAllByNormalizedName("alexwang"))
+				.thenReturn(List.of(new VotingParticipant("1", "BD/DPA", "Alex Wang", "alexwang")));
+		assertThat(service.eligibility(userId)).isEqualTo(new NominationApprovalService.Eligibility(
+				true, true, profile.getName(), null, true));
 	}
 }

@@ -22,7 +22,7 @@ public interface IdeaRepository extends JpaRepository<Idea, UUID> {
 
 	List<Idea> findByCreatedByOrderByCreatedAtDesc(UUID createdBy);
 	List<Idea> findByCreatedByAndHackathonId(UUID createdBy, UUID hackathonId);
-	List<Idea> findByApprovalHeadKeyOrderByCreatedAtDesc(String approvalHeadKey);
+	List<Idea> findByApprovalHeadKeyInOrderByCreatedAtDesc(List<String> approvalHeadKeys);
 
 	@Query(value = "select i.* from ideas i where exists (select 1 from jsonb_array_elements("
 			+ "case when jsonb_typeof(i.project_attachments) = 'array' then i.project_attachments else '[]'::jsonb end) a "

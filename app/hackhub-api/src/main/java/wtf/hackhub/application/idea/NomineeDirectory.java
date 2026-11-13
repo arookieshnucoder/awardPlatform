@@ -84,7 +84,11 @@ public class NomineeDirectory {
 	}
 
 	public boolean isAdminOrRosterParticipant(Profile profile) {
-		return profile.getRole() == Profile.Role.ADMIN || resolveRosterParticipant(profile).isPresent();
+		return profile.getRole() == Profile.Role.ADMIN || isRosterParticipant(profile);
+	}
+
+	public boolean isRosterParticipant(Profile profile) {
+		return resolveRosterParticipant(profile).isPresent();
 	}
 
 	/** Resolve display names with one profile query per showcase page. */

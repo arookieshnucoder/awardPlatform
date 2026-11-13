@@ -59,7 +59,7 @@ class SubmitIdeaUseCaseTest {
 		var manager = new wtf.hackhub.domain.Profile("manager@example.test", "Manager", "hash");
 		manager.changeRole(wtf.hackhub.domain.Profile.Role.MANAGER);
 		org.mockito.Mockito.lenient().when(profileRepository.findById(USER_ID)).thenReturn(Optional.of(manager));
-		org.mockito.Mockito.lenient().when(nomineeDirectory.isAdminOrRosterParticipant(any())).thenReturn(true);
+		org.mockito.Mockito.lenient().when(nomineeDirectory.isRosterParticipant(any())).thenReturn(true);
 		org.mockito.Mockito.lenient().when(nomineeDirectory.enrich(org.mockito.ArgumentMatchers.nullable(String.class),
 				org.mockito.ArgumentMatchers.anyBoolean())).thenAnswer(call -> call.getArgument(0));
 	}
@@ -92,7 +92,7 @@ class SubmitIdeaUseCaseTest {
 	@Test
 	void rejects_create_and_edit_without_roster_access_before_saving() {
 		stubValidSubmit();
-		when(nomineeDirectory.isAdminOrRosterParticipant(any())).thenReturn(false);
+		when(nomineeDirectory.isRosterParticipant(any())).thenReturn(false);
 		var existing = idea(USER_ID);
 		when(ideaRepository.findById(existing.getId())).thenReturn(Optional.of(existing));
 		assertThatThrownBy(() -> useCase.execute("Title", "Evidence", HACKATHON_ID, null, USER_ID, "AI", List.of()))
@@ -255,7 +255,6 @@ class SubmitIdeaUseCaseTest {
 	@Test
 	void creates_nomination_with_metadata_and_submitted_status_in_one_save() {
 		stubValidSubmit();
-		when(profileRepository.existsById(USER_ID)).thenReturn(true);
 		when(ideaRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 		String metadata = "[{\"type\":\"nomination\",\"nomineeUserId\":\"" + USER_ID + "\"}]";
 		Idea saved = useCase.executeNomination("Nomination", "Evidence", HACKATHON_ID, null, USER_ID,
@@ -345,14 +344,18 @@ class SubmitIdeaUseCaseTest {
 	@org.junit.jupiter.params.provider.EnumSource(value = wtf.hackhub.domain.Profile.Role.class, names = {"ADMIN", "MANAGER"})
 	void submits_individual_nomination_in_draft_award_without_a_team(wtf.hackhub.domain.Profile.Role role) {
 		stubIndividualRequester(role, null);
-		when(profileRepository.existsById(USER_ID)).thenReturn(true);
 		when(ideaRepository.save(any())).thenAnswer(call -> call.getArgument(0));
 		String metadata = "[{\"type\":\"nomination\",\"nomineeUserId\":\"" + USER_ID + "\"}]";
 		Idea result = useCase.executeNomination("Nominee", "Impact", HACKATHON_ID, null, USER_ID,
 				"Customer Values", List.of("Digital"), Idea.Status.SUBMITTED, null, null, metadata);
 		assertThat(result.getTeamId()).isNull();
 		assertThat(result.getStatus()).isEqualTo(Idea.Status.SUBMITTED);
-		assertThat(result.getProjectAttachments()).isEqualTo(metadata);
+		if (role == wtf.hackhub.domain.Profile.Role.ADMIN) {
+			assertThat(result.getApprovalStatus()).isEqualTo("pending");
+			assertThat(result.getProjectAttachments()).contains(USER_ID.toString());
+		} else {
+			assertThat(result.getProjectAttachments()).isEqualTo(metadata);
+		}
 		org.mockito.Mockito.verifyNoInteractions(teamRepository, teamMemberRepository);
 	}
 

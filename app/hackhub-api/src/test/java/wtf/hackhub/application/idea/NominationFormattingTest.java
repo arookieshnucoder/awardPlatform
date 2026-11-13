@@ -26,6 +26,27 @@ class NominationFormattingTest {
 	}
 
 	@Test
+	void table_text_is_preserved_and_irregular_rows_are_rejected() throws Exception {
+		String tableAnswers = """
+				[
+				  [{"table":[[[{"runs":[{"text":"Impact","bold":true}]}],[{"runs":[{"text":"40%"}]}]],
+				             [[{"runs":[{"text":"Time"}]}],[{"runs":[{"text":"3 days"}]}]]]}],
+				  [{"runs":[{"text":"Details"}]}],
+				  [{"runs":[{"text":"Culture"}]}]
+				]
+				""";
+		var nomination = mapper.createObjectNode().put("type", "nomination").put("achievementSummary", "Impact\t40%\nTime\t3 days")
+				.put("teamAchievementImpact", "Details").put("cultureDemonstration", "Culture");
+		nomination.set("formattedAnswers", mapper.readTree(tableAnswers));
+		NominationFormatting.validateTeamAnswers(nomination);
+		assertThat(NominationFormatting.individualDescription(mapper.createArrayNode().add(nomination), "Legacy"))
+				.contains("Impact\t40%\nTime\t3 days");
+		((com.fasterxml.jackson.databind.node.ArrayNode) nomination.at("/formattedAnswers/0/0/table/1")).remove(1);
+		assertThatThrownBy(() -> NominationFormatting.validateTeamAnswers(nomination))
+				.isInstanceOf(IllegalArgumentException.class).hasMessageContaining("formatting");
+	}
+
+	@Test
 	void rejects_unsupported_properties_and_mismatched_team_text() throws Exception {
 		var malformed = mapper.readTree("[{\"type\":\"nomination\",\"formattedAnswers\":"
 				+ answers.replace("\"bold\":true", "\"html\":\"extra\"") + "}]");

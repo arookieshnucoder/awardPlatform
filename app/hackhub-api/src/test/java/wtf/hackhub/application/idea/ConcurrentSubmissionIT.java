@@ -147,8 +147,9 @@ class ConcurrentSubmissionIT extends PostgresIntegrationTest {
 		}
 		UUID award = award(managers.getFirst());
 		jdbc.update("UPDATE hackathons SET visibility='public',status='running' WHERE id=?", award);
+		UUID publisher = participant();
 		for (int i = 0; i < 100; i++)
-			jdbc.update("INSERT INTO ideas(title,description,hackathon_id,created_by,category,status) VALUES ('Published','Fixture',?,?,'Customer Values','submitted')", award, managers.getFirst());
+			jdbc.update("INSERT INTO ideas(title,description,hackathon_id,created_by,category,status) VALUES ('Published','Fixture',?,?,'Customer Values','submitted')", award, publisher);
 		var targets = jdbc.queryForList("SELECT id FROM ideas WHERE hackathon_id=? ORDER BY id LIMIT 2", UUID.class, award);
 		String payload = ballot ? "{\"ideaIds\":[\"" + targets.get(0) + "\",\"" + targets.get(1) + "\"]}"
 				: "{\"title\":\"Concurrent HTTP nomination\",\"description\":\"Fixture\",\"category\":\"Customer Values\",\"status\":\"SUBMITTED\"}";

@@ -9,7 +9,7 @@ import { useAwardAccess } from './hooks/useAwardAccess'
 import { loginDestination } from './lib/loginDestination'
 import { HackathonAccess } from './components/HackathonAccess'
 import { useNominationEligibility } from './hooks/useNominationEligibility'
-import { votingAccessNotice } from './config/votingWindow'
+import { votingAccessNotice, votingEntryNotice } from './config/votingWindow'
 import { loadProjectShowcase, preloadedProjectShowcase, preloadProjectShowcase } from './lib/preloadShowcase'
 
 let preloadedAwardManagement: ComponentType | undefined
@@ -54,9 +54,11 @@ function ReviewModuleAccess({ children }: { children: ReactNode }) {
 function BrowseVotingAccess({ children }: { children: ReactNode }) {
   const { user } = useAuthStore()
   const eligibility = useNominationEligibility()
+  const { search } = useLocation()
   if (user?.role !== 'admin' && eligibility.isPending) return <LoadingOverlay visible />
 
-  const message = votingAccessNotice(user?.role, eligibility)
+  const notice = new URLSearchParams(search).get('view') === 'voting-records' ? votingEntryNotice : votingAccessNotice
+  const message = notice(user?.role, eligibility)
   if (!message) return children
 
   return <Container className="dp-page" py="xl">

@@ -55,6 +55,7 @@ beforeEach(() => {
 })
 
 it.each(['/projects', '/projects/?view=voting-records'])('protects direct access to %s until the voting roster is confirmed', async (path) => {
+  const clock = vi.spyOn(Date, 'now').mockReturnValue(Date.parse('2026-11-30T00:00:00+08:00'))
   auth.user = { id: 'employee-1', role: 'participant' }
   auth.initialized = true
   auth.loading = false
@@ -71,6 +72,7 @@ it.each(['/projects', '/projects/?view=voting-records'])('protects direct access
   eligibility.data = { canStartNomination: true }
   rendered.rerender(view())
   expect(await screen.findByText('Candidate list')).toBeInTheDocument()
+  clock.mockRestore()
 })
 
 it('lets an administrator open Browse & Vote independently of the roster check', async () => {

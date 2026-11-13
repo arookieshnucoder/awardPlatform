@@ -1,7 +1,10 @@
 package wtf.hackhub.application.idea;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -81,20 +84,17 @@ public class SubmitIdeaUseCase {
 
 		var requester = profileRepository.findById(createdBy)
 				.orElseThrow(() -> new IdeaAccessDeniedException(null, createdBy));
-		boolean teamSubmission = teamId != null || hasTeamMetadata(projectAttachments);
+		var items = attachmentItems(projectAttachments);
+		boolean teamSubmission = teamId != null || hasTeamMetadata(items);
 		if (teamId != null) requireTeamCaptain(teamId, hackathonId, createdBy);
 		requireNominationAccess(requester);
 		// The transaction lock spans the duplicate check, implicit team creation and idea insert.
 		mutationLock.acquire(UUID.nameUUIDFromBytes(("nomination:" + hackathonId + ":" + createdBy + ":"
 				+ teamSubmission).getBytes(java.nio.charset.StandardCharsets.UTF_8)));
 		if (ideaRepository.findByCreatedByAndHackathonId(createdBy, hackathonId).stream()
-				.anyMatch(existing -> (existing.getTeamId() != null || hasTeamMetadata(existing.getProjectAttachments())) == teamSubmission))
+				.anyMatch(existing -> (existing.getTeamId() != null || hasTeamMetadata(attachmentItems(existing.getProjectAttachments()))) == teamSubmission))
 			throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.CONFLICT,
 					"You may submit only one " + (teamSubmission ? "team" : "individual") + " nomination per award. Edit your existing nomination.");
-		boolean employeeSubmission = teamSubmission || requester.getRole() == Profile.Role.PARTICIPANT
-				|| approvalDirectory.allowsSelfApproval(createdBy);
-		var employee = employeeSubmission ? approvalDirectory.requireEmployee(createdBy) : null;
-
 		// Validate user is org member (if hackathon has an org)
 		if (hackathon.getOrganizationId() != null
 				&& !orgMemberRepository.existsByOrganizationIdAndUserId(hackathon.getOrganizationId(), createdBy)) {
@@ -102,26 +102,40 @@ public class SubmitIdeaUseCase {
 		}
 
 		tags = normalizeTags(tags);
-		validateNominee(projectAttachments, createdBy);
-		projectAttachments = employeeSubmission
-				? employeeMetadata(projectAttachments, employee, createdBy, hackathonId)
-				: nomineeDirectory.enrich(projectAttachments, true);
+		var nomination = validateNominee(items, requester, createdBy);
+		boolean adminSelfReview = requester.getRole() == Profile.Role.ADMIN && (teamSubmission
+				|| (status != null && status != Idea.Status.DRAFT && (nomination == null
+						|| createdBy.toString().equalsIgnoreCase(nomination.path("nomineeUserId").asText()))));
+		boolean requiresApproval = adminSelfReview || teamSubmission || requester.getRole() == Profile.Role.PARTICIPANT
+				|| approvalDirectory.allowsSelfApproval(createdBy);
+		var employee = adminSelfReview ? approvalDirectory.employee(createdBy).orElse(null)
+				: requiresApproval ? approvalDirectory.requireEmployee(createdBy) : null;
+		String headName = adminSelfReview ? requester.getName() : employee == null ? null : employee.nominatingHead();
+		if (requiresApproval) {
+			applyEmployeeMetadata(items, nomination, employee, requester, createdBy, hackathonId, headName);
+		} else {
+			projectAttachments = nomineeDirectory.enrich(projectAttachments, true);
+			if (projectAttachments != null) {
+				items = attachmentItems(projectAttachments);
+			}
+		}
 		if (teamSubmission) {
-			var metadata = requireTeamMetadata(projectAttachments, category);
+			var metadata = requireTeamMetadata(items, category);
 			title = metadata.path("projectName").asText();
 			description = teamDescription(metadata);
-			projectAttachments = teamDisplayMetadata(projectAttachments);
+			setTeamDisplayName(metadata);
 			if (teamId == null) teamId = resolveTeam(hackathonId, createdBy, title);
 		} else {
-			var items = attachmentItems(projectAttachments);
 			description = NominationFormatting.individualDescription(items, description);
 			validateIndividualDocuments(items, hackathonId, createdBy);
 		}
 		Idea idea = new Idea(title, description, hackathonId, teamId, createdBy, category);
 		idea.update(title, description, category, tags == null ? List.of() : tags,
-				employeeSubmission ? Idea.Status.SUBMITTED : status == null ? Idea.Status.DRAFT : status, repositoryUrl, demoUrl, projectAttachments);
-		if (employeeSubmission) {
-			idea.submitForApproval(approvalDirectory.headKey(employee), employee.nominatingHead());
+				requiresApproval ? Idea.Status.SUBMITTED : status == null ? Idea.Status.DRAFT : status, repositoryUrl, demoUrl,
+				requiresApproval ? items.toString() : projectAttachments);
+		if (requiresApproval) {
+			idea.submitForApproval(adminSelfReview ? NominationApprovalService.adminSelfReviewKey(createdBy)
+					: approvalDirectory.headKey(employee), headName);
 			// record() flushes the pending insert before writing the audit row.
 			idea = ideaRepository.save(idea);
 			approvalService.record(idea, createdBy, "submitted", null);
@@ -150,10 +164,12 @@ public class SubmitIdeaUseCase {
 		var requester = profileRepository.findById(requestingUserId)
 				.orElseThrow(() -> new IdeaAccessDeniedException(ideaId, requestingUserId));
 		requireNominationAccess(requester);
-		boolean teamSubmission = idea.getTeamId() != null && hasTeamMetadata(idea.getProjectAttachments());
+		boolean teamSubmission = idea.getTeamId() != null && hasTeamMetadata(attachmentItems(idea.getProjectAttachments()));
 		if (idea.getTeamId() != null)
 			requireTeamCaptain(idea.getTeamId(), idea.getHackathonId(), requestingUserId);
-		if (!teamSubmission) rejectTeamMetadata(projectAttachments);
+		var items = attachmentItems(projectAttachments);
+		if (!teamSubmission && hasTeamMetadata(items))
+			throw new IllegalArgumentException("A team nomination must belong to its original team");
 		if (!java.util.Objects.equals(idea.getCategory(), category))
 			throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.CONFLICT,
 					"The award category cannot change after a nomination has been created.");
@@ -162,22 +178,31 @@ public class SubmitIdeaUseCase {
 				|| "approved".equals(idea.getApprovalStatus())))
 			throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.CONFLICT,
 					"The nomination changed or is already approved. Refresh before editing.");
-		var employee = employeeSubmission ? approvalDirectory.requireEmployee(requestingUserId) : null;
+		boolean adminSelfReview = NominationApprovalService.adminSelfReviewKey(requestingUserId)
+				.equals(idea.getApprovalHeadKey());
+		if (adminSelfReview && requester.getRole() != Profile.Role.ADMIN)
+			throw new IdeaAccessDeniedException(ideaId, requestingUserId);
+		var employee = adminSelfReview ? approvalDirectory.employee(requestingUserId).orElse(null)
+				: employeeSubmission ? approvalDirectory.requireEmployee(requestingUserId) : null;
+		String headName = adminSelfReview ? requester.getName() : employee == null ? null : employee.nominatingHead();
 		tags = normalizeTags(tags);
-		validateNominee(projectAttachments, requestingUserId);
-		projectAttachments = employeeSubmission
-				? employeeMetadata(projectAttachments, employee, requestingUserId, idea.getHackathonId())
-				: nomineeDirectory.enrich(projectAttachments, true);
+		var nomination = validateNominee(items, requester, requestingUserId);
+		if (employeeSubmission) {
+			applyEmployeeMetadata(items, nomination, employee, requester, requestingUserId, idea.getHackathonId(), headName);
+		} else {
+			projectAttachments = nomineeDirectory.enrich(projectAttachments, true);
+			if (projectAttachments != null) items = attachmentItems(projectAttachments);
+		}
 		if (teamSubmission) {
-			var metadata = requireTeamMetadata(projectAttachments, category);
+			var metadata = requireTeamMetadata(items, category);
 			title = metadata.path("projectName").asText();
 			description = teamDescription(metadata);
-			projectAttachments = teamDisplayMetadata(projectAttachments);
+			setTeamDisplayName(metadata);
 		} else if (idea.getTeamId() == null) {
-			var items = attachmentItems(projectAttachments);
 			description = NominationFormatting.individualDescription(items, description);
 			validateIndividualDocuments(items, idea.getHackathonId(), requestingUserId);
 		}
+		if (employeeSubmission || teamSubmission) projectAttachments = items.toString();
 		if (idea.getVotes() > 0 || !judgeScoreRepository.findAllByIdeaId(ideaId).isEmpty()) {
 			Idea proposed = new Idea(title, description, idea.getHackathonId(), idea.getTeamId(), idea.getCreatedBy(),
 					category);
@@ -194,64 +219,52 @@ public class SubmitIdeaUseCase {
 		Idea.Status resolvedStatus = employeeSubmission ? Idea.Status.SUBMITTED : status != null ? status : idea.getStatus();
 		idea.update(title, description, category, tags, resolvedStatus, repositoryUrl, demoUrl, projectAttachments);
 		if (employeeSubmission) {
-			idea.submitForApproval(approvalDirectory.headKey(employee), employee.nominatingHead());
+			idea.submitForApproval(adminSelfReview ? NominationApprovalService.adminSelfReviewKey(requestingUserId)
+					: approvalDirectory.headKey(employee), headName);
 			approvalService.record(idea, requestingUserId, "submitted", null);
 		}
 		return ideaRepository.save(idea);
 	}
 
 	private void requireNominationAccess(Profile requester) {
-		if (!nomineeDirectory.isAdminOrRosterParticipant(requester)) {
+		if (!nomineeDirectory.isRosterParticipant(requester)) {
 			throw new ResponseStatusException(HttpStatus.FORBIDDEN, NominationApprovalService.BD_NOMINATION_MESSAGE);
 		}
 	}
 
-	private String employeeMetadata(String attachments, NominationApprovalDirectory.Employee employee,
-			UUID userId, UUID hackathonId) {
-		try {
-			var items = attachments == null ? ATTACHMENTS.createArrayNode() : ATTACHMENTS.readTree(attachments);
-			if (!items.isArray()) throw new IllegalArgumentException("Nomination attachments must be an array");
-			com.fasterxml.jackson.databind.node.ObjectNode nomination = null;
-			for (var item : items) {
-				if ("nomination".equals(item.path("type").asText())) {
-					if (!userId.toString().equals(item.path("nomineeUserId").asText()))
-						throw new IdeaAccessDeniedException(null, userId);
-					nomination = (com.fasterxml.jackson.databind.node.ObjectNode) item;
-				}
-				String key = item.path("storageKey").asText("");
-				if (!key.isBlank() && !key.startsWith("nominations/" + hackathonId + "/" + userId + "/"))
-					throw new IllegalArgumentException("Only your own nomination attachments may be submitted");
-			}
-			if (nomination == null)
-				nomination = ((com.fasterxml.jackson.databind.node.ArrayNode) items).addObject().put("type", "nomination")
-						.put("nomineeUserId", userId.toString());
-			String name = employee.name();
-			String orgUnit = employee.orgUnit();
-			if (name.isBlank() || orgUnit.isBlank()) {
-				var profile = profileRepository.findById(userId)
-						.orElseThrow(() -> new IdeaAccessDeniedException(null, userId));
-				if (name.isBlank()) name = profile.getName();
-				if (orgUnit.isBlank()) orgUnit = profile.getOrgCode();
-			}
-			nomination.put("name", name).put("nomineeOrgCode", orgUnit)
-					.put("employeeEmail", employee.email()).put("nominatingHead", employee.nominatingHead());
-			return items.toString();
-		} catch (JsonProcessingException ex) {
-			throw new IllegalArgumentException("Invalid nomination attachments");
+	private static void applyEmployeeMetadata(ArrayNode items, ObjectNode nomination,
+			NominationApprovalDirectory.Employee employee, Profile requester, UUID userId, UUID hackathonId,
+			String headName) {
+		String owner = userId.toString();
+		String prefix = "nominations/" + hackathonId + "/" + owner + "/";
+		if (nomination != null && !owner.equals(nomination.path("nomineeUserId").asText()))
+			throw new IdeaAccessDeniedException(null, userId);
+		for (var item : items) {
+			String key = item.path("storageKey").asText("");
+			if (!key.isBlank() && !key.startsWith(prefix))
+				throw new IllegalArgumentException("Only your own nomination attachments may be submitted");
 		}
+		if (nomination == null) {
+			nomination = items.addObject().put("type", "nomination").put("nomineeUserId", owner);
+		}
+		String name = employee == null || employee.name().isBlank() ? requester.getName() : employee.name();
+		String orgUnit = employee == null || employee.orgUnit().isBlank() ? requester.getOrgCode() : employee.orgUnit();
+		String email = employee == null ? requester.getEmail() : employee.email();
+		nomination.put("name", name).put("nomineeOrgCode", orgUnit)
+				.put("employeeEmail", email).put("nominatingHead", headName);
 	}
 
 	private UUID resolveTeam(UUID campaignId, UUID userId, String projectName) {
-		for (var membership : teamMemberRepository.findAllByUserId(userId)) {
+		for (var membership : teamMemberRepository.findAllByHackathonIdAndUserId(campaignId, userId)) {
 			var team = teamRepository.findById(membership.getTeamId()).orElseThrow();
-			if (!team.getHackathonId().equals(campaignId)) continue;
-			requireTeamCaptain(team.getId(), campaignId, userId);
+			if (!team.getCreatedBy().equals(userId) || membership.getRole() != wtf.hackhub.domain.TeamMember.Role.LEADER)
+				throw new IdeaAccessDeniedException(null, userId);
 			return team.getId();
 		}
 		return createTeam.execute(projectName, "", campaignId, userId).getId();
 	}
 
-	private void validateIndividualDocuments(com.fasterxml.jackson.databind.JsonNode attachments, UUID campaignId, UUID ownerId) {
+	private void validateIndividualDocuments(JsonNode attachments, UUID campaignId, UUID ownerId) {
 		for (var item : attachments) {
 			if (!"document".equals(item.path("type").asText())) continue;
 			String key = item.path("storageKey").asText();
@@ -271,36 +284,31 @@ public class SubmitIdeaUseCase {
 			throw new IdeaAccessDeniedException(null, userId);
 	}
 
-	private static com.fasterxml.jackson.databind.JsonNode attachmentItems(String attachments) {
+	private static ArrayNode attachmentItems(String attachments) {
 		try {
 			var items = ATTACHMENTS.readTree(attachments == null || attachments.isBlank() ? "[]" : attachments);
-			if (items == null || !items.isArray())
+			if (!(items instanceof ArrayNode array))
 				throw new IllegalArgumentException("Nomination attachments must be an array");
-			return items;
+			return array;
 		} catch (JsonProcessingException ex) {
 			throw new IllegalArgumentException("Invalid nomination attachments");
 		}
 	}
 
-	private static boolean hasTeamMetadata(String attachments) {
-		for (var item : attachmentItems(attachments))
+	private static boolean hasTeamMetadata(ArrayNode items) {
+		for (var item : items)
 			if ("nomination".equals(item.path("type").asText())
 					&& "team".equals(item.path("nominationType").asText())) return true;
 		return false;
 	}
 
-	private static void rejectTeamMetadata(String attachments) {
-		if (hasTeamMetadata(attachments))
-			throw new IllegalArgumentException("A team nomination must belong to its original team");
-	}
-
-	private static com.fasterxml.jackson.databind.JsonNode requireTeamMetadata(String attachments, String category) {
+	private static ObjectNode requireTeamMetadata(ArrayNode items, String category) {
 		if (!List.of("Customer Values", "Innovation Breakthrough", "Collaboration to Win").contains(category))
 			throw new IllegalArgumentException("Select an award category");
-		com.fasterxml.jackson.databind.JsonNode nomination = null;
+		ObjectNode nomination = null;
 		boolean photo = false;
-		for (var item : attachmentItems(attachments)) {
-			if ("nomination".equals(item.path("type").asText())) nomination = item;
+		for (var item : items) {
+			if ("nomination".equals(item.path("type").asText())) nomination = (ObjectNode) item;
 			else {
 				String key = item.path("storageKey").asText();
 				if (key.isBlank() || key.contains("..") || key.contains("//")
@@ -328,18 +336,12 @@ public class SubmitIdeaUseCase {
 		return nomination;
 	}
 
-	private static String teamDisplayMetadata(String attachments) {
-		var items = attachmentItems(attachments);
-		for (var item : items) {
-			if (!"nomination".equals(item.path("type").asText())) continue;
-			var nomination = (com.fasterxml.jackson.databind.node.ObjectNode) item;
-			nomination.put("nominatorName", nomination.path("name").asText());
-			nomination.put("name", nomination.path("projectName").asText());
-		}
-		return items.toString();
+	private static void setTeamDisplayName(ObjectNode nomination) {
+		nomination.put("nominatorName", nomination.path("name").asText());
+		nomination.put("name", nomination.path("projectName").asText());
 	}
 
-	private static String teamDescription(com.fasterxml.jackson.databind.JsonNode nomination) {
+	private static String teamDescription(JsonNode nomination) {
 		return "Achievement Summary\n" + nomination.path("achievementSummary").asText()
 				+ "\n\nDetails of Your Team Achievement in 2026 and Business Impact\n"
 				+ nomination.path("teamAchievementImpact").asText()
@@ -358,32 +360,23 @@ public class SubmitIdeaUseCase {
 		return normalized;
 	}
 
-	private void validateNominee(String attachments, UUID requesterId) {
-		if (attachments == null || attachments.isBlank())
-			return;
-		try {
-			var items = ATTACHMENTS.readTree(attachments);
-			if (items == null || !items.isArray())
-				throw new IllegalArgumentException("Nomination attachments must be an array");
-			int nominations = 0;
-			for (var item : items) {
-				if (!"nomination".equals(item.path("type").asText()))
-					continue;
-				if (++nominations > 1)
-					throw new IllegalArgumentException("Only one nominee is allowed");
-				UUID nomineeId = UUID.fromString(item.path("nomineeUserId").asText());
-				if (!profileRepository.existsById(nomineeId))
-					throw new IllegalArgumentException("Nominee profile not found");
-				if (!nomineeId.equals(requesterId)) {
-					var requester = profileRepository.findById(requesterId)
-							.orElseThrow(() -> new IdeaAccessDeniedException(null, requesterId));
-					if (requester.getRole() != Profile.Role.ADMIN && requester.getRole() != Profile.Role.MANAGER)
-						throw new IdeaAccessDeniedException(null, requesterId);
-				}
-			}
-		} catch (JsonProcessingException ex) {
-			throw new IllegalArgumentException("Invalid nomination attachments");
+	private ObjectNode validateNominee(ArrayNode items, Profile requester, UUID requesterId) {
+		ObjectNode nomination = null;
+		for (var item : items) {
+			if (!"nomination".equals(item.path("type").asText()))
+				continue;
+			if (nomination != null)
+				throw new IllegalArgumentException("Only one nominee is allowed");
+			nomination = (ObjectNode) item;
+			UUID nomineeId = UUID.fromString(nomination.path("nomineeUserId").asText());
+			if (nomineeId.equals(requesterId))
+				continue;
+			if (!profileRepository.existsById(nomineeId))
+				throw new IllegalArgumentException("Nominee profile not found");
+			if (requester.getRole() != Profile.Role.ADMIN && requester.getRole() != Profile.Role.MANAGER)
+				throw new IdeaAccessDeniedException(null, requesterId);
 		}
+		return nomination;
 	}
 
 	@Transactional

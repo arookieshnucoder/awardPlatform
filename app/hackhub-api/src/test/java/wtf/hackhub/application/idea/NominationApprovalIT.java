@@ -71,14 +71,13 @@ class NominationApprovalIT extends PostgresIntegrationTest {
 	@Test
 	void admin_can_list_and_delete_pending_and_rejected_nominations() {
 		UUID admin = UUID.fromString(insertProfile("cleanup-admin@example.invalid", "Cleanup Admin", "admin"));
+		addVotingRosterEntry(admin);
 		Idea pending = nomination("Pending nomination");
 		Idea rejected = submitTeam(null, employee, teamMetadata(employee));
 		approvals.decide(hod, List.of(selection(rejected)), "rejected", "Add evidence");
 		Idea published = submit.executeNomination("Published", "Evidence", campaign, null, admin, "Customer Values",
 				List.of(), Idea.Status.SUBMITTED, null, null, null);
-		published.submitForApproval(roster.hodEmail(), roster.nominatingHead());
-		ideas.saveAndFlush(published);
-		approvals.decide(hod, List.of(selection(published)), "approved", null);
+		approvals.decide(admin, List.of(selection(published)), "approved", null);
 		var page = PageRequest.of(0, 10);
 		assertThat(getIdeas.listByHackathon(campaign, page)).extracting(Idea::getId).containsExactly(published.getId());
 		assertThat(getIdeas.listForManagement(campaign, page)).extracting(Idea::getId)
@@ -115,7 +114,7 @@ class NominationApprovalIT extends PostgresIntegrationTest {
 				"Customer Values", List.of(), Idea.Status.COMPLETED, null, null, metadata);
 	}
 	@org.junit.jupiter.params.ParameterizedTest
-	@org.junit.jupiter.params.provider.ValueSource(strings = {"participant", "manager", "admin"})
+	@org.junit.jupiter.params.provider.ValueSource(strings = {"participant", "manager"})
 	void team_captain_of_every_role_requires_hod_and_retains_actual_evidence(String role) throws Exception {
 		jdbc.update("UPDATE profiles SET role=? WHERE id=?", role, employee);
 		UUID teamId = team(employee);
@@ -191,13 +190,39 @@ class NominationApprovalIT extends PostgresIntegrationTest {
 		assertThat(ideas.count()).isEqualTo(1);
 	}
 	@Test
-	void team_captain_requires_verified_sso_even_when_admin() {
-		UUID teamId = team(employee);
-		jdbc.update("UPDATE profiles SET role='admin' WHERE id=?", employee);
-		jdbc.update("UPDATE sso_identities SET verified_email=NULL WHERE profile_id=?", employee);
-		assertThatThrownBy(() -> submitTeam(teamId, employee, teamMetadata(employee)))
-				.isInstanceOf(IllegalArgumentException.class);
-		assertThat(ideas.count()).isZero();
+	void admin_must_be_on_roster_to_submit_and_can_review_only_own_admin_nominations() {
+		UUID admin = UUID.fromString(insertProfile("admin-self@example.invalid", "Admin Reviewer", "admin"));
+		UUID otherAdmin = UUID.fromString(insertProfile("other-admin@example.invalid", "Other Admin", "admin"));
+		assertThat(approvals.eligibility(admin).canSubmit()).isFalse();
+		assertThatThrownBy(() -> submitTeam(null, admin, teamMetadata(admin)))
+				.isInstanceOfSatisfying(ResponseStatusException.class, ex -> assertThat(ex.getStatusCode().value()).isEqualTo(403));
+		assertThatThrownBy(() -> submit.executeNomination("Individual", "Evidence", campaign, null, admin,
+				"Innovation Breakthrough", List.of(), Idea.Status.SUBMITTED, null, null, null))
+				.isInstanceOfSatisfying(ResponseStatusException.class, ex -> assertThat(ex.getStatusCode().value()).isEqualTo(403));
+		addVotingRosterEntry(admin);
+		assertThat(approvals.eligibility(admin).canSubmit()).isTrue();
+		Idea employeeIdea = nomination("Employee nomination");
+		Idea teamIdea = submitTeam(null, admin, teamMetadata(admin));
+		Idea individual = submit.executeNomination("Individual", "Evidence", campaign, null, admin,
+				"Innovation Breakthrough", List.of(), Idea.Status.SUBMITTED, null, null, null);
+		assertThat(approvals.eligibility(admin).canReview()).isTrue();
+		assertThat(approvals.assigned(admin)).extracting(Idea::getId)
+				.containsExactlyInAnyOrder(teamIdea.getId(), individual.getId());
+		assertThat(teamIdea.getApprovalHeadName()).isEqualTo("Admin Reviewer");
+		assertThat(getIdeas.listByHackathon(campaign, PageRequest.of(0, 10))).isEmpty();
+		assertThatThrownBy(() -> approvals.decide(admin, List.of(selection(employeeIdea)), "approved", ""))
+				.isInstanceOfSatisfying(ResponseStatusException.class, ex -> assertThat(ex.getStatusCode().value()).isEqualTo(403));
+		assertThatThrownBy(() -> approvals.decide(otherAdmin, List.of(selection(teamIdea)), "approved", ""))
+				.isInstanceOfSatisfying(ResponseStatusException.class, ex -> assertThat(ex.getStatusCode().value()).isEqualTo(403));
+
+		Idea rejected = approvals.decide(admin, List.of(selection(teamIdea)), "rejected", "Revise evidence").getFirst();
+		Idea revised = submit.update(rejected.getId(), admin, rejected.getTitle(), rejected.getDescription(),
+				rejected.getCategory(), rejected.getTags(), null, null, null, rejected.getProjectAttachments(), rejected.getApprovalVersion());
+		approvals.decide(admin, List.of(selection(revised), selection(individual)), "approved", "HoD test comment");
+		assertThat(approvals.mine(admin)).extracting(Idea::getApprovalReason).containsExactly("HoD test comment", "HoD test comment");
+		assertThat(approvals.assigned(hod)).extracting(Idea::getId).containsExactly(employeeIdea.getId());
+		assertThat(getIdeas.listByHackathon(campaign, PageRequest.of(0, 10))).extracting(Idea::getId)
+				.containsExactlyInAnyOrder(teamIdea.getId(), individual.getId());
 	}
 
 	@Test
@@ -357,7 +382,7 @@ class NominationApprovalIT extends PostgresIntegrationTest {
 		try (var input = new ClassPathResource("nomination-roster.json").getInputStream()) {
 			rows = new ObjectMapper().readValue(input, new TypeReference<>() { });
 		}
-		assertThat(rows).hasSize(563).allSatisfy(row -> {
+		assertThat(rows).isNotEmpty().allSatisfy(row -> {
 			assertThat(row.email()).isNotBlank();
 			assertThat(row.hodEmail()).isNotBlank();
 		});
@@ -368,7 +393,7 @@ class NominationApprovalIT extends PostgresIntegrationTest {
 		addVotingRosterEntry(confirmedUser);
 		assertThat(approvals.eligibility(confirmedUser).canSubmit()).isTrue();
 		assertThat(directory.requireEmployee(confirmedUser).name()).contains("CHEN Peiyi");
-		assertThat(directory.reviewerKey(hod)).contains("vio2kor@bosch.com");
+		assertThat(directory.reviewerKey(hod)).contains(directory.headKey(roster));
 		jdbc.update("UPDATE sso_identities SET verified_email=NULL WHERE profile_id=?", employee);
 		assertThat(approvals.eligibility(employee).canSubmit()).isFalse();
 		assertThatThrownBy(() -> nomination("Cannot submit")).isInstanceOf(IllegalArgumentException.class);

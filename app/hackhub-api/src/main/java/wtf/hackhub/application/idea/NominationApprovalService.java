@@ -36,11 +36,21 @@ public class NominationApprovalService {
 	public record Eligibility(boolean canSubmit, boolean canReview, String nominatingHead, String message,
 			boolean canStartNomination) { }
 	public record Selection(UUID id, int version) { }
+
+	static String adminSelfReviewKey(UUID userId) {
+		return "admin:" + userId;
+	}
+
 	@Transactional(readOnly = true)
 	public Eligibility eligibility(UUID userId) {
-		boolean canReview = directory.reviewerKey(userId).isPresent();
 		var profile = profiles.findById(userId);
-		if (profile.filter(nominees::isAdminOrRosterParticipant).isEmpty()) {
+		if (profile.isPresent() && profile.get().getRole() == Profile.Role.ADMIN) {
+			boolean inRoster = nominees.isRosterParticipant(profile.get());
+			return new Eligibility(inRoster, true, inRoster ? profile.get().getName() : null,
+					inRoster ? null : BD_NOMINATION_MESSAGE, inRoster);
+		}
+		boolean canReview = directory.reviewerKey(userId).isPresent();
+		if (profile.filter(nominees::isRosterParticipant).isEmpty()) {
 			return new Eligibility(false, canReview, null, BD_NOMINATION_MESSAGE, false);
 		}
 		boolean privileged = profile.get().getRole() != Profile.Role.PARTICIPANT;
@@ -57,10 +67,31 @@ public class NominationApprovalService {
 	public List<Idea> mine(UUID userId) { return ideas.findByCreatedByOrderByCreatedAtDesc(userId); }
 	@Transactional(readOnly = true)
 	public List<Idea> assigned(UUID userId) {
-		String key = directory.reviewerKey(userId).orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN));
-		boolean allowSelfApproval = directory.allowsSelfApproval(userId);
-		return ideas.findByApprovalHeadKeyOrderByCreatedAtDesc(key).stream()
-				.filter(i -> !i.getCreatedBy().equals(userId) || allowSelfApproval).toList();
+		var reviewer = reviewer(userId);
+		return ideas.findByApprovalHeadKeyInOrderByCreatedAtDesc(reviewer.keys()).stream()
+				.filter(reviewer::canDecide).toList();
+	}
+
+	private record Reviewer(UUID userId, String rosterKey, boolean allowRosterSelfApproval, String adminKey) {
+		List<String> keys() {
+			if (adminKey == null) return List.of(rosterKey);
+			return rosterKey == null ? List.of(adminKey) : List.of(rosterKey, adminKey);
+		}
+
+		boolean canDecide(Idea idea) {
+			boolean own = userId.equals(idea.getCreatedBy());
+			String assignedKey = idea.getApprovalHeadKey();
+			return (adminKey != null && own && adminKey.equals(assignedKey))
+					|| (rosterKey != null && rosterKey.equals(assignedKey) && (!own || allowRosterSelfApproval));
+		}
+	}
+
+	private Reviewer reviewer(UUID userId) {
+		String rosterKey = directory.reviewerKey(userId).orElse(null);
+		String adminKey = profiles.findById(userId).filter(profile -> profile.getRole() == Profile.Role.ADMIN)
+				.map(profile -> adminSelfReviewKey(userId)).orElse(null);
+		if (adminKey == null && rosterKey == null) throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+		return new Reviewer(userId, rosterKey, rosterKey != null && directory.allowsSelfApproval(userId), adminKey);
 	}
 	public boolean canRead(Idea idea, UUID userId) {
 		return idea.isApprovalPublished() || (userId != null && (idea.getCreatedBy().equals(userId)
@@ -77,12 +108,11 @@ public class NominationApprovalService {
 			throw new IllegalArgumentException("Select between 1 and 200 nominations");
 		var ids = selections.stream().map(Selection::id).distinct().sorted().toList();
 		if (ids.size() != selections.size()) throw new IllegalArgumentException("Duplicate nominations are not allowed");
-		String key = directory.reviewerKey(userId).orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN));
-		boolean allowSelfApproval = directory.allowsSelfApproval(userId);
+		var reviewer = reviewer(userId);
 		ids.forEach(mutationLock::acquire);
 		var selected = ids.stream().map(id -> ideas.findById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND))).toList();
 		for (var idea : selected) {
-			if (!key.equals(idea.getApprovalHeadKey()) || userId.equals(idea.getCreatedBy()) && !allowSelfApproval)
+			if (!reviewer.canDecide(idea))
 				throw new ResponseStatusException(HttpStatus.FORBIDDEN);
 			int version = selections.stream().filter(s -> s.id().equals(idea.getId())).findFirst().orElseThrow().version();
 			if (!"pending".equals(idea.getApprovalStatus()) || version != idea.getApprovalVersion())

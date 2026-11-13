@@ -49,30 +49,64 @@ final class NominationFormatting {
 		for (var answer : answers) {
 			if (!answer.isArray() || answer.isEmpty() || answer.size() > 4000) throw invalidFormatting();
 			var text = new StringBuilder();
-			int runCount = 0;
+			var counter = new AnswerSize();
 			for (int index = 0; index < answer.size(); index++) {
-				var line = answer.get(index);
-				if (!line.isObject() || !line.path("runs").isArray()
-						|| line.properties().stream().anyMatch(field -> !LINE_FIELDS.contains(field.getKey())))
-					throw invalidFormatting();
-				if (line.has("list") && !Set.of("bullet", "number").contains(line.path("list").asText()))
-					throw invalidFormatting();
+				var block = answer.get(index);
 				if (index > 0) text.append('\n');
-				for (var run : line.path("runs")) {
-					if (++runCount > 4096 || !run.isObject() || !run.path("text").isTextual()
-							|| run.properties().stream().anyMatch(field -> !"text".equals(field.getKey())
-								&& (!MARKS.contains(field.getKey()) || !field.getValue().isBoolean() || !field.getValue().asBoolean())))
-						throw invalidFormatting();
-					String value = run.path("text").asText();
-					if (value.isEmpty() || value.contains("\n") || value.contains("\r")
-							|| value.length() > 32_000 - text.length()) throw invalidFormatting();
-					text.append(value);
-				}
+				if (block.has("table")) appendTable(block, text, counter);
+				else appendLine(block, text, counter);
 				if (text.length() > 32_000) throw invalidFormatting();
 			}
 			result.add(text.toString().strip());
 		}
 		return result;
+	}
+
+	private static final class AnswerSize {
+		int lines;
+		int runs;
+		int cells;
+	}
+
+	private static void appendTable(JsonNode block, StringBuilder text, AnswerSize size) {
+		var table = block.path("table");
+		if (block.size() != 1 || !table.isArray() || table.isEmpty() || table.size() > 30)
+			throw invalidFormatting();
+		int width = table.get(0).size();
+		if (width < 1 || width > 12 || (size.cells += width * table.size()) > 1200)
+			throw invalidFormatting();
+		for (int rowIndex = 0; rowIndex < table.size(); rowIndex++) {
+			var row = table.get(rowIndex);
+			if (!row.isArray() || row.size() != width) throw invalidFormatting();
+			if (rowIndex > 0) text.append('\n');
+			for (int column = 0; column < width; column++) {
+				var cell = row.get(column);
+				if (!cell.isArray()) throw invalidFormatting();
+				if (column > 0) text.append('\t');
+				for (int line = 0; line < cell.size(); line++) {
+					if (line > 0) text.append('\n');
+					appendLine(cell.get(line), text, size);
+				}
+			}
+		}
+	}
+
+	private static void appendLine(JsonNode line, StringBuilder text, AnswerSize size) {
+		if (++size.lines > 4000 || !line.isObject() || !line.path("runs").isArray()
+				|| line.properties().stream().anyMatch(field -> !LINE_FIELDS.contains(field.getKey())))
+			throw invalidFormatting();
+		if (line.has("list") && !Set.of("bullet", "number").contains(line.path("list").asText()))
+			throw invalidFormatting();
+		for (var run : line.path("runs")) {
+			if (++size.runs > 4096 || !run.isObject() || !run.path("text").isTextual()
+					|| run.properties().stream().anyMatch(field -> !"text".equals(field.getKey())
+							&& (!MARKS.contains(field.getKey()) || !field.getValue().isBoolean() || !field.getValue().asBoolean())))
+				throw invalidFormatting();
+			String value = run.path("text").asText();
+			if (value.isEmpty() || value.contains("\n") || value.contains("\r")
+					|| value.length() > 32_000 - text.length()) throw invalidFormatting();
+			text.append(value);
+		}
 	}
 
 	private static IllegalArgumentException invalidFormatting() {

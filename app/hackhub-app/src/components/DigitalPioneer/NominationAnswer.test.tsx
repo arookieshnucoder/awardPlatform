@@ -26,7 +26,7 @@ it('shows formatting controls only while working in the answer and keeps the sel
   expect(screen.queryByRole('toolbar')).not.toBeInTheDocument()
   const editor = screen.getByRole('textbox', { name: 'Achievement Summary' })
   fireEvent.focus(editor)
-  expect(within(screen.getByRole('toolbar')).getAllByRole('button')).toHaveLength(5)
+  expect(within(screen.getByRole('toolbar')).getAllByRole('button')).toHaveLength(6)
   const bold = document.createElement('b')
   bold.textContent = 'Saved formatting'
   editor.append(bold)
@@ -34,4 +34,29 @@ it('shows formatting controls only while working in the answer and keeps the sel
   expect(onChange).toHaveBeenLastCalledWith('Saved formatting', [{ runs: [{ text: 'Saved formatting', bold: true }] }])
   fireEvent.blur(editor)
   expect(screen.queryByRole('toolbar')).not.toBeInTheDocument()
+})
+
+it('creates editable cells and restores a pasted table with formatting in the preview', () => {
+  const onChange = vi.fn()
+  render(<MantineProvider env="test">
+    <NominationAnswerEditor label="Answer" value="" placeholder="Enter an answer" onChange={onChange} />
+  </MantineProvider>)
+  const editor = screen.getByRole('textbox', { name: 'Answer' })
+  fireEvent.focus(editor)
+  fireEvent.click(screen.getByRole('button', { name: 'Insert table' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Insert', exact: true }))
+  expect(editor.querySelectorAll('td')).toHaveLength(4)
+
+  const selection = document.getSelection()!
+  selection.selectAllChildren(editor)
+  fireEvent.select(editor)
+  fireEvent.paste(editor, { clipboardData: { getData: (type: string) => type === 'text/html'
+    ? '<table><tr><td><b>Impact</b></td><td><script>ignored()</script>40%</td></tr><tr><td>Time</td><td>3 days</td></tr></table>'
+    : 'Impact\t40%\nTime\t3 days' } })
+  const [text, format] = onChange.mock.lastCall!
+  expect(text.trim()).toBe('Impact\t40%\nTime\t3 days')
+  const { container } = render(<MantineProvider env="test"><NominationAnswerBody text={text} format={format} /></MantineProvider>)
+  expect(container.querySelectorAll('td')).toHaveLength(4)
+  expect(container.querySelector('td strong')).toHaveTextContent('Impact')
+  expect(container.querySelector('script')).toBeNull()
 })

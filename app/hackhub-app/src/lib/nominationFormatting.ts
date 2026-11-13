@@ -5,7 +5,10 @@ export interface NominationLine {
   runs: NominationRun[]
   list?: 'bullet' | 'number'
 }
-export type NominationAnswer = NominationLine[]
+export type NominationTable = { table: NominationLine[][][] }
+export type NominationBlock = NominationLine | NominationTable
+export type NominationAnswer = NominationBlock[]
+export const tableLimits = { rows: 30, columns: 12, cellsPerAnswer: 1200 } as const
 export type AnswerIndex = 0 | 1 | 2
 export type FormattedAnswers = [NominationAnswer, NominationAnswer, NominationAnswer]
 export type AnswerFormats = Partial<Record<AnswerIndex, NominationAnswer>>
@@ -22,10 +25,13 @@ export const teamAnswerHeadings = [
   individualAnswerHeadings[2],
 ] as const
 
-export const answerText = (answer: NominationAnswer) =>
-  answer.map((line) => line.runs.map((run) => run.text).join('')).join('\n')
+const lineText = (line: NominationLine) => line.runs.map((run) => run.text).join('')
 
-export const plainAnswer = (text: string): NominationAnswer =>
+export const answerText = (answer: NominationAnswer) => answer.map((block) => 'table' in block
+  ? block.table.map((row) => row.map((cell) => cell.map(lineText).join('\n')).join('\t')).join('\n')
+  : lineText(block)).join('\n')
+
+export const plainAnswer = (text: string): NominationLine[] =>
   text.split(/\r?\n/).map((line) => ({ runs: line ? [{ text: line }] : [] }))
 
 export function formattedAnswers(texts: [string, string, string], formats?: AnswerFormats): FormattedAnswers | undefined {
@@ -33,7 +39,7 @@ export function formattedAnswers(texts: [string, string, string], formats?: Answ
   return [formats[0] ?? plainAnswer(texts[0]), formats[1] ?? plainAnswer(texts[1]), formats[2] ?? plainAnswer(texts[2])]
 }
 
-export function readNominationAnswer(editor: HTMLElement): NominationAnswer {
+export function readNominationAnswer(editor: ParentNode, allowTables = true): NominationAnswer {
   const lines: NominationAnswer = []
   let line: NominationLine | undefined
   const addLine = (list?: NominationLine['list']) => {
@@ -56,7 +62,34 @@ export function readNominationAnswer(editor: HTMLElement): NominationAnswer {
       })
       return
     }
-    if (!(node instanceof HTMLElement)) return
+    if (!(node instanceof HTMLElement) || ['SCRIPT', 'STYLE', 'TEMPLATE', 'NOSCRIPT'].includes(node.tagName)) return
+    if (node instanceof HTMLTableElement && allowTables) {
+      const table: NominationTable['table'] = []
+      for (const [index, row] of Array.from(node.rows).entries()) {
+        const cells = table[index] ??= []
+        let column = 0
+        for (const cell of Array.from(row.cells)) {
+          while (cells[column]) column++
+          const endColumn = column + Math.min(cell.colSpan, tableLimits.columns + 1)
+          const endRow = Math.min(index + (cell.rowSpan || node.rows.length), node.rows.length, tableLimits.rows + 1)
+          for (let r = index; r < endRow; r++) {
+            const target = table[r] ??= []
+            for (let c = column; c < endColumn; c++) target[c] = []
+          }
+          cells[column] = readNominationAnswer(cell, false).filter((block): block is NominationLine => 'runs' in block)
+          column = endColumn
+          if (column > tableLimits.columns) break
+        }
+        if (index >= tableLimits.rows) break
+      }
+      const width = Math.max(0, ...table.map((row) => row.length))
+      if (width) {
+        for (const row of table) for (let column = 0; column < width; column++) row[column] ??= []
+        lines.push({ table })
+      }
+      line = undefined
+      return
+    }
     if (node.tagName === 'BR') {
       if (node.parentNode?.childNodes.length !== 1) {
         if (!line) addLine(list)
