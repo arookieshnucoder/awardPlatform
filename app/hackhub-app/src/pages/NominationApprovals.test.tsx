@@ -96,6 +96,21 @@ describe('Nominating HoD approval inbox', () => {
 })
 
 describe('My Nominations', () => {
+  it.each(['Customer Values', 'Innovation Breakthrough', 'Collaboration to Win'])('shows the project name for a %s team nomination', async (category) => {
+    const user = userEvent.setup()
+    const team = nomination('team')
+    mocks.get.mockResolvedValue([{
+      ...team, category, teamId: 'team-id',
+      projectAttachments: [{ ...team.projectAttachments[0], nominationType: 'team', nominatorName: 'Team submitter', projectName: 'Joint Project' }],
+    }])
+    show(false, '/my-nominations')
+
+    await user.click(await screen.findByRole('button', { name: `${category} Joint Project` }))
+    expect(screen.getByText('Project Name', { exact: true }).parentElement).toHaveTextContent('Joint Project')
+    expect(screen.getByText('Project Name:', { exact: true }).parentElement).toHaveTextContent('Joint Project')
+    expect(screen.getByText('Nominator Name:', { exact: true }).parentElement).toHaveTextContent('Team submitter')
+  })
+
   it('opens the matching detail on a row double-click and keeps the nomination button clickable', async () => {
     const user = userEvent.setup()
     show(false, '/my-nominations')

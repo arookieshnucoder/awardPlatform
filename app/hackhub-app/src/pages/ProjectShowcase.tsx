@@ -1071,11 +1071,15 @@ export function ProjectShowcase({ nominationMode = false, managementMode = false
   }
 
   if (nominationMode) {
+    const submittedMetadata = submittedNomination?.projectAttachments?.find((item) => item.type === 'nomination')
+    const submittedIsTeam = Boolean(submittedNomination?.teamId || submittedMetadata?.nominationType === 'team')
     if (submittedNomination) return <Container size={1240} py="xl" className="dp-page"><Card className="dp-form-shell dp-light-surface" p="xl"><Stack gap="lg">
       <Title order={2}>Nomination Submitted Successfully</Title>
       <Button w="fit-content" onClick={() => navigate('/my-nominations')}>My Nominations</Button>
       <Title order={3}>{DIGITAL_PIONEER_TRACKS.find((track) => track.value === submittedNomination.category)?.label ?? submittedNomination.category}</Title>
-      <Text>Name: {user?.email ?? submittedNomination.title}</Text>
+      {submittedIsTeam
+        ? <Text>Project Name: {submittedMetadata?.projectName?.trim() || submittedNomination.title}</Text>
+        : <Text>Name: {user?.email ?? submittedNomination.title}</Text>}
       <Text>Your nomination has been submitted.</Text>
       {submissionDraftWarning && <Text role="status">{submissionDraftWarning}</Text>}
       <NominationProgress idea={submittedNomination} />

@@ -16,6 +16,11 @@ function trackName(idea: Idea) {
   return DIGITAL_PIONEER_TRACKS.find((track) => track.value === idea.category)?.label ?? idea.category
 }
 
+function nominationDisplayName(idea: Idea, metadata = idea.projectAttachments?.find((item) => item.type === 'nomination')) {
+  if (idea.teamId || metadata?.nominationType === 'team') return metadata?.projectName?.trim() || idea.title
+  return metadata?.name || idea.title
+}
+
 export function NominationApprovals({ reviewMode = false }: { reviewMode?: boolean }) {
   const { user } = useAuthStore()
   const eligibility = useNominationEligibility()
@@ -37,6 +42,7 @@ export function NominationApprovals({ reviewMode = false }: { reviewMode?: boole
   const ideas = nominations.data ?? []
   const current = ideas.find((idea) => idea.id === params.get('id'))
   const currentMetadata = current?.projectAttachments?.find((item) => item.type === 'nomination')
+  const currentIsTeam = Boolean(current?.teamId || currentMetadata?.nominationType === 'team')
   const pending = ideas.filter((idea) => idea.approvalStatus === 'pending')
   const selectedPending = pending.filter((idea) => selected.includes(idea.id))
   const targets = current ? (current.approvalStatus === 'pending' ? [current] : []) : selectedPending
@@ -81,7 +87,7 @@ export function NominationApprovals({ reviewMode = false }: { reviewMode?: boole
             <Stack gap="xl">
               <Button variant="outline" radius="xl" w="fit-content" styles={{ root: { backgroundColor: 'transparent' } }} onClick={() => open()}>Go back</Button>
               <Title order={2}>{trackName(current)}</Title>
-              <div><Text fw={700}>Name</Text><Text>{current.projectAttachments?.find((item) => item.type === 'nomination')?.nominatorName || current.projectAttachments?.find((item) => item.type === 'nomination')?.name || current.title}</Text></div>
+              <div><Text fw={700}>{currentIsTeam ? 'Project Name' : 'Name'}</Text><Text>{nominationDisplayName(current, currentMetadata)}</Text></div>
               <Group justify="space-between" align="start">
                 <Group align="start"><div><Text fw={700}>Created</Text><Text>{new Date(current.createdAt).toLocaleString()}</Text></div><div><Text fw={700}>Updated</Text><Text>{new Date(current.updatedAt).toLocaleString()}</Text></div><div><Text fw={700}>State</Text><Text>{nominationState(current)}</Text></div></Group>
               </Group>
@@ -93,7 +99,7 @@ export function NominationApprovals({ reviewMode = false }: { reviewMode?: boole
                 <Tabs.List><Tabs.Tab value="details">Details</Tabs.Tab><Tabs.Tab value="activity">Activity</Tabs.Tab><Tabs.Tab value="attachments">Attachments</Tabs.Tab></Tabs.List>
                 <Tabs.Panel value="details" pt="lg"><Stack>
                   {current.projectAttachments?.filter((item) => item.type === 'nomination').map((item, index) => <Stack gap="xs" key={index}>
-                    <Text><strong>{item.nominationType === 'team' ? 'Project Name: ' : 'Name: '}</strong>{item.name}</Text>
+                    <Text><strong>{currentIsTeam ? 'Project Name: ' : 'Name: '}</strong>{nominationDisplayName(current, item)}</Text>
                     {item.nominationType === 'team' && <>
                       <Text><strong>Nominator Name: </strong>{item.nominatorName}</Text>
                       <Text style={{ whiteSpace: 'pre-wrap' }}><strong>Core Team Member: </strong>{item.coreTeamMembers}</Text>
@@ -131,7 +137,7 @@ export function NominationApprovals({ reviewMode = false }: { reviewMode?: boole
                 style={reviewMode ? undefined : { cursor: 'pointer' }}
               >
                 {reviewMode && <Table.Td><Checkbox aria-label={`Select ${idea.title}`} disabled={idea.approvalStatus !== 'pending' || busy} checked={selected.includes(idea.id)} onChange={(event) => { const checked = event.currentTarget.checked; setSelected((ids) => checked ? [...ids, idea.id] : ids.filter((id) => id !== idea.id)) }} /></Table.Td>}
-                <Table.Td><Anchor component="button" onClick={() => open(idea.id)} ta="left" c="inherit"><Text fw={700}>{trackName(idea)}</Text><Text>{idea.projectAttachments?.find((item) => item.type === 'nomination')?.name || idea.title}</Text></Anchor></Table.Td>
+                <Table.Td><Anchor component="button" onClick={() => open(idea.id)} ta="left" c="inherit"><Text fw={700}>{trackName(idea)}</Text><Text>{nominationDisplayName(idea)}</Text></Anchor></Table.Td>
                 <Table.Td>{new Date(idea.createdAt).toLocaleString()}</Table.Td><Table.Td>{nominationState(idea)}</Table.Td>
               </Table.Tr>)}</Table.Tbody>
             </Table></Table.ScrollContainer>

@@ -696,12 +696,16 @@ describe('ProjectShowcase', () => {
         { type: 'screenshot', url: '/storage/team.png', name: 'team.png' },
       ],
     })
-    updateIdea.mockResolvedValueOnce({ id: 'rejected-team', category: 'Customer Values', approvalStatus: 'pending' })
+    updateIdea.mockResolvedValueOnce({
+      id: 'rejected-team', category: 'Customer Values', approvalStatus: 'pending', title: 'Saved project',
+      projectAttachments: [{ type: 'nomination', nominationType: 'team', name: 'Team submitter', projectName: 'Saved project' }],
+    })
     const user = userEvent.setup()
     render(<MantineProvider env="test"><MemoryRouter initialEntries={['/nominate?edit=rejected-team']}><ProjectShowcase nominationMode /></MemoryRouter></MantineProvider>)
     await user.click(await screen.findByRole('button', { name: 'Resubmit nomination' }))
     await user.click(await screen.findByRole('button', { name: 'Confirm and Submit' }))
     expect(await screen.findByRole('heading', { name: 'Nomination Submitted Successfully' })).toBeInTheDocument()
+    expect(screen.getByText('Project Name: Saved project')).toBeVisible()
     expect(screen.getByRole('status')).toHaveTextContent('Your nomination was submitted, but its saved draft could not be removed.')
     expect(updateIdea).toHaveBeenCalledOnce()
     expect(createIdea).not.toHaveBeenCalled()
