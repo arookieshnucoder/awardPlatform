@@ -9,6 +9,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
+import wtf.hackhub.domain.AwardTrack;
 import wtf.hackhub.domain.Hackathon;
 import wtf.hackhub.domain.Idea;
 import wtf.hackhub.domain.Profile;
@@ -16,6 +17,7 @@ import wtf.hackhub.infrastructure.persistence.IdeaMutationLock;
 import wtf.hackhub.infrastructure.persistence.auth.ProfileRepository;
 import wtf.hackhub.infrastructure.persistence.hackathon.HackathonRepository;
 import wtf.hackhub.infrastructure.persistence.idea.IdeaRepository;
+import wtf.hackhub.infrastructure.persistence.idea.NominationDraftGeneration;
 import wtf.hackhub.infrastructure.persistence.judging.JudgeScoreRepository;
 import wtf.hackhub.infrastructure.persistence.organization.OrganizationMemberRepository;
 import wtf.hackhub.infrastructure.persistence.team.TeamMemberRepository;
@@ -28,6 +30,7 @@ import java.util.UUID;
 public class SubmitIdeaUseCase {
 
 	private static final ObjectMapper ATTACHMENTS = new ObjectMapper();
+	private static final List<String> TRACKS = List.of("Customer Values", "Innovation Breakthrough", "Collaboration to Win");
 	private final IdeaMutationLock mutationLock;
 	private final wtf.hackhub.infrastructure.storage.NominationPdfValidator pdfValidator;
 	private final wtf.hackhub.application.team.CreateTeamUseCase createTeam;
@@ -36,6 +39,7 @@ public class SubmitIdeaUseCase {
 	private final NominationApprovalService approvalService;
 
 	private final IdeaRepository ideaRepository;
+	private final NominationDraftGeneration draftGeneration;
 	private final JudgeScoreRepository judgeScoreRepository;
 	private final ProfileRepository profileRepository;
 	private final HackathonRepository hackathonRepository;
@@ -50,13 +54,14 @@ public class SubmitIdeaUseCase {
 			NomineeDirectory nomineeDirectory, NominationApprovalDirectory approvalDirectory,
 			NominationApprovalService approvalService,
 			wtf.hackhub.infrastructure.storage.NominationPdfValidator pdfValidator,
-			wtf.hackhub.application.team.CreateTeamUseCase createTeam) {
+			wtf.hackhub.application.team.CreateTeamUseCase createTeam, NominationDraftGeneration draftGeneration) {
 		this.pdfValidator = pdfValidator;
 		this.createTeam = createTeam;
 		this.approvalDirectory = approvalDirectory;
 		this.approvalService = approvalService;
 		this.nomineeDirectory = nomineeDirectory;
 		this.ideaRepository = ideaRepository;
+		this.draftGeneration = draftGeneration;
 		this.mutationLock = mutationLock;
 		this.judgeScoreRepository = judgeScoreRepository;
 		this.profileRepository = profileRepository;
@@ -77,6 +82,16 @@ public class SubmitIdeaUseCase {
 	public Idea executeNomination(String title, String description, UUID hackathonId, UUID teamId, UUID createdBy,
 			String category, List<String> tags, Idea.Status status, String repositoryUrl, String demoUrl,
 			String projectAttachments) {
+		return executeNomination(title, description, hackathonId, teamId, createdBy, category, tags, status,
+				repositoryUrl, demoUrl, projectAttachments, null);
+	}
+
+	public record Replacement(@jakarta.validation.constraints.NotNull UUID id, int version) { }
+
+	@Transactional
+	public Idea executeNomination(String title, String description, UUID hackathonId, UUID teamId, UUID createdBy,
+			String category, List<String> tags, Idea.Status status, String repositoryUrl, String demoUrl,
+			String projectAttachments, Replacement replacement) {
 
 		// Validate hackathon exists
 		Hackathon hackathon = hackathonRepository.findById(hackathonId)
@@ -89,10 +104,22 @@ public class SubmitIdeaUseCase {
 		if (teamId != null) requireTeamCaptain(teamId, hackathonId, createdBy);
 		requireNominationAccess(requester);
 		// The transaction lock spans the duplicate check, implicit team creation and idea insert.
+		mutationLock.acquireForCreation();
 		mutationLock.acquire(UUID.nameUUIDFromBytes(("nomination:" + hackathonId + ":" + createdBy + ":"
 				+ teamSubmission).getBytes(java.nio.charset.StandardCharsets.UTF_8)));
-		if (ideaRepository.findByCreatedByAndHackathonId(createdBy, hackathonId).stream()
-				.anyMatch(existing -> (existing.getTeamId() != null || hasTeamMetadata(attachmentItems(existing.getProjectAttachments()))) == teamSubmission))
+		if (replacement != null) mutationLock.acquire(replacement.id());
+		var currentNominations = ideaRepository.findByCreatedByAndHackathonId(createdBy, hackathonId).stream()
+				.filter(existing -> !existing.isSuperseded() && isTeamNomination(existing) == teamSubmission).toList();
+		Idea replaced = null;
+		if (replacement != null) {
+			if (currentNominations.size() != 1 || !currentNominations.getFirst().getId().equals(replacement.id()))
+				throw new ResponseStatusException(HttpStatus.CONFLICT, "This nomination can no longer be replaced. Refresh My Nominations.");
+			replaced = currentNominations.getFirst();
+			if (!"rejected".equals(replaced.getApprovalStatus()) || replaced.getApprovalVersion() != replacement.version()
+					|| !TRACKS.contains(category) || AwardTrack.normalize(replaced.getCategory(), replaced.getTags()).equals(category)
+					|| status != Idea.Status.SUBMITTED)
+				throw new ResponseStatusException(HttpStatus.CONFLICT, "Select a different track to replace your current rejected nomination.");
+		} else if (!currentNominations.isEmpty())
 			throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.CONFLICT,
 					"You may submit only one " + (teamSubmission ? "team" : "individual") + " nomination per award. Edit your existing nomination.");
 		// Validate user is org member (if hackathon has an org)
@@ -133,6 +160,7 @@ public class SubmitIdeaUseCase {
 		idea.update(title, description, category, tags == null ? List.of() : tags,
 				requiresApproval ? Idea.Status.SUBMITTED : status == null ? Idea.Status.DRAFT : status, repositoryUrl, demoUrl,
 				requiresApproval ? items.toString() : projectAttachments);
+		if (replaced != null) replaced.markSuperseded();
 		if (requiresApproval) {
 			idea.submitForApproval(adminSelfReview ? NominationApprovalService.adminSelfReviewKey(createdBy)
 					: approvalDirectory.headKey(employee), headName);
@@ -161,6 +189,8 @@ public class SubmitIdeaUseCase {
 		if (!idea.getCreatedBy().equals(requestingUserId)) {
 			throw new IdeaAccessDeniedException(ideaId, requestingUserId);
 		}
+		if (idea.isSuperseded())
+			throw new ResponseStatusException(HttpStatus.CONFLICT, "A new nomination replaced this submission.");
 		var requester = profileRepository.findById(requestingUserId)
 				.orElseThrow(() -> new IdeaAccessDeniedException(ideaId, requestingUserId));
 		requireNominationAccess(requester);
@@ -227,7 +257,7 @@ public class SubmitIdeaUseCase {
 	}
 
 	private void requireNominationAccess(Profile requester) {
-		if (!nomineeDirectory.isRosterParticipant(requester)) {
+		if (requester.getRole() != Profile.Role.ADMIN && !nomineeDirectory.isRosterParticipant(requester)) {
 			throw new ResponseStatusException(HttpStatus.FORBIDDEN, NominationApprovalService.BD_NOMINATION_MESSAGE);
 		}
 	}
@@ -302,8 +332,12 @@ public class SubmitIdeaUseCase {
 		return false;
 	}
 
+	private static boolean isTeamNomination(Idea idea) {
+		return idea.getTeamId() != null || hasTeamMetadata(attachmentItems(idea.getProjectAttachments()));
+	}
+
 	private static ObjectNode requireTeamMetadata(ArrayNode items, String category) {
-		if (!List.of("Customer Values", "Innovation Breakthrough", "Collaboration to Win").contains(category))
+		if (!TRACKS.contains(category))
 			throw new IllegalArgumentException("Select an award category");
 		ObjectNode nomination = null;
 		boolean photo = false;
@@ -386,11 +420,7 @@ public class SubmitIdeaUseCase {
 
 	@Transactional
 	public void deleteMany(List<UUID> ideaIds, UUID requestingUserId) {
-		var requester = profileRepository.findById(requestingUserId)
-				.orElseThrow(() -> new IdeaAccessDeniedException(null, requestingUserId));
-		if (requester.getRole() != Profile.Role.ADMIN) {
-			throw new IdeaAccessDeniedException(null, requestingUserId);
-		}
+		requireAdmin(requestingUserId);
 		if (ideaIds == null || ideaIds.isEmpty() || ideaIds.stream().anyMatch(java.util.Objects::isNull)) {
 			throw new IllegalArgumentException("Select at least one nomination to delete.");
 		}
@@ -402,6 +432,31 @@ public class SubmitIdeaUseCase {
 		// Existing foreign keys cascade votes, comments and scores in the same transaction.
 		ideaRepository.deleteAll(ideas);
 		ideaRepository.flush();
+	}
+
+	@Transactional
+	public CleanupResult deleteAllNominations(UUID requestingUserId) {
+		requireAdmin(requestingUserId);
+		mutationLock.acquireForCleanup();
+		ideaRepository.findAllIds().stream().sorted().forEach(mutationLock::acquire);
+		return new CleanupResult(ideaRepository.deleteEveryNomination(), draftGeneration.advance());
+	}
+
+	public record CleanupResult(int deletedCount, int generation) { }
+
+	public record DraftState(int generation) { }
+
+	@Transactional(readOnly = true)
+	public DraftState draftState() {
+		return new DraftState(draftGeneration.current());
+	}
+
+	private void requireAdmin(UUID requestingUserId) {
+		var requester = profileRepository.findById(requestingUserId)
+				.orElseThrow(() -> new IdeaAccessDeniedException(null, requestingUserId));
+		if (requester.getRole() != Profile.Role.ADMIN) {
+			throw new IdeaAccessDeniedException(null, requestingUserId);
+		}
 	}
 
 	public static class IdeaAccessDeniedException extends RuntimeException {

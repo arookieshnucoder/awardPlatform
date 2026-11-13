@@ -190,16 +190,9 @@ class NominationApprovalIT extends PostgresIntegrationTest {
 		assertThat(ideas.count()).isEqualTo(1);
 	}
 	@Test
-	void admin_must_be_on_roster_to_submit_and_can_review_only_own_admin_nominations() {
+	void admin_without_roster_membership_can_submit_both_types_and_review_any_pending_nomination() {
 		UUID admin = UUID.fromString(insertProfile("admin-self@example.invalid", "Admin Reviewer", "admin"));
 		UUID otherAdmin = UUID.fromString(insertProfile("other-admin@example.invalid", "Other Admin", "admin"));
-		assertThat(approvals.eligibility(admin).canSubmit()).isFalse();
-		assertThatThrownBy(() -> submitTeam(null, admin, teamMetadata(admin)))
-				.isInstanceOfSatisfying(ResponseStatusException.class, ex -> assertThat(ex.getStatusCode().value()).isEqualTo(403));
-		assertThatThrownBy(() -> submit.executeNomination("Individual", "Evidence", campaign, null, admin,
-				"Innovation Breakthrough", List.of(), Idea.Status.SUBMITTED, null, null, null))
-				.isInstanceOfSatisfying(ResponseStatusException.class, ex -> assertThat(ex.getStatusCode().value()).isEqualTo(403));
-		addVotingRosterEntry(admin);
 		assertThat(approvals.eligibility(admin).canSubmit()).isTrue();
 		Idea employeeIdea = nomination("Employee nomination");
 		Idea teamIdea = submitTeam(null, admin, teamMetadata(admin));
@@ -207,13 +200,13 @@ class NominationApprovalIT extends PostgresIntegrationTest {
 				"Innovation Breakthrough", List.of(), Idea.Status.SUBMITTED, null, null, null);
 		assertThat(approvals.eligibility(admin).canReview()).isTrue();
 		assertThat(approvals.assigned(admin)).extracting(Idea::getId)
-				.containsExactlyInAnyOrder(teamIdea.getId(), individual.getId());
+				.containsExactlyInAnyOrder(teamIdea.getId(), individual.getId(), employeeIdea.getId());
+		assertThat(approvals.assigned(hod)).extracting(Idea::getId).containsExactly(employeeIdea.getId());
 		assertThat(teamIdea.getApprovalHeadName()).isEqualTo("Admin Reviewer");
 		assertThat(getIdeas.listByHackathon(campaign, PageRequest.of(0, 10))).isEmpty();
-		assertThatThrownBy(() -> approvals.decide(admin, List.of(selection(employeeIdea)), "approved", ""))
-				.isInstanceOfSatisfying(ResponseStatusException.class, ex -> assertThat(ex.getStatusCode().value()).isEqualTo(403));
-		assertThatThrownBy(() -> approvals.decide(otherAdmin, List.of(selection(teamIdea)), "approved", ""))
-				.isInstanceOfSatisfying(ResponseStatusException.class, ex -> assertThat(ex.getStatusCode().value()).isEqualTo(403));
+		Idea employeeApproved = approvals.decide(otherAdmin, List.of(selection(employeeIdea)), "approved", "").getFirst();
+		assertThat(employeeApproved.getApprovalReviewerName()).isEqualTo("Other Admin");
+		assertThat(employeeApproved.getApprovalHeadName()).isEqualTo(employeeIdea.getApprovalHeadName());
 
 		Idea rejected = approvals.decide(admin, List.of(selection(teamIdea)), "rejected", "Revise evidence").getFirst();
 		Idea revised = submit.update(rejected.getId(), admin, rejected.getTitle(), rejected.getDescription(),
@@ -222,7 +215,7 @@ class NominationApprovalIT extends PostgresIntegrationTest {
 		assertThat(approvals.mine(admin)).extracting(Idea::getApprovalReason).containsExactly("HoD test comment", "HoD test comment");
 		assertThat(approvals.assigned(hod)).extracting(Idea::getId).containsExactly(employeeIdea.getId());
 		assertThat(getIdeas.listByHackathon(campaign, PageRequest.of(0, 10))).extracting(Idea::getId)
-				.containsExactlyInAnyOrder(teamIdea.getId(), individual.getId());
+				.containsExactlyInAnyOrder(teamIdea.getId(), individual.getId(), employeeIdea.getId());
 	}
 
 	@Test
@@ -322,6 +315,36 @@ class NominationApprovalIT extends PostgresIntegrationTest {
 				.isInstanceOf(IllegalArgumentException.class).hasMessageContaining("original team");
 		assertThatThrownBy(() -> nomination("Duplicate rejected"))
 				.isInstanceOf(ResponseStatusException.class).hasMessageContaining("only one individual");
+	}
+
+	@org.junit.jupiter.params.ParameterizedTest
+	@org.junit.jupiter.params.provider.ValueSource(booleans = {false, true})
+	void replacing_a_rejected_nomination_keeps_history_and_blocks_further_edits(boolean team) {
+		Idea original = team ? submitTeam(null, employee, teamMetadata(employee)) : nomination("Original");
+		Idea rejected = approvals.decide(hod, List.of(selection(original)), "rejected", "Revise evidence").getFirst();
+		var replacement = new SubmitIdeaUseCase.Replacement(rejected.getId(), rejected.getApprovalVersion());
+		String metadata = team ? teamMetadata(employee) : null;
+		assertThatThrownBy(() -> submit.executeNomination("New", "Evidence", campaign, null, employee,
+				"Innovation Breakthrough", List.of("one", "two", "three", "four", "five", "six"), Idea.Status.SUBMITTED,
+				null, null, metadata, replacement)).isInstanceOf(IllegalArgumentException.class);
+		assertThat(ideas.findById(rejected.getId()).orElseThrow().isSuperseded()).isFalse();
+
+		Idea result = submit.executeNomination("New", "Evidence", campaign, null, employee, "Innovation Breakthrough",
+				List.of(), Idea.Status.SUBMITTED, null, null, metadata, replacement);
+		assertThat(result.getId()).isNotEqualTo(rejected.getId());
+		assertThat(result.getApprovalStatus()).isEqualTo("pending");
+		assertThat(result.getTeamId()).isEqualTo(original.getTeamId());
+		Idea archived = ideas.findById(rejected.getId()).orElseThrow();
+		assertThat(archived.isSuperseded()).isTrue();
+		assertThat(archived.getApprovalStatus()).isEqualTo("rejected");
+		assertThat(archived.getApprovalReason()).isEqualTo("Revise evidence");
+		assertThat(archived.getCategory()).isEqualTo("Customer Values");
+		assertThatThrownBy(() -> submit.update(rejected.getId(), employee, "Edit", "Evidence", "Customer Values",
+				List.of(), null, null, null, rejected.getProjectAttachments(), rejected.getApprovalVersion()))
+				.isInstanceOf(ResponseStatusException.class).hasMessageContaining("replaced");
+		assertThatThrownBy(() -> submit.executeNomination("Duplicate", "Evidence", campaign, null, employee,
+				"Collaboration to Win", List.of(), Idea.Status.SUBMITTED, null, null, metadata, replacement))
+				.isInstanceOf(ResponseStatusException.class).hasMessageContaining("no longer be replaced");
 	}
 
 	@org.junit.jupiter.params.ParameterizedTest

@@ -42,7 +42,7 @@ const onDraftRestored = vi.fn()
 function show(editing?: Idea, restoredDraft?: TeamNominationDraft) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   return render(<MantineProvider env="test"><Notifications /><QueryClientProvider client={client}><TeamNominationForm user={user}
-    hackathonId="campaign" category="customer-values" onCategoryChange={vi.fn()} canSubmit editing={editing}
+    hackathonId="campaign" category="customer-values" onCategoryChange={vi.fn()} canSubmit revisionSource={editing}
     restoredDraft={restoredDraft} onDraftSaved={onDraftSaved} onDraftRestored={onDraftRestored} onSubmitted={onSubmitted} />
   </QueryClientProvider></MantineProvider>)
 }
@@ -107,7 +107,7 @@ describe('Team nomination form', () => {
       })]),
     }))
     expect(TeamService.createTeam).not.toHaveBeenCalled()
-    expect(NominationDraftStore.remove).toHaveBeenCalledWith(nominationDraftKey({ userId: user.id, hackathonId: 'campaign', nominationType: 'team', category: 'customer-values' }))
+    expect(NominationDraftStore.remove).toHaveBeenCalledWith(nominationDraftKey({ userId: user.id, hackathonId: 'campaign', nominationType: 'team', category: 'customer-values' }), 0)
   })
 
   it('lists only the required team fields that are missing and keeps the member example visible', async () => {

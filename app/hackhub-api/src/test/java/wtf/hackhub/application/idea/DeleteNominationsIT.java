@@ -87,6 +87,38 @@ class DeleteNominationsIT extends PostgresIntegrationTest {
 				.isEqualTo(1);
 	}
 
+	@Test
+	void delete_all_removes_every_state_and_invalidates_drafts_even_when_already_empty() throws Exception {
+		UUID pending = nomination(), rejected = nomination(), approved = nomination(), draft = nomination(), legacy = nomination();
+		jdbc.update("UPDATE ideas SET status='submitted', approval_status='pending' WHERE id=?", pending);
+		jdbc.update("UPDATE ideas SET status='submitted', approval_status='rejected', superseded=true WHERE id=?", rejected);
+		jdbc.update("UPDATE ideas SET status='submitted', approval_status='approved' WHERE id=?", approved);
+		jdbc.update("UPDATE ideas SET status='draft' WHERE id=?", draft);
+		var otherAward = awards.execute(new CreateHackathonUseCase.Command("Other Award", "Description", Instant.now(),
+				Instant.now().plusSeconds(86400), 4, 100, admin, null, List.of(), List.of())).getId();
+		jdbc.update("UPDATE ideas SET hackathon_id=? WHERE id=?", otherAward, legacy);
+		jdbc.update("INSERT INTO nomination_approval_events (idea_id,actor_id,submission_version,decision) VALUES (?,?,1,'rejected')",
+				rejected, admin);
+		int generation = jdbc.queryForObject("SELECT generation FROM nomination_draft_state", Integer.class);
+		mvc.perform(delete("/api/v1/admin/nominations").with(MockAuthHelper.asManager(owner)))
+				.andExpect(status().isForbidden());
+		mvc.perform(get("/api/v1/me/nomination-draft-state").with(MockAuthHelper.asManager(owner)))
+				.andExpect(status().isOk()).andExpect(jsonPath("$.generation").value(generation));
+		mvc.perform(delete("/api/v1/admin/nominations").with(MockAuthHelper.asAdmin(admin)))
+				.andExpect(status().isOk()).andExpect(jsonPath("$.deletedCount").value(5))
+				.andExpect(jsonPath("$.generation").value(generation + 1));
+		for (UUID id : List.of(pending, rejected, approved, draft, legacy)) assertDeleted(id);
+		mvc.perform(get("/api/v1/me/nominations").with(MockAuthHelper.asManager(owner)))
+				.andExpect(status().isOk()).andExpect(jsonPath("$").isEmpty());
+		assertThat(jdbc.queryForObject("SELECT count(*) FROM nomination_approval_events", Integer.class)).isZero();
+		assertThat(jdbc.queryForObject("SELECT count(*) FROM hackathons", Integer.class)).isEqualTo(2);
+		mvc.perform(delete("/api/v1/admin/nominations").with(MockAuthHelper.asAdmin(admin)))
+				.andExpect(status().isOk()).andExpect(jsonPath("$.deletedCount").value(0))
+				.andExpect(jsonPath("$.generation").value(generation + 2));
+		mvc.perform(get("/api/v1/me/nomination-draft-state").with(MockAuthHelper.asManager(owner)))
+				.andExpect(status().isOk()).andExpect(jsonPath("$.generation").value(generation + 2));
+	}
+
 	void assertDeleted(UUID id) {
 		assertThat(jdbc.queryForObject("SELECT count(*) FROM ideas WHERE id=?", Integer.class, id)).isZero();
 		for (String table : List.of("idea_votes", "comments", "idea_scores", "judge_scores")) {

@@ -45,9 +45,7 @@ public class NominationApprovalService {
 	public Eligibility eligibility(UUID userId) {
 		var profile = profiles.findById(userId);
 		if (profile.isPresent() && profile.get().getRole() == Profile.Role.ADMIN) {
-			boolean inRoster = nominees.isRosterParticipant(profile.get());
-			return new Eligibility(inRoster, true, inRoster ? profile.get().getName() : null,
-					inRoster ? null : BD_NOMINATION_MESSAGE, inRoster);
+			return new Eligibility(true, true, profile.get().getName(), null, true);
 		}
 		boolean canReview = directory.reviewerKey(userId).isPresent();
 		if (profile.filter(nominees::isRosterParticipant).isEmpty()) {
@@ -68,30 +66,24 @@ public class NominationApprovalService {
 	@Transactional(readOnly = true)
 	public List<Idea> assigned(UUID userId) {
 		var reviewer = reviewer(userId);
-		return ideas.findByApprovalHeadKeyInOrderByCreatedAtDesc(reviewer.keys()).stream()
+		if (reviewer.admin() != null) return ideas.findByApprovalStatusIsNotNullOrderByCreatedAtDesc();
+		return ideas.findByApprovalHeadKeyInOrderByCreatedAtDesc(List.of(reviewer.rosterKey())).stream()
 				.filter(reviewer::canDecide).toList();
 	}
 
-	private record Reviewer(UUID userId, String rosterKey, boolean allowRosterSelfApproval, String adminKey) {
-		List<String> keys() {
-			if (adminKey == null) return List.of(rosterKey);
-			return rosterKey == null ? List.of(adminKey) : List.of(rosterKey, adminKey);
-		}
-
+	private record Reviewer(UUID userId, String rosterKey, boolean allowRosterSelfApproval, Profile admin) {
 		boolean canDecide(Idea idea) {
-			boolean own = userId.equals(idea.getCreatedBy());
-			String assignedKey = idea.getApprovalHeadKey();
-			return (adminKey != null && own && adminKey.equals(assignedKey))
-					|| (rosterKey != null && rosterKey.equals(assignedKey) && (!own || allowRosterSelfApproval));
+			return admin != null ? idea.getApprovalStatus() != null
+					: rosterKey.equals(idea.getApprovalHeadKey()) && (!userId.equals(idea.getCreatedBy()) || allowRosterSelfApproval);
 		}
 	}
 
 	private Reviewer reviewer(UUID userId) {
+		var admin = profiles.findById(userId).filter(profile -> profile.getRole() == Profile.Role.ADMIN).orElse(null);
+		if (admin != null) return new Reviewer(userId, null, true, admin);
 		String rosterKey = directory.reviewerKey(userId).orElse(null);
-		String adminKey = profiles.findById(userId).filter(profile -> profile.getRole() == Profile.Role.ADMIN)
-				.map(profile -> adminSelfReviewKey(userId)).orElse(null);
-		if (adminKey == null && rosterKey == null) throw new ResponseStatusException(HttpStatus.FORBIDDEN);
-		return new Reviewer(userId, rosterKey, rosterKey != null && directory.allowsSelfApproval(userId), adminKey);
+		if (rosterKey == null) throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+		return new Reviewer(userId, rosterKey, directory.allowsSelfApproval(userId), null);
 	}
 	public boolean canRead(Idea idea, UUID userId) {
 		return idea.isApprovalPublished() || (userId != null && (idea.getCreatedBy().equals(userId)
@@ -119,7 +111,7 @@ public class NominationApprovalService {
 				throw new ResponseStatusException(HttpStatus.CONFLICT, "The nomination changed. Refresh before reviewing.");
 		}
 		for (var idea : selected) {
-			idea.decideApproval(decision, comment, idea.getApprovalHeadName());
+			idea.decideApproval(decision, comment, reviewer.admin() == null ? idea.getApprovalHeadName() : reviewer.admin().getName());
 			record(idea, userId, decision, comment);
 		}
 		return ideas.saveAll(selected);

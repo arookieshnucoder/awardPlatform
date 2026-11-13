@@ -24,6 +24,7 @@ export interface Idea {
   userHasVoted?: boolean
   nomineeFullName?: string
   approvalStatus?: 'pending' | 'approved' | 'rejected' | null
+  superseded?: boolean
   approvalReason?: string | null
   approvalReviewedAt?: string | null
   approvalReviewerName?: string | null
@@ -53,6 +54,7 @@ export interface ProjectAttachment {
 }
 
 export interface CreateIdeaInput {
+  replaces?: { id: string; version: number }
   title: string
   description: string
   hackathonId: string
@@ -175,6 +177,14 @@ export class IdeaService {
 
   static async deleteIdeas(ids: string[]): Promise<void> {
     return api.post('/api/v1/ideas/batch-delete', { ids })
+  }
+
+  static async deleteAllNominations(): Promise<{ deletedCount: number; generation: number }> {
+    return api.delete('/api/v1/admin/nominations')
+  }
+
+  static async getNominationDraftState(): Promise<{ generation: number }> {
+    return api.get('/api/v1/me/nomination-draft-state')
   }
 
   /** Toggle vote — returns new state. Previously broken due to Supabase 406 errors. */

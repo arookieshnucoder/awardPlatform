@@ -79,9 +79,12 @@ public class IdeaController {
 	@ResponseStatus(HttpStatus.CREATED)
 	public IdeaResponse create(@PathVariable UUID hackathonId, @Valid @RequestBody CreateIdeaRequest req,
 			@AuthenticationPrincipal UUID userId) {
-		return response(submitIdeaUseCase.executeNomination(req.title(), req.description(), hackathonId, req.teamId(),
-				userId, req.category(), req.tags(), req.status(), req.repositoryUrl(), req.demoUrl(),
-				req.projectAttachments()), false);
+		var idea = req.replaces() == null
+				? submitIdeaUseCase.executeNomination(req.title(), req.description(), hackathonId, req.teamId(), userId,
+						req.category(), req.tags(), req.status(), req.repositoryUrl(), req.demoUrl(), req.projectAttachments())
+				: submitIdeaUseCase.executeNomination(req.title(), req.description(), hackathonId, req.teamId(), userId,
+						req.category(), req.tags(), req.status(), req.repositoryUrl(), req.demoUrl(), req.projectAttachments(), req.replaces());
+		return response(idea, false);
 	}
 
 	@Operation(summary = "Get an idea by ID")
@@ -127,6 +130,19 @@ public class IdeaController {
 	@ResponseStatus(HttpStatus.NO_CONTENT)
 	public void deleteMany(@Valid @RequestBody DeleteIdeasRequest req, @AuthenticationPrincipal UUID userId) {
 		submitIdeaUseCase.deleteMany(req.ids(), userId);
+	}
+
+	@Operation(summary = "Delete all nominations and invalidate saved drafts")
+	@DeleteMapping("/api/v1/admin/nominations")
+	@PreAuthorize("hasRole('ADMIN')")
+	public SubmitIdeaUseCase.CleanupResult deleteAll(@AuthenticationPrincipal UUID userId) {
+		return submitIdeaUseCase.deleteAllNominations(userId);
+	}
+
+	@GetMapping("/api/v1/me/nomination-draft-state")
+	public SubmitIdeaUseCase.DraftState nominationDraftState(jakarta.servlet.http.HttpServletResponse response) {
+		response.setHeader("Cache-Control", "no-store");
+		return submitIdeaUseCase.draftState();
 	}
 
 	public record DeleteIdeasRequest(
@@ -264,7 +280,7 @@ public class IdeaController {
 				: result.projectAttachments()), result.totalScore(),
 				result.voteCount(), result.userHasVoted(), result.createdAt(), result.updatedAt(),
 				result.approvalStatus(), result.approvalReason(), result.approvalReviewedAt(), result.approvalReviewerName(),
-				result.approvalVersion(), result.approvalHeadName(), nomineeFullName);
+				result.approvalVersion(), result.approvalHeadName(), result.superseded(), nomineeFullName);
 	}
 
 	// ── DTOs ──────────────────────────────────────────────────────────────────
@@ -274,6 +290,7 @@ public class IdeaController {
 			String repositoryUrl, String demoUrl, String projectAttachments, BigDecimal totalScore, int voteCount,
 			boolean userHasVoted, Instant createdAt, Instant updatedAt, String approvalStatus, String approvalReason,
 			Instant approvalReviewedAt, String approvalReviewerName, int approvalVersion, String approvalHeadName,
+			boolean superseded,
 			@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
 			String nomineeFullName) {
 		static IdeaResponse from(Idea i, boolean userHasVoted) {
@@ -282,7 +299,7 @@ public class IdeaController {
 					i.getAttachments(), i.getRepositoryUrl(), i.getDemoUrl(), i.getProjectAttachments(),
 					i.getTotalScore(), i.getVoteCount(), userHasVoted, i.getCreatedAt(), i.getUpdatedAt(),
 					i.getApprovalStatus(), i.getApprovalReason(), i.getApprovalReviewedAt(), i.getApprovalReviewerName(),
-					i.getApprovalVersion(), i.getApprovalHeadName(), null);
+					i.getApprovalVersion(), i.getApprovalHeadName(), i.isSuperseded(), null);
 		}
 	}
 
@@ -301,7 +318,7 @@ public class IdeaController {
 
 	public record CreateIdeaRequest(@NotBlank String title, @NotBlank String description, UUID teamId,
 			@NotBlank String category, List<String> tags, Idea.Status status, String repositoryUrl, String demoUrl,
-			String projectAttachments) {
+			String projectAttachments, @Valid SubmitIdeaUseCase.Replacement replaces) {
 	}
 
 	public record UpdateIdeaRequest(@NotBlank String title, @NotBlank String description, @NotBlank String category,

@@ -20,8 +20,9 @@ interface Props {
   category: string
   onCategoryChange: (category: string) => void
   canSubmit: boolean
-  editing?: Idea | null
+  revisionSource?: Idea | null
   restoredDraft?: TeamNominationDraft | null
+  draftGeneration?: number | null
   onDraftRestored: () => void
   onDraftSaved: (category: string, draft: NominationDraft<TeamNominationDraft>) => void
   onSubmitted: (idea: Idea, draftWarning?: string) => void
@@ -46,13 +47,16 @@ export interface TeamNominationDraft {
 }
 
 export function TeamNominationForm({
-  user, hackathonId, category, onCategoryChange, canSubmit, editing,
-  restoredDraft, onDraftRestored, onDraftSaved, onSubmitted,
+  user, hackathonId, category, onCategoryChange, canSubmit, revisionSource,
+  restoredDraft, draftGeneration = 0, onDraftRestored, onDraftSaved, onSubmitted,
 }: Props) {
+  const editing = revisionSource?.category === category ? revisionSource : null
   const metadata = editing?.projectAttachments?.find((item) => item.type === 'nomination')
-  const draftKey = nominationDraftKey({ userId: user.id, hackathonId, nominationType: 'team', editId: editing?.id, category })
+  const draftKey = nominationDraftKey({ userId: user.id, hackathonId, nominationType: 'team', editId: revisionSource?.id, category })
   const currentDraftKey = useRef(draftKey)
   currentDraftKey.current = draftKey
+  const currentDraftGeneration = useRef(draftGeneration)
+  currentDraftGeneration.current = draftGeneration
   const [categoryForms, setCategoryForms] = useState<Record<string, TeamNominationDraft>>({})
   const initialForm: TeamNominationDraft = {
     category, projectName: metadata?.projectName ?? '', coreTeamMembers: metadata?.coreTeamMembers ?? '',
@@ -92,17 +96,17 @@ export function TeamNominationForm({
   }, [category, draftKey, restoredDraft, onDraftRestored])
 
   const saveDraft = async () => {
-    if (draftSaving || busy) return
+    if (draftSaving || busy || draftGeneration === null) return
     setDraftSaving(true)
     setDraftError(null)
     setDraftMessage(null)
     try {
       const draft = await NominationDraftStore.save<TeamNominationDraft>(draftKey, {
         category, projectName, coreTeamMembers, achievementSummary, teamAchievementImpact, cultureDemonstration,
-        formats, photo, document, approvalVersion: editing?.approvalVersion,
-      })
+        formats, photo, document, approvalVersion: revisionSource?.approvalVersion,
+      }, draftGeneration)
       onDraftSaved(category, draft)
-      if (currentDraftKey.current === draftKey) {
+      if (currentDraftKey.current === draftKey && currentDraftGeneration.current === draftGeneration) {
         setDraftMessage('Draft saved successfully.')
         notifications.show({ message: 'Draft saved successfully.', color: 'green', autoClose: 4000, className: 'dp-status-toast' })
       }
@@ -189,10 +193,12 @@ export function TeamNominationForm({
       }
       const result = editing
         ? await IdeaService.updateIdea(editing.id, { ...payload, approvalVersion: editing.approvalVersion })
-        : await IdeaService.createIdea(payload)
+        : await IdeaService.createIdea({ ...payload, ...(revisionSource && {
+          replaces: { id: revisionSource.id, version: revisionSource.approvalVersion ?? 0 },
+        }) })
       let draftWarning: string | undefined
       // 提交已成功时，草稿清理失败只提示用户，不重复提交提名。
-      await NominationDraftStore.remove(draftKey).catch(() => {
+      await NominationDraftStore.remove(draftKey, draftGeneration ?? 0).catch(() => {
         draftWarning = 'Your nomination was submitted, but its saved draft could not be removed.'
       })
       setReviewOpened(false)
@@ -216,7 +222,7 @@ export function TeamNominationForm({
     {draftMessage && <Alert color="blue" c="white" role="status" styles={{ message: { color: '#fff' } }}>{draftMessage}</Alert>}
       <Grid gutter="md">
         <Grid.Col span={{ base: 12, sm: 6 }}><TextInput label="Nominator Name" value={metadata?.nominatorName ?? user.name} readOnly required /></Grid.Col>
-        <Grid.Col span={{ base: 12, sm: 6 }}><Select label="Award Category" required allowDeselect={false} disabled={busy || Boolean(editing)}
+        <Grid.Col span={{ base: 12, sm: 6 }}><Select label="Award Category" required allowDeselect={false} disabled={busy || draftSaving}
           data={getDigitalPioneerTracks('team').map((track) => ({ value: track.value, label: track.label }))}
           value={category} onChange={(value) => { if (value) onCategoryChange(value) }} /></Grid.Col>
         <Grid.Col span={12}><TextInput label="Project Name" required value={projectName} maxLength={200} disabled={busy} onChange={(event) => updateForm({ projectName: event.currentTarget.value })} /></Grid.Col>
@@ -246,7 +252,7 @@ export function TeamNominationForm({
         {document && !documentError && <LocalNominationAttachment file={document} />}
         {!document && savedDocuments.map((item) => <Stack key={item.storageKey ?? item.url} gap="xs"><Text size="sm">Retained attachment: {item.name}</Text><NominationEvidence attachment={item} /></Stack>)}
       </div>
-      <Group justify="flex-end"><Button className="dp-primary-button" loading={draftSaving} disabled={busy} onClick={() => void saveDraft()}>Save Draft</Button>
+      <Group justify="flex-end"><Button className="dp-primary-button" loading={draftSaving} disabled={busy || draftGeneration === null} onClick={() => void saveDraft()}>Save Draft</Button>
         <Button className="dp-primary-button" loading={busy}
         disabled={!canSubmit || summaryWords > 200 || Boolean(photoError || documentError)} onClick={() => void submit()}>
         {editing ? 'Resubmit nomination' : 'Submit nomination'}

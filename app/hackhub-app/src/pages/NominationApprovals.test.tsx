@@ -96,6 +96,14 @@ describe('Nominating HoD approval inbox', () => {
 })
 
 describe('My Nominations', () => {
+  it('keeps the original rejection readable and disables its resubmit button after replacement', async () => {
+    mocks.get.mockResolvedValue([{ ...nomination('old', 'rejected'), superseded: true }])
+    show(false, '/my-nominations?id=old')
+    const comments = await screen.findAllByText('Please explain the measured impact.')
+    expect(comments.find((element) => !element.closest('[hidden]'))).toBeVisible()
+    expect(screen.getByRole('button', { name: 'Edit and resubmit' })).toBeDisabled()
+  })
+
   it.each(['Customer Values', 'Innovation Breakthrough', 'Collaboration to Win'])('shows the project name for a %s team nomination', async (category) => {
     const user = userEvent.setup()
     const team = nomination('team')

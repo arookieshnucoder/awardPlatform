@@ -51,14 +51,10 @@ class NominationApprovalServiceTest {
 	}
 
 	@Test
-	void admin_needs_roster_membership_for_submission_but_can_open_review() {
+	void admin_without_roster_membership_can_submit_and_review() {
 		profile.changeRole(Profile.Role.ADMIN);
 		when(profiles.findById(userId)).thenReturn(Optional.of(profile));
 
-		assertThat(service.eligibility(userId)).isEqualTo(new NominationApprovalService.Eligibility(
-				false, true, null, NominationApprovalService.BD_NOMINATION_MESSAGE, false));
-		when(roster.findAllByNormalizedName("alexwang"))
-				.thenReturn(List.of(new VotingParticipant("1", "BD/DPA", "Alex Wang", "alexwang")));
 		assertThat(service.eligibility(userId)).isEqualTo(new NominationApprovalService.Eligibility(
 				true, true, profile.getName(), null, true));
 	}

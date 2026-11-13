@@ -9,7 +9,7 @@ import { useNominationEligibility } from '../hooks/useNominationEligibility'
 import { DIGITAL_PIONEER_TRACKS } from '../config/digitalPioneer'
 import { NominationProgress } from '../components/DigitalPioneer/NominationProgress'
 import { NominationAnswerDetails } from '../components/DigitalPioneer/NominationAnswer'
-import { nominationState } from '../lib/nominationStatus'
+import { isTeamNomination, nominationState, occupiesNominationSlot } from '../lib/nominationStatus'
 import './DigitalPioneer.css'
 
 function trackName(idea: Idea) {
@@ -42,7 +42,9 @@ export function NominationApprovals({ reviewMode = false }: { reviewMode?: boole
   const ideas = nominations.data ?? []
   const current = ideas.find((idea) => idea.id === params.get('id'))
   const currentMetadata = current?.projectAttachments?.find((item) => item.type === 'nomination')
-  const currentIsTeam = Boolean(current?.teamId || currentMetadata?.nominationType === 'team')
+  const currentIsTeam = current ? isTeamNomination(current) : false
+  const resubmissionBlocked = current && (current.superseded || ideas.some((idea) => idea.id !== current.id
+    && occupiesNominationSlot(idea, current.hackathonId, currentIsTeam)))
   const pending = ideas.filter((idea) => idea.approvalStatus === 'pending')
   const selectedPending = pending.filter((idea) => selected.includes(idea.id))
   const targets = current ? (current.approvalStatus === 'pending' ? [current] : []) : selectedPending
@@ -94,7 +96,10 @@ export function NominationApprovals({ reviewMode = false }: { reviewMode?: boole
               {current.approvalHeadName && <Text><strong>Nominating HoD: </strong>{current.approvalHeadName}</Text>}
               <NominationProgress idea={current} />
               {actions}
-              {!reviewMode && current.approvalStatus === 'rejected' && <Button component={Link} to={`/nominate?edit=${encodeURIComponent(current.id)}`} w="fit-content">Edit and resubmit</Button>}
+              {!reviewMode && current.approvalStatus === 'rejected' && (resubmissionBlocked
+                ? <Button disabled w="fit-content" styles={{ root: { cursor: 'not-allowed', pointerEvents: 'auto', backgroundColor: 'var(--mantine-color-gray-3)', color: 'var(--mantine-color-gray-7)' } }}
+                  title="A newer nomination has replaced this submission.">Edit and resubmit</Button>
+                : <Button component={Link} to={`/nominate?edit=${encodeURIComponent(current.id)}`} w="fit-content">Edit and resubmit</Button>)}
               <Tabs defaultValue="details">
                 <Tabs.List><Tabs.Tab value="details">Details</Tabs.Tab><Tabs.Tab value="activity">Activity</Tabs.Tab><Tabs.Tab value="attachments">Attachments</Tabs.Tab></Tabs.List>
                 <Tabs.Panel value="details" pt="lg"><Stack>

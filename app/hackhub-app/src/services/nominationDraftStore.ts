@@ -12,6 +12,11 @@ export interface NominationDraft<T> {
   data: T
 }
 
+const generationKey = 'draft-generation'
+// Generation zero uses the original keys so deployment does not clear existing drafts.
+const storageKey = (key: string, generation: number) =>
+  generation === 0 ? key : JSON.stringify([generation, ...JSON.parse(key) as string[]])
+
 // 每个用户、活动、提名类型、编辑记录和赛道分别保存，兼容旧版未分赛道的键。
 export const nominationDraftKey = (scope: NominationDraftScope) => JSON.stringify([
   scope.userId, scope.hackathonId, scope.nominationType, scope.editId ?? 'new',
@@ -57,7 +62,33 @@ async function transact<T>(mode: IDBTransactionMode, action: (store: IDBObjectSt
 }
 
 export const NominationDraftStore = {
-  async list<T>(key: string, categories: readonly string[]): Promise<Record<string, NominationDraft<T>>> {
+  async clearEarlierGenerations(generation: number): Promise<void> {
+    const database = await openDatabase()
+    try {
+      await new Promise<void>((resolve, reject) => {
+        const transaction = database.transaction('drafts', 'readwrite')
+        const store = transaction.objectStore('drafts')
+        const current = store.get(generationKey)
+        current.onsuccess = () => {
+          if ((current.result ?? 0) >= generation) return
+          store.put(generation, generationKey)
+          const request = store.openKeyCursor()
+          request.onsuccess = () => {
+            const cursor = request.result
+            if (!cursor) return
+            if (typeof cursor.key === 'string' && cursor.key.startsWith('[')) {
+              const [first] = JSON.parse(cursor.key) as [string | number]
+              if (typeof first === 'string' || first < generation) store.delete(cursor.key)
+            }
+            cursor.continue()
+          }
+        }
+        transaction.oncomplete = () => resolve()
+        transaction.onabort = () => reject(new Error('Unable to clear old drafts.'))
+      })
+    } finally { database.close() }
+  },
+  async list<T>(key: string, categories: readonly string[], generation = 0): Promise<Record<string, NominationDraft<T>>> {
     const database = await openDatabase()
     const records: Record<string, NominationDraft<T>> = {}
     try {
@@ -68,24 +99,26 @@ export const NominationDraftStore = {
         const validDraft = (draft: NominationDraft<T> | undefined): draft is NominationDraft<T> =>
           draft?.version === 1 && typeof draft.savedAt === 'string' && Boolean(draft.data)
         for (const category of categories) {
-          const request = store.get(JSON.stringify([...scope, category]))
+          const request = store.get(storageKey(JSON.stringify([...scope, category]), generation))
           request.onsuccess = () => {
             if (validDraft(request.result)) records[category] = request.result
           }
         }
         // Read the old unscoped record last so it can be compared with the saved track.
-        const legacy = store.get(key)
-        legacy.onsuccess = () => {
-          const draft = legacy.result as NominationDraft<T> | undefined
-          if (!validDraft(draft)) return
-          const data = draft.data as { category?: string; form?: { category?: string } }
-          const category = data.category ?? data.form?.category
-          if (!category || !categories.includes(category)) return
-          if (!records[category] || draft.savedAt > records[category].savedAt) {
-            records[category] = draft
-            store.put(draft, JSON.stringify([...scope, category]))
+        if (generation === 0) {
+          const legacy = store.get(key)
+          legacy.onsuccess = () => {
+            const draft = legacy.result as NominationDraft<T> | undefined
+            if (!validDraft(draft)) return
+            const data = draft.data as { category?: string; form?: { category?: string } }
+            const category = data.category ?? data.form?.category
+            if (!category || !categories.includes(category)) return
+            if (!records[category] || draft.savedAt > records[category].savedAt) {
+              records[category] = draft
+              store.put(draft, JSON.stringify([...scope, category]))
+            }
+            store.delete(key)
           }
-          store.delete(key)
         }
         transaction.oncomplete = () => resolve()
         transaction.onerror = () => reject(new Error('Unable to read draft storage.'))
@@ -94,13 +127,26 @@ export const NominationDraftStore = {
     } finally { database.close() }
     return records
   },
-  async save<T>(key: string, data: T): Promise<NominationDraft<T>> {
+  async save<T>(key: string, data: T, generation = 0): Promise<NominationDraft<T>> {
     const record: NominationDraft<T> = { version: 1, savedAt: new Date().toISOString(), data }
     // IndexedDB 的结构化克隆保存文件本体，退出页面后仍可恢复照片和附件。
-    await transact('readwrite', (store) => store.put(record, key))
+    const database = await openDatabase()
+    try {
+      await new Promise<void>((resolve, reject) => {
+        const transaction = database.transaction('drafts', 'readwrite')
+        const store = transaction.objectStore('drafts')
+        const current = store.get(generationKey)
+        current.onsuccess = () => {
+          if ((current.result ?? 0) > generation) transaction.abort()
+          else store.put(record, storageKey(key, generation))
+        }
+        transaction.oncomplete = () => resolve()
+        transaction.onabort = () => reject(new Error('Unable to save draft.'))
+      })
+    } finally { database.close() }
     return record
   },
-  async remove(key: string): Promise<void> {
-    await transact('readwrite', (store) => store.delete(key))
+  async remove(key: string, generation = 0): Promise<void> {
+    await transact('readwrite', (store) => store.delete(storageKey(key, generation)))
   },
 }

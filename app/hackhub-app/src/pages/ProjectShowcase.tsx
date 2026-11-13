@@ -59,7 +59,7 @@ import { useNominationEligibility } from '../hooks/useNominationEligibility'
 import { NominationProgress } from '../components/DigitalPioneer/NominationProgress'
 import { NominationAnswerBody, NominationAnswerDetails, NominationAnswerEditor } from '../components/DigitalPioneer/NominationAnswer'
 import { NominationReview } from '../components/DigitalPioneer/NominationReview'
-import { isNomineeDepartmentWarning, nominationState } from '../lib/nominationStatus'
+import { isNomineeDepartmentWarning, isTeamNomination, nominationState, occupiesNominationSlot } from '../lib/nominationStatus'
 import { answerText, formattedAnswers, individualAnswerHeadings as nominationHeadings, type AnswerFormats, type FormattedAnswers } from '../lib/nominationFormatting'
 import { validateNominationPdf } from '../services/storageService'
 import { NominationEvidence } from '../components/DigitalPioneer/NominationEvidence'
@@ -440,12 +440,13 @@ export function ProjectShowcase({ nominationMode = false, managementMode = false
     enabled: nominationMode && Boolean(user), staleTime: 0, retry: false,
   })
   const editId = nominationMode ? searchParams.get('edit') : null
-  const [editingNomination, setEditingNomination] = useState<Idea | null>(null)
+  const [loadedRevision, setLoadedRevision] = useState<Idea | null>(null)
+  const revisionSource = loadedRevision?.id === editId ? loadedRevision : null
   const [editError, setEditError] = useState<string | null>(null)
   const [submittedNomination, setSubmittedNomination] = useState<Idea | null>(null)
   const canDelete = managementMode && user?.role === 'admin'
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
-  const [pendingDeletion, setPendingDeletion] = useState<Project[]>([])
+  const [pendingDeletion, setPendingDeletion] = useState<Project[] | 'all' | null>(null)
   const [deleting, setDeleting] = useState(false)
   const deletingRef = useRef(false)
   const [deleteError, setDeleteError] = useState<string | null>(null)
@@ -473,8 +474,8 @@ export function ProjectShowcase({ nominationMode = false, managementMode = false
   const uploadBusy = useRef(false)
   const [individualPreviewOpened, setIndividualPreviewOpened] = useState(false)
   const [individualReviewError, setIndividualReviewError] = useState<string | null>(null)
-  const [draftListing, setDraftListing] = useState<{ scope: string; drafts: Record<string, TrackDraft> } | null>(null)
-  const [teamRestore, setTeamRestore] = useState<{ scope: string; data: TeamNominationDraft } | null>(null)
+  const [draftListing, setDraftListing] = useState<{ scope: string; generation: number; drafts: Record<string, TrackDraft> } | null>(null)
+  const [teamRestore, setTeamRestore] = useState<{ scope: string; generation: number; data: TeamNominationDraft } | null>(null)
   const [savingDraft, setSavingDraft] = useState(false)
   const [draftNotice, setDraftNotice] = useState<string | null>(null)
   const [submissionDraftWarning, setSubmissionDraftWarning] = useState<string | null>(null)
@@ -484,18 +485,30 @@ export function ProjectShowcase({ nominationMode = false, managementMode = false
   const [photoToCrop, setPhotoToCrop] = useState<File | null>(null)
   const photoPreview = usePhotoUrl(projectImage && !validatePersonalPhoto(projectImage) ? projectImage : null)
   const [uploadForm, setUploadForm] = useState<ProjectUploadForm>(emptyUploadForm)
-  const nominationType = editingNomination
-    ? editingNomination.projectAttachments?.find((item) => item.type === 'nomination')?.nominationType ?? 'individual'
+  const nominationType = revisionSource
+    ? isTeamNomination(revisionSource) ? 'team' : 'individual'
     : preferredNominationType
+  const editingNomination = revisionSource?.category === uploadForm.category ? revisionSource : null
   const nominationTracks = getDigitalPioneerTracks(nominationType)
-  const existingNomination = ownNominations.data?.find((idea) => idea.hackathonId === uploadForm.hackathonId
-    && (idea.teamId || idea.projectAttachments?.some((item) => item.type === 'nomination' && item.nominationType === 'team') ? 'team' : 'individual') === nominationType)
+  const existingNomination = ownNominations.data?.find((idea) => idea.id !== editId
+    && occupiesNominationSlot(idea, uploadForm.hackathonId, nominationType === 'team'))
+  const replacementBlocked = Boolean(revisionSource?.superseded || existingNomination)
   const draftScopeKey = nominationMode && canStartNomination && user && uploadForm.hackathonId
-    && !submittedNomination && (editId ? editingNomination?.id === editId : ownNominations.data && !existingNomination)
+    && !submittedNomination && !replacementBlocked && (editId ? revisionSource?.id === editId : ownNominations.data)
     ? nominationDraftKey({ userId: user.id, hackathonId: uploadForm.hackathonId, nominationType, editId }) : null
   const currentDraftScope = useRef(draftScopeKey)
   currentDraftScope.current = draftScopeKey
-  const savedDrafts = draftListing?.scope === draftScopeKey ? draftListing.drafts : null
+  const draftState = useQuery({
+    queryKey: ['nomination-draft-state'],
+    queryFn: () => IdeaService.getNominationDraftState(),
+    enabled: Boolean(nominationMode && user),
+    refetchOnMount: 'always',
+    refetchInterval: 30_000,
+  })
+  const draftGeneration = draftState.isFetchedAfterMount && !draftState.isError ? draftState.data?.generation : undefined
+  const currentDraftGeneration = useRef(draftGeneration)
+  currentDraftGeneration.current = draftGeneration
+  const savedDrafts = draftListing?.scope === draftScopeKey && draftListing?.generation === draftGeneration ? draftListing?.drafts : null
   const individualCategoryForms = useRef(new Map<string, IndividualNominationDraft>())
   const individualDraftKey = user && uploadForm.hackathonId && uploadForm.category ? nominationDraftKey({
     userId: user.id, hackathonId: uploadForm.hackathonId, nominationType: 'individual', editId, category: uploadForm.category,
@@ -510,14 +523,14 @@ export function ProjectShowcase({ nominationMode = false, managementMode = false
       notifications.show({ message, color: 'orange', autoClose: 4000, className: 'dp-status-toast' })
       return
     }
-    if (category === uploadForm.category || editId || uploading || savingDraft) return
+    if (category === uploadForm.category || uploading || savingDraft || (editId && (revisionSource?.id !== editId || replacementBlocked))) return
     if (individualDraftKey && uploadForm.category) {
       individualCategoryForms.current.set(individualDraftKey, {
         form: uploadForm, photo: projectImage, document: individualDocument,
       })
     }
     const nextKey = user ? nominationDraftKey({
-      userId: user.id, hackathonId: uploadForm.hackathonId, nominationType: 'individual', category,
+      userId: user.id, hackathonId: uploadForm.hackathonId, nominationType: 'individual', editId, category,
     }) : null
     const cached = nextKey ? individualCategoryForms.current.get(nextKey) : undefined
     setUploadForm(cached?.form ?? { ...emptyUploadForm(), hackathonId: uploadForm.hackathonId, category })
@@ -530,37 +543,43 @@ export function ProjectShowcase({ nominationMode = false, managementMode = false
   }
   useEffect(() => {
     setDraftNotice(null)
-    if (!draftScopeKey) return
+    if (draftGeneration === undefined) return
     let active = true
-    void NominationDraftStore.list<TrackDraft['data']>(draftScopeKey, nominationTracks.map((track) => track.value)).then((drafts) => {
+    void (async () => {
+      if (draftGeneration > 0) await NominationDraftStore.clearEarlierGenerations(draftGeneration)
+      if (!active || !draftScopeKey) return
+      const drafts = await NominationDraftStore.list<TrackDraft['data']>(draftScopeKey, nominationTracks.map((track) => track.value), draftGeneration)
       if (active) setDraftListing((current) => ({
         scope: draftScopeKey,
-        drafts: current?.scope === draftScopeKey ? { ...current.drafts, ...drafts } : drafts,
+        generation: draftGeneration,
+        drafts: current?.scope === draftScopeKey && current.generation === draftGeneration ? { ...drafts, ...current.drafts } : drafts,
       }))
-    }).catch(() => { if (active) setDraftNotice('Saved drafts are unavailable in this browser. Your form is still editable.') })
+    })().catch(() => { if (active) setDraftNotice('Saved drafts are unavailable in this browser. Your form is still editable.') })
     return () => { active = false }
-  }, [draftScopeKey, nominationTracks])
+  }, [draftScopeKey, nominationTracks, draftGeneration])
 
   const recordSavedDraft = (category: string, draft: TrackDraft) => {
-    if (!draftScopeKey || currentDraftScope.current !== draftScopeKey) return
+    if (!draftScopeKey || currentDraftScope.current !== draftScopeKey
+        || draftGeneration === undefined || currentDraftGeneration.current !== draftGeneration) return
     setDraftListing((current) => ({
       scope: draftScopeKey,
-      drafts: { ...(current?.scope === draftScopeKey ? current.drafts : {}), [category]: draft },
+      generation: draftGeneration,
+      drafts: { ...(current?.scope === draftScopeKey && current.generation === draftGeneration ? current.drafts : {}), [category]: draft },
     }))
   }
 
   const saveIndividualDraft = async () => {
-    if (!individualDraftKey || savingDraft || uploading) return
+    if (!individualDraftKey || draftGeneration === undefined || savingDraft || uploading) return
     const key = individualDraftKey
     setSavingDraft(true)
     setDraftNotice(null)
     try {
       const saved = await NominationDraftStore.save<IndividualNominationDraft>(key, {
         form: { ...uploadForm }, photo: projectImage, document: individualDocument,
-        approvalVersion: editingNomination?.approvalVersion,
-      })
+        approvalVersion: revisionSource?.approvalVersion,
+      }, draftGeneration)
       recordSavedDraft(uploadForm.category, saved)
-      if (currentDraftKey.current === key) {
+      if (currentDraftKey.current === key && currentDraftGeneration.current === draftGeneration) {
         setDraftNotice('Draft saved successfully.')
         notifications.show({ message: 'Draft saved successfully.', color: 'green', autoClose: 4000, className: 'dp-status-toast' })
       }
@@ -570,9 +589,8 @@ export function ProjectShowcase({ nominationMode = false, managementMode = false
   }
 
   const restoreDraft = (category: string, { data }: TrackDraft) => {
-    if (!draftScopeKey || uploading || savingDraft) return
-    if (editId && category !== editingNomination?.category) return
-    if (editId && data.approvalVersion !== editingNomination?.approvalVersion) {
+    if (!draftScopeKey || draftGeneration === undefined || uploading || savingDraft) return
+    if (editId && data.approvalVersion !== revisionSource?.approvalVersion) {
       setDraftNotice('This draft belongs to an earlier revision. Edit the current nomination to save a new draft.')
       return
     }
@@ -584,7 +602,7 @@ export function ProjectShowcase({ nominationMode = false, managementMode = false
       setPhotoToCrop(null)
       setIndividualPreviewOpened(false)
     } else {
-      setTeamRestore({ scope: draftScopeKey, data: { ...data, category } })
+      setTeamRestore({ scope: draftScopeKey, generation: draftGeneration, data: { ...data, category } })
     }
     setDraftNotice('Draft restored. Review the information before submitting.')
   }
@@ -594,22 +612,24 @@ export function ProjectShowcase({ nominationMode = false, managementMode = false
     setSubmittedNomination(idea)
     queryClient.setQueryData<Idea[]>(['my-nomination-slots', user?.id], (current) =>
       [idea, ...(current ?? []).filter((item) => item.id !== idea.id)])
+    void queryClient.invalidateQueries({ queryKey: ['nomination-inbox', user?.id, false] })
     void ownNominations.refetch()
   }
   useEffect(() => {
     if (!editId || !user || !canStartNomination) return
     let active = true
     setEditError(null)
-    setEditingNomination(null)
+    setLoadedRevision(null)
     void IdeaService.getIdea(editId).then((idea) => {
       if (!active) return
       if (idea.createdBy !== user.id || idea.approvalStatus !== 'rejected') throw new Error('Only your rejected nominations can be revised here.')
+      if (idea.superseded) throw new Error('A newer nomination has replaced this submission.')
       const sections = parseNominationDescription(idea.description)
       const formats = idea.projectAttachments?.find((item) => item.type === 'nomination')?.formattedAnswers
       const readAnswer = (index: 0 | 1 | 2) => formats
         ? answerText(formats[index])
         : sections.find((section) => section.heading === nominationHeadings[index])?.body ?? ''
-      setEditingNomination(idea)
+      setLoadedRevision(idea)
       setUploadForm({
         hackathonId: idea.hackathonId,
         category: idea.category,
@@ -752,7 +772,7 @@ export function ProjectShowcase({ nominationMode = false, managementMode = false
     setCartOpened(false)
     setVoteError(null)
     setSelectedIds(new Set())
-    setPendingDeletion([])
+    setPendingDeletion(null)
     setDeleteError(null)
     setDeleteSuccess(null)
     void loadProjects()
@@ -765,8 +785,8 @@ export function ProjectShowcase({ nominationMode = false, managementMode = false
   const documentError = validateNominationPdf(individualDocument)
 
   const handleProjectUpload = async (confirmed = false) => {
-    if (!user || !canNominate || uploading || uploadBusy.current || (!editId && (ownNominations.isPending || ownNominations.isError || existingNomination))) return
-    if (editId && editingNomination?.id !== editId) return
+    if (!user || !canNominate || uploading || uploadBusy.current || ownNominations.isPending || ownNominations.isError || replacementBlocked) return
+    if (editId && revisionSource?.id !== editId) return
     const missing = [
       !uploadForm.hackathonId && 'award',
       !uploadForm.category.trim() && 'award category',
@@ -832,11 +852,13 @@ export function ProjectShowcase({ nominationMode = false, managementMode = false
       }
       const submitted = editingNomination
         ? await IdeaService.updateIdea(editingNomination.id, { ...payload, approvalVersion: editingNomination.approvalVersion })
-        : await IdeaService.createIdea(payload)
+        : await IdeaService.createIdea({ ...payload, ...(revisionSource && {
+          replaces: { id: revisionSource.id, version: revisionSource.approvalVersion ?? 0 },
+        }) })
       markNominationSubmitted(submitted)
       setIndividualPreviewOpened(false)
       if (individualDraftKey) {
-        await NominationDraftStore.remove(individualDraftKey).catch(() => {
+        await NominationDraftStore.remove(individualDraftKey, draftGeneration).catch(() => {
           setSubmissionDraftWarning('Your nomination was submitted, but its saved draft could not be removed.')
         })
       }
@@ -1042,34 +1064,47 @@ export function ProjectShowcase({ nominationMode = false, managementMode = false
     }
   }
 
-  const requestDeletion = (targets: Project[]) => {
-    if (!canDelete || deletingRef.current || !targets.length) return
+  const requestDeletion = (targets: Project[] | 'all') => {
+    if (!canDelete || deletingRef.current || (targets !== 'all' && !targets.length)) return
     setDeleteError(null)
     setDeleteSuccess(null)
     setPendingDeletion(targets)
   }
 
   const confirmDeletion = async () => {
-    if (!canDelete || deletingRef.current || !pendingDeletion.length) return
+    if (!canDelete || deletingRef.current || !pendingDeletion) return
     deletingRef.current = true
     setDeleting(true)
     setDeleteError(null)
-    const ids = pendingDeletion.map((project) => project.id)
+    const all = pendingDeletion === 'all'
+    const ids = pendingDeletion === 'all' ? [] : pendingDeletion.map((project) => project.id)
+    let deletedCount = ids.length
     const sequence = loadSequence.current
     try {
-      if (ids.length === 1) await IdeaService.deleteIdea(ids[0])
+      if (all) {
+        const result = await IdeaService.deleteAllNominations()
+        deletedCount = result.deletedCount
+        await queryClient.cancelQueries({ queryKey: ['nomination-draft-state'] })
+        queryClient.setQueryData(['nomination-draft-state'], { generation: result.generation })
+        void NominationDraftStore.clearEarlierGenerations(result.generation).catch(() => {})
+      } else if (ids.length === 1) await IdeaService.deleteIdea(ids[0])
       else await IdeaService.deleteIdeas(ids)
+      for (const key of ['nomination-inbox', 'my-nomination-slots', 'judging-ideas']) {
+        void queryClient.invalidateQueries({ queryKey: [key] })
+      }
       if (sequence !== loadSequence.current) return
       // Apply only committed deletions; all counts and the vote cart derive from this list.
       const deletedIds = new Set(ids)
-      setProjects((current) => current.filter((project) => !deletedIds.has(project.id)))
-      setSelectedIds((current) => new Set([...current].filter((id) => !deletedIds.has(id))))
-      if (selectedProject && deletedIds.has(selectedProject.id)) {
+      setProjects((current) => all ? [] : current.filter((project) => !deletedIds.has(project.id)))
+      setSelectedIds((current) => new Set(all ? [] : [...current].filter((id) => !deletedIds.has(id))))
+      if (selectedProject && (all || deletedIds.has(selectedProject.id))) {
         setSelectedProject(null)
         setModalOpened(false)
       }
-      setPendingDeletion([])
-      setDeleteSuccess(language === 'zh' ? `已删除 ${ids.length} 条提名。` : `Deleted ${ids.length} nomination(s).`)
+      setPendingDeletion(null)
+      setDeleteSuccess(language === 'zh'
+        ? `已删除 ${deletedCount} 条提名。${all ? '旧草稿会在用户下次同步时清除。' : ''}`
+        : `Deleted ${deletedCount} nomination(s).${all ? ' Saved drafts will be cleared when users next sync.' : ''}`)
     } catch (error) {
       if (sequence !== loadSequence.current) return
       setDeleteError(error instanceof Error ? error.message : (language === 'zh' ? '删除失败，请重试。' : 'Unable to delete nominations. Please try again.'))
@@ -1121,8 +1156,13 @@ export function ProjectShowcase({ nominationMode = false, managementMode = false
           {eligibility.isError && <Alert color="red">Unable to verify your nomination eligibility. Please refresh.</Alert>}
           {eligibility.data && !canNominate && (canStartNomination || editId) && <Alert color="orange">{eligibility.data.message || 'Your signed-in account could not be matched to an eligible employee and Nominating HoD.'}</Alert>}
           {editError && <Alert color="red">{editError}</Alert>}
-          {editId && canStartNomination && !editingNomination && !editError && <Text>Loading your submitted nomination…</Text>}
-          {editingNomination?.approvalReason && <Alert color="orange" title="Requested Changes">{editingNomination.approvalReason}</Alert>}
+          {editId && canStartNomination && !revisionSource && !editError && <Text>Loading your submitted nomination…</Text>}
+          {revisionSource?.approvalReason && <Alert color="orange" title="Requested Changes" styles={{ message: { color: 'white' } }}>
+            {revisionSource.approvalReason}
+          </Alert>}
+          {revisionSource && !editingNomination && <Alert color="blue" styles={{ message: { color: 'white' } }}>
+            Submitting in this track will replace your rejected nomination. You can still view the original in My Nominations.
+          </Alert>}
           <div className="dp-flow-heading">
             <div>
               <Title id="track-choice-title" order={2}>Start Your Nomination</Title>
@@ -1136,7 +1176,7 @@ export function ProjectShowcase({ nominationMode = false, managementMode = false
             </Button.Group>
           </div>
 
-          {!editId && existingNomination ? <Alert color="grape" className="dp-existing-nomination" title="Nomination Already Submitted">
+          {replacementBlocked ? <Alert color="grape" className="dp-existing-nomination" title="Nomination Already Submitted">
             <Group justify="space-between">
               <Text>You can submit one Individual nomination and one Team nomination per award, across all categories.</Text>
               <Button onClick={() => navigate('/my-nominations')}>My Nominations</Button>
@@ -1145,11 +1185,10 @@ export function ProjectShowcase({ nominationMode = false, managementMode = false
             <Button onClick={() => navigate('/my-nominations')}>My Nominations</Button>
           </Group>}
 
-          {savedDrafts && nominationTracks.some((track) => savedDrafts[track.value]
-            && (!editId || track.value === editingNomination?.category)) && <Stack gap="xs" mb="md">
+          {savedDrafts && nominationTracks.some((track) => savedDrafts[track.value]) && <Stack gap="xs" mb="md">
             {nominationTracks.map((track) => {
               const draft = savedDrafts[track.value]
-              if (!draft || (editId && track.value !== editingNomination?.category)) return null
+              if (!draft) return null
               return <Alert key={track.value} color="blue" styles={{ message: { color: 'white' } }}>
                 <Group role="group" aria-label={track.label} justify="space-between" gap="sm">
                   <Text fw={700}>
@@ -1162,6 +1201,7 @@ export function ProjectShowcase({ nominationMode = false, managementMode = false
             })}
           </Stack>}
           {draftNotice && <Text c="white" role="status">{draftNotice}</Text>}
+          {draftState.isError && <Text c="white" role="status">Unable to check saved drafts. Refresh to try again.</Text>}
 
           <div className="dp-nomination-tracks" role="radiogroup" aria-label="Nomination track">
             {nominationTracks.map((track) => {
@@ -1175,7 +1215,7 @@ export function ProjectShowcase({ nominationMode = false, managementMode = false
                   aria-checked={isSelected}
                   aria-controls="nomination-track-description nomination-form"
                   aria-expanded={isSelected}
-                  disabled={uploading || savingDraft || (Boolean(editId) && track.value !== editingNomination?.category)}
+                  disabled={uploading || savingDraft || (Boolean(editId) && (!revisionSource || replacementBlocked))}
                   onClick={() => changeNominationCategory(track.value)}
                 >
                   <span className="dp-nomination-track__topline">
@@ -1199,7 +1239,7 @@ export function ProjectShowcase({ nominationMode = false, managementMode = false
             </div>
           )}
 
-          {!editId && existingNomination ? null : !selectedNominationTrack ? (
+          {replacementBlocked ? null : !selectedNominationTrack ? (
             <div className="dp-track-gate" role="status">
               <Text fw={650}>Choose a track to begin</Text>
             </div>
@@ -1217,12 +1257,13 @@ export function ProjectShowcase({ nominationMode = false, managementMode = false
             </Alert>
           ) : user && ownNominations.isPending ? <Text role="status">Checking your existing nominations…</Text>
             : user && ownNominations.isError ? <Alert color="red">Unable to verify your existing nominations. <Button variant="subtle" onClick={() => void ownNominations.refetch()}>Retry</Button></Alert>
-            : editId && !editingNomination ? null : nominationType === 'team' && user ? (
-            <TeamNominationForm key={`${user.id}:${uploadForm.hackathonId}:${editingNomination?.id ?? 'new'}`}
+            : editId && !revisionSource ? null : nominationType === 'team' && user ? (
+            <TeamNominationForm key={`${user.id}:${uploadForm.hackathonId}:${editId ?? 'new'}`}
               user={user} hackathonId={uploadForm.hackathonId} category={uploadForm.category}
               onCategoryChange={changeNominationCategory}
-              canSubmit={canNominate} editing={editingNomination}
-              restoredDraft={teamRestore?.scope === draftScopeKey ? teamRestore.data : null}
+              canSubmit={canNominate} revisionSource={revisionSource}
+              restoredDraft={teamRestore?.scope === draftScopeKey && teamRestore?.generation === draftGeneration ? teamRestore?.data : null}
+              draftGeneration={draftGeneration ?? null}
               onDraftRestored={() => setTeamRestore(null)} onDraftSaved={recordSavedDraft}
               onSubmitted={markNominationSubmitted} />
           ) : (
@@ -1286,7 +1327,7 @@ export function ProjectShowcase({ nominationMode = false, managementMode = false
                           data={nominationTracks.map((track) => ({ value: track.value, label: track.label }))}
                           value={uploadForm.category}
                           allowDeselect={false}
-                          disabled={Boolean(editingNomination) || uploading || savingDraft}
+                          disabled={uploading || savingDraft}
                           onChange={(value) => {
                             if (value) changeNominationCategory(value)
                           }}
@@ -1339,14 +1380,14 @@ export function ProjectShowcase({ nominationMode = false, managementMode = false
                     {!individualDocument && editingNomination?.projectAttachments?.filter((item) => item.type === 'document').map((item) => <NominationEvidence key={item.storageKey ?? item.url} attachment={item} />)}
                   </div>
                   <Group justify="flex-end" align="center" pt="lg">
-                    <Button className="dp-primary-button" loading={savingDraft} disabled={uploading || !individualDraftKey}
+                    <Button className="dp-primary-button" loading={savingDraft} disabled={uploading || !individualDraftKey || draftGeneration === undefined}
                       onClick={() => void saveIndividualDraft()}>Save Draft</Button>
                     <Button
                       className="dp-primary-button"
                       rightSection={<IconArrowRight size={17} />}
                       onClick={() => void handleProjectUpload()}
                       loading={uploading}
-                      disabled={!canNominate || tooManyTags || Boolean(photoError || documentError) || Boolean(editId && editingNomination?.id !== editId)}
+                      disabled={!canNominate || tooManyTags || Boolean(photoError || documentError) || Boolean(editId && revisionSource?.id !== editId)}
                     >
                       {editingNomination ? 'Resubmit nomination' : 'Submit nomination'}
                     </Button>
@@ -1452,8 +1493,8 @@ export function ProjectShowcase({ nominationMode = false, managementMode = false
                 onClick={() => requestDeletion(projects.filter((project) => selectedIds.has(project.id)))}>
                 {language === 'zh' ? `删除选中（${selectedIds.size}）` : `Delete selected (${selectedIds.size})`}
               </Button>
-              <Button color="red" leftSection={<IconTrash size={16} />} disabled={loading || loadError || deleting || !projects.length}
-                onClick={() => requestDeletion(projects)}>
+              <Button color="red" leftSection={<IconTrash size={16} />} disabled={loading || deleting}
+                onClick={() => requestDeletion('all')}>
                 {language === 'zh' ? `一键删除全部（${projects.length}）` : `Delete all (${projects.length})`}
               </Button>
             </Group>
@@ -1701,8 +1742,8 @@ export function ProjectShowcase({ nominationMode = false, managementMode = false
         </Modal>
 
         <Modal
-          opened={canDelete && pendingDeletion.length > 0}
-          onClose={() => { if (!deleting) setPendingDeletion([]) }}
+          opened={canDelete && pendingDeletion !== null}
+          onClose={() => { if (!deleting) setPendingDeletion(null) }}
           title={language === 'zh' ? '确认删除提名' : 'Confirm Nomination Deletion'}
           centered
           closeOnClickOutside={false}
@@ -1711,15 +1752,18 @@ export function ProjectShowcase({ nominationMode = false, managementMode = false
           classNames={{ content: 'dp-candidate-modal', header: 'dp-candidate-modal-header' }}
         >
           <Stack>
-            <Text>{language === 'zh'
-              ? `即将永久删除 ${pendingDeletion.length} 条提名及其关联的投票、评论和评分，无法撤销。`
-              : `Permanently delete ${pendingDeletion.length} nomination(s) and their votes, comments and scores? This cannot be undone.`}</Text>
+            <Text>{pendingDeletion === 'all'
+              ? (language === 'zh' ? '永久删除所有活动中各状态的提名、关联的投票、评论和评分，并清除所有已保存的草稿。此操作无法撤销。'
+                : 'Permanently delete every nomination in every award, including pending and rejected nominations, their votes, comments and scores, and all saved drafts? This cannot be undone.')
+              : (language === 'zh'
+                ? `即将永久删除 ${pendingDeletion?.length ?? 0} 条提名及其关联的投票、评论和评分，无法撤销。`
+                : `Permanently delete ${pendingDeletion?.length ?? 0} nomination(s) and their votes, comments and scores? This cannot be undone.`)}</Text>
             <Stack gap="xs" mah={200} style={{ overflowY: 'auto' }}>
-              {pendingDeletion.map((project) => <Text key={project.id} size="sm" translate="no" style={{ overflowWrap: 'anywhere' }}>{project.title} · {project.category}</Text>)}
+              {Array.isArray(pendingDeletion) && pendingDeletion.map((project) => <Text key={project.id} size="sm" translate="no" style={{ overflowWrap: 'anywhere' }}>{project.title} · {project.category}</Text>)}
             </Stack>
             {deleteError && <Text c="red.3" role="alert">{deleteError}</Text>}
             <Group justify="flex-end">
-              <Button variant="default" disabled={deleting} onClick={() => setPendingDeletion([])}>{language === 'zh' ? '取消' : 'Cancel'}</Button>
+              <Button variant="default" disabled={deleting} onClick={() => setPendingDeletion(null)}>{language === 'zh' ? '取消' : 'Cancel'}</Button>
               <Button color="red" loading={deleting} onClick={() => void confirmDeletion()}>{language === 'zh' ? '确认删除' : 'Confirm delete'}</Button>
             </Group>
           </Stack>

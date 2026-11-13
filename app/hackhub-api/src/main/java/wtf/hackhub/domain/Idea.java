@@ -78,6 +78,8 @@ public class Idea {
 	private String approvalReviewerName;
 	@Column(name = "approval_version", nullable = false)
 	private int approvalVersion;
+	@Column(nullable = false)
+	private boolean superseded;
 
 	@Column(name = "created_at", nullable = false, updatable = false)
 	private Instant createdAt = Instant.now();
@@ -180,6 +182,8 @@ public class Idea {
 	public Instant getApprovalReviewedAt() { return approvalReviewedAt; }
 	public String getApprovalReviewerName() { return approvalReviewerName; }
 	public int getApprovalVersion() { return approvalVersion; }
+	public boolean isSuperseded() { return superseded; }
+	public void markSuperseded() { superseded = true; }
 
 	public UUID getId() {
 		return id;

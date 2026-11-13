@@ -20,4 +20,13 @@ public class IdeaMutationLock {
 		long key = ideaId.getMostSignificantBits() ^ ideaId.getLeastSignificantBits();
 		jdbc.query("SELECT pg_advisory_xact_lock(?)", rs -> {}, key);
 	}
+
+	public void acquireForCreation() {
+		jdbc.query("SELECT pg_advisory_xact_lock_shared(73041, 1)", rs -> {});
+	}
+
+	public void acquireForCleanup() {
+		// The two-integer namespace is separate from the per-idea locks.
+		jdbc.query("SELECT pg_advisory_xact_lock(73041, 1)", rs -> {});
+	}
 }

@@ -3,6 +3,7 @@ package wtf.hackhub.infrastructure.persistence.idea;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import wtf.hackhub.domain.Idea;
@@ -23,6 +24,14 @@ public interface IdeaRepository extends JpaRepository<Idea, UUID> {
 	List<Idea> findByCreatedByOrderByCreatedAtDesc(UUID createdBy);
 	List<Idea> findByCreatedByAndHackathonId(UUID createdBy, UUID hackathonId);
 	List<Idea> findByApprovalHeadKeyInOrderByCreatedAtDesc(List<String> approvalHeadKeys);
+	List<Idea> findByApprovalStatusIsNotNullOrderByCreatedAtDesc();
+
+	@Query("select i.id from Idea i")
+	List<UUID> findAllIds();
+
+	@Modifying
+	@Query("delete from Idea")
+	int deleteEveryNomination();
 
 	@Query(value = "select i.* from ideas i where exists (select 1 from jsonb_array_elements("
 			+ "case when jsonb_typeof(i.project_attachments) = 'array' then i.project_attachments else '[]'::jsonb end) a "
