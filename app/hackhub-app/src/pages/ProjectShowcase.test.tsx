@@ -743,6 +743,32 @@ describe('ProjectShowcase', () => {
     expect(updateIdea).not.toHaveBeenCalled()
   })
 
+  it('keeps the individual draft when the gateway blocks submission', async () => {
+    const tags = '<script>alert(1)</script>, 客户价值'
+    listDrafts.mockResolvedValueOnce({ 'Customer Values': {
+      version: 1, savedAt: '2026-11-09T00:00:00Z',
+      data: {
+        form: { hackathonId: 'hackathon-1', category: 'Customer Values', executiveSummary: '客户价值 45%', achievementImpact: 'Business impact', cultureDemonstration: 'Culture example', technologies: tags },
+        photo: new File(['photo'], 'saved-photo.png', { type: 'image/png' }), document: null,
+      },
+    } })
+    createIdea.mockRejectedValueOnce(new ApiError(405, 'Error', 'Method Not Allowed', 'text/html'))
+    const user = userEvent.setup()
+    render(<MantineProvider env="test"><MemoryRouter initialEntries={['/nominate?type=individual']}><ProjectShowcase nominationMode /></MemoryRouter></MantineProvider>)
+    await user.click(await screen.findByRole('button', { name: 'Restore Draft' }))
+    await user.click(screen.getByRole('button', { name: 'Submit nomination' }))
+    const review = await screen.findByRole('dialog', { name: 'Review Individual Nomination' })
+    expect(within(review).getByText(tags)).toBeInTheDocument()
+    expect(review.querySelector('script')).not.toBeInTheDocument()
+    await user.click(within(review).getByRole('button', { name: 'Confirm and Submit' }))
+
+    expect(await within(review).findByRole('alert')).toHaveTextContent(/blocked \(HTTP 405\).*save a draft/i)
+    await user.click(within(review).getByRole('button', { name: 'Back to Edit' }))
+    expect(screen.getByRole('textbox', { name: /Executive Summary/ })).toHaveTextContent('客户价值 45%')
+    expect(screen.getByRole('textbox', { name: /Tags You Want to Add/ })).toHaveValue(tags)
+    expect(removeDraft).not.toHaveBeenCalled()
+  })
+
   it('keeps team submission successful and displays a warning when its draft cannot be removed', async () => {
     removeDraft.mockRejectedValueOnce(new Error('Draft storage unavailable'))
     getIdea.mockResolvedValueOnce({
@@ -990,7 +1016,7 @@ describe('ProjectShowcase', () => {
     }
     expect(screen.queryByText('Photo exceeds 50 MB. Please choose a smaller photo.')).not.toBeInTheDocument()
     const tagsInput = screen.getByRole('textbox', { name: /Tags You Want to Add/ })
-    await user.type(tagsInput, 'Customer、Innovation，Collaboration, Impact;Digital；Sixth、')
+    await user.type(tagsInput, 'AI,数字化,客户价值,创新,协同,超额第六个,第七个,第八个')
     expect(screen.getByRole('button', { name: 'Submit nomination' })).toBeDisabled()
     expect(createIdea).not.toHaveBeenCalled()
     await user.clear(tagsInput)

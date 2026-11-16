@@ -29,6 +29,7 @@ const uiTranslations: Record<string, string> = {
   "Unable to load attachment.": "附件加载失败。",
 
   "Submission failed": "提交失败",
+  "Your nomination was blocked (HTTP 405). Go back to review your text or save a draft. If the problem persists, contact an administrator.": "提名提交被拦截（HTTP 405）。请返回检查填写内容或保存草稿。如果问题仍然存在，请联系管理员。",
   "Details & comments": "详情与评论",
   "Loading comments…": "正在加载评论…",
   "Unable to load comments.": "评论加载失败。",

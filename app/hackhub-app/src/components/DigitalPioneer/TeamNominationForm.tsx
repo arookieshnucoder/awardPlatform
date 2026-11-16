@@ -11,7 +11,7 @@ import { LocalNominationAttachment } from './LocalNominationAttachment'
 import { NominationEvidence } from './NominationEvidence'
 import { NominationAnswerBody, NominationAnswerEditor } from './NominationAnswer'
 import { NominationReview } from './NominationReview'
-import { isNomineeDepartmentWarning } from '../../lib/nominationStatus'
+import { isNomineeDepartmentWarning, nominationGatewayError } from '../../lib/nominationStatus'
 import { formattedAnswers, teamAnswerHeadings, type AnswerFormats } from '../../lib/nominationFormatting'
 
 interface Props {
@@ -204,9 +204,10 @@ export function TeamNominationForm({
       setReviewOpened(false)
       onSubmitted(result, draftWarning)
     } catch (cause) {
+      const gatewayMessage = nominationGatewayError(cause)
       const message = cause instanceof Error ? cause.message : 'Unable to submit the team nomination. Please retry.'
-      if (isNomineeDepartmentWarning(message)) {
-        setReviewError(message)
+      if (gatewayMessage || isNomineeDepartmentWarning(message)) {
+        setReviewError(gatewayMessage ?? message)
       } else {
         notifications.show({ title: 'Submission failed', message, color: 'red', position: 'bottom-right' })
       }

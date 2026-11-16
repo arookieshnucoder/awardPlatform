@@ -12,16 +12,19 @@ const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? ''
 export class ApiError extends Error {
   readonly status: number
   readonly title: string
+  readonly mediaType?: string
 
   constructor(
     status: number,
     title: string,
-    message: string
+    message: string,
+    mediaType?: string,
   ) {
     super(message)
     this.name = 'ApiError'
     this.status = status
     this.title = title
+    this.mediaType = mediaType
   }
 }
 
@@ -78,7 +81,8 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
       title = problem.title ?? title
       detail = problem.detail ?? detail
     } catch {}
-    throw new ApiError(response.status, title, detail)
+    const mediaType = response.headers.get('content-type')?.split(';', 1)[0]?.trim().toLowerCase()
+    throw new ApiError(response.status, title, detail, mediaType)
   }
 
   if (response.status === 204) return undefined as T

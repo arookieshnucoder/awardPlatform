@@ -84,6 +84,21 @@ describe('api client', () => {
     await expect(api.get('/api/v1/broken')).rejects.toBeInstanceOf(ApiError)
   })
 
+  it('preserves the status and media type of an HTML response from an upstream gateway', async () => {
+    fetchMock.mockResolvedValueOnce(new Response('<html><title>Request blocked</title></html>', {
+      status: 405,
+      statusText: 'Method Not Allowed',
+      headers: { 'Content-Type': 'text/html; charset=utf-8' },
+    }))
+
+    await expect(api.post('/api/v1/hackathons/campaign/ideas', { title: 'Local test' })).rejects.toMatchObject({
+      status: 405,
+      mediaType: 'text/html',
+      message: 'Method Not Allowed',
+    })
+    expect(fetchMock).toHaveBeenCalledOnce()
+  })
+
   it('401 with successful refresh retries the request', async () => {
     tokenStore.setAccessToken('expired-token')
 

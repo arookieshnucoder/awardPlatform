@@ -1,4 +1,11 @@
 import type { Idea } from '../services/ideaService'
+import { ApiError } from './apiClient'
+
+export function nominationGatewayError(error: unknown) {
+  if (error instanceof ApiError && error.status === 405 && error.mediaType === 'text/html') {
+    return 'Your nomination was blocked (HTTP 405). Go back to review your text or save a draft. If the problem persists, contact an administrator.'
+  }
+}
 
 export function isTeamNomination(idea: Idea) {
   return Boolean(idea.teamId || idea.projectAttachments?.some((item) => item.type === 'nomination' && item.nominationType === 'team'))

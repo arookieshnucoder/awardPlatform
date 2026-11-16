@@ -1008,12 +1008,17 @@
 }
 .dp-answer-table-scroll td .dp-nomination-answer { margin: 0; }
 
-/* 下拉通过 Portal 渲染，单独设置深色背景及足够对比度。 */
-.dp-member-dropdown { background: #071b3b; border-color: #8da6ca; color: #eef5ff; }
-.dp-member-dropdown .mantine-Combobox-empty,
-.dp-member-dropdown .mantine-Text-root[data-size='xs'] { color: #bcc9dc; }
+/* The portal uses Mantine's global styles. Keep the background rule more
+   specific than Mantine's default so the CSS load order cannot change it. */
+.mantine-Combobox-dropdown.dp-member-dropdown {
+  background-color: #071b3b;
+  border-color: #8da6ca;
+  color: #eef5ff;
+}
+.dp-member-dropdown .mantine-Combobox-empty { color: #bcc9dc; }
 .dp-member-dropdown .mantine-Combobox-option[data-combobox-selected],
-.dp-member-dropdown .mantine-Combobox-option:hover { background: #244675; }
+.dp-member-dropdown .mantine-Combobox-option:hover,
+.dp-member-dropdown .mantine-Combobox-option:active { background-color: #244675; }
 
 .dp-flow-heading__hint {
   color: var(--dp-muted);

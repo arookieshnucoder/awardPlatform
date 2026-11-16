@@ -59,7 +59,7 @@ import { useNominationEligibility } from '../hooks/useNominationEligibility'
 import { NominationProgress } from '../components/DigitalPioneer/NominationProgress'
 import { NominationAnswerBody, NominationAnswerDetails, NominationAnswerEditor } from '../components/DigitalPioneer/NominationAnswer'
 import { NominationReview } from '../components/DigitalPioneer/NominationReview'
-import { isNomineeDepartmentWarning, isTeamNomination, nominationState, occupiesNominationSlot } from '../lib/nominationStatus'
+import { isNomineeDepartmentWarning, isTeamNomination, nominationGatewayError, nominationState, occupiesNominationSlot } from '../lib/nominationStatus'
 import { answerText, formattedAnswers, individualAnswerHeadings as nominationHeadings, type AnswerFormats, type FormattedAnswers } from '../lib/nominationFormatting'
 import { validateNominationPdf } from '../services/storageService'
 import { NominationEvidence } from '../components/DigitalPioneer/NominationEvidence'
@@ -872,9 +872,10 @@ export function ProjectShowcase({ nominationMode = false, managementMode = false
       setProjectImage(null)
       setUploadForm(emptyUploadForm())
     } catch (error) {
+      const gatewayMessage = nominationGatewayError(error)
       const message = error instanceof Error ? error.message : 'Unable to submit the nomination'
-      if (isNomineeDepartmentWarning(message)) {
-        setIndividualReviewError(message)
+      if (gatewayMessage || isNomineeDepartmentWarning(message)) {
+        setIndividualReviewError(gatewayMessage ?? message)
       } else {
         notifications.show({ title: 'Submission failed', message, color: 'red' })
       }

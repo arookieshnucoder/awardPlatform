@@ -127,12 +127,22 @@ RUN --mount=type=cache,target=/root/.m2 \
 
 COPY src ./src
 
+# Maven 3.3.1 resources can skip copying non-filtered files stamped at Unix epoch zero.
 RUN --mount=type=cache,target=/root/.m2 \
     --mount=type=secret,id=corporate-ca,required=false \
+    find src/main/resources -type f -exec touch {} + && \
     /usr/local/bin/mvn-build package -DskipTests -Dspotless.check.skip=true -q
 
-# Extract layered jar for faster subsequent image rebuilds
-RUN java -Djarmode=layertools -jar target/*.jar extract --destination target/extracted
+# Verify both directories used by the nomination and team search services are packaged.
+RUN set -eu; \
+    set -- /build/target/hackhub-api-*.jar; \
+    test "$#" -eq 1; \
+    cd "$(mktemp -d)"; \
+    jar xf "$1" BOOT-INF/classes/nomination-roster.json BOOT-INF/classes/team-member-directory.json; \
+    for resource in nomination-roster.json team-member-directory.json; do \
+        test -s "BOOT-INF/classes/$resource" || { echo "Missing JAR resource: $resource" >&2; exit 1; }; \
+        cmp "/build/src/main/resources/$resource" "BOOT-INF/classes/$resource"; \
+    done
 
 # Optional targets used by the Makefile. They keep verification on Java 21 even
 # when the host JDK is older. Neither target is part of the production image.
@@ -166,10 +176,17 @@ USER hackhub
 
 WORKDIR /app
 
-COPY --from=builder --chown=hackhub:hackhub /build/target/extracted/dependencies/ ./
-COPY --from=builder --chown=hackhub:hackhub /build/target/extracted/spring-boot-loader/ ./
-COPY --from=builder --chown=hackhub:hackhub /build/target/extracted/snapshot-dependencies/ ./
-COPY --from=builder --chown=hackhub:hackhub /build/target/extracted/application/ ./
+COPY --from=builder --chown=hackhub:hackhub --chmod=0444 /build/target/hackhub-api-*.jar ./hackhub-api.jar
+
+# Keep Flyway discovery independent of the layered application class loader.
+COPY --from=builder --chown=hackhub:hackhub /build/src/main/resources/db/migration/ /app/migrations/
+ENV SPRING_FLYWAY_LOCATIONS=filesystem:/app/migrations \
+    SPRING_FLYWAY_FAIL_ON_MISSING_LOCATIONS=true
+RUN set -eu; \
+    for migration in /app/migrations/V*__*.sql; do \
+        test -s "$migration"; \
+        test -r "$migration"; \
+    done
 
 EXPOSE 8080 8081
 
@@ -180,4 +197,4 @@ ENTRYPOINT ["java", \
   "-XX:+UseContainerSupport", \
   "-XX:MaxRAMPercentage=75.0", \
   "-Djava.security.egd=file:/dev/./urandom", \
-  "org.springframework.boot.loader.launch.JarLauncher"]
+  "-jar", "/app/hackhub-api.jar"]

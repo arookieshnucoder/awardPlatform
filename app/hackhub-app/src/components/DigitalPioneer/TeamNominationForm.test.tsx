@@ -9,7 +9,8 @@ import { IdeaService, type Idea } from '../../services/ideaService'
 import { StorageService } from '../../services/storageService'
 import { TeamMemberService } from '../../services/teamMemberService'
 import { NominationDraftStore, nominationDraftKey } from '../../services/nominationDraftStore'
-import { setNominationField } from '../../test/nominationFields'
+import { nominationFieldValue, setNominationField } from '../../test/nominationFields'
+import { ApiError } from '../../lib/apiClient'
 
 vi.mock('../../services/nominationDraftStore', async (importOriginal) => ({
   ...await importOriginal<typeof import('../../services/nominationDraftStore')>(),
@@ -135,6 +136,26 @@ describe('Team nomination form', () => {
     expect(within(alert).getByText(message)).toHaveStyle('color: var(--mantine-color-blue-9)')
     expect(onSubmitted).not.toHaveBeenCalled()
   })
+
+  it('keeps team answers editable when the gateway blocks submission', async () => {
+    const boundaryText = ['客户价值', '45%', '（空）', '（纯空格）', '%', '_', '*', "'", '" OR 1=1--', "'; DROP TABLE votes;--"].join('\n')
+    vi.mocked(IdeaService.createIdea).mockRejectedValueOnce(new ApiError(405, 'Error', 'Method Not Allowed', 'text/html'))
+    const view = show()
+    await fill(view, boundaryText)
+    fireEvent.click(screen.getByRole('button', { name: 'Submit nomination' }))
+    const review = await screen.findByRole('dialog', { name: 'Review Team Nomination' })
+    fireEvent.click(within(review).getByRole('button', { name: 'Confirm and Submit' }))
+
+    expect(await within(review).findByRole('alert')).toHaveTextContent(/blocked \(HTTP 405\).*save a draft/i)
+    expect(IdeaService.createIdea).toHaveBeenCalledWith(expect.objectContaining({
+      description: expect.stringContaining(boundaryText),
+    }))
+    fireEvent.click(within(review).getByRole('button', { name: 'Back to Edit' }))
+    expect(nominationFieldValue(screen.getByRole('textbox', { name: /Achievement Summary/ }))).toBe(boundaryText)
+    expect(NominationDraftStore.remove).not.toHaveBeenCalled()
+    expect(onSubmitted).not.toHaveBeenCalled()
+  })
+
   it('blocks a summary over 200 words before uploading or submitting', async () => {
     const view = show()
     await fill(view, Array.from({ length: 201 }, () => 'word').join(' '))
