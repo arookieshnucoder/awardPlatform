@@ -12,7 +12,8 @@ import static org.mockito.Mockito.*;
 class NomineeDirectoryTest {
 	ProfileRepository profiles = mock(ProfileRepository.class);
 	VotingParticipantRepository participants = mock(VotingParticipantRepository.class);
-	NomineeDirectory directory = new NomineeDirectory(profiles, participants);
+	NominationApprovalDirectory approvals = mock(NominationApprovalDirectory.class);
+	NomineeDirectory directory = new NomineeDirectory(profiles, participants, approvals);
 
 	@Test
 	void resolves_showcase_names_in_one_lookup_for_legacy_and_approved_nominations() {
@@ -76,6 +77,35 @@ class NomineeDirectoryTest {
 		assertThat(directory.resolveParticipant(profile)).isPresent().get()
 				.extracting(VotingParticipant::getOrganizationalUnit).isEqualTo("BD/DPA-SRE3");
 		verify(participants, never()).findAllByNormalizedName("otherperson");
+		verifyNoInteractions(approvals);
+	}
+
+	@Test
+	void verified_employee_can_match_one_roster_entry_after_email_and_display_name_fail() {
+		var profile = new Profile("alexandre.wang@example.test", "WANG Alexandre (BD/DPA-SRE3)", "hash");
+		var id = UUID.randomUUID();
+		ReflectionTestUtils.setField(profile, "id", id);
+		var entry = new VotingParticipant("1", "BD/DPA-SRE3", "WANG Alex", "alexwang");
+		assertThat(directory.resolveRosterParticipant(profile)).isEmpty();
+
+		when(approvals.employee(id)).thenReturn(Optional.of(new NominationApprovalDirectory.Employee(
+				profile.getEmail(), "nt", entry.getDisplayName(), entry.getOrganizationalUnit(), "HoD", "hod",
+				"hod@example.test", false)));
+		when(participants.findAllByDisplayNameAndOrganizationalUnit(entry.getDisplayName(), entry.getOrganizationalUnit()))
+				.thenReturn(List.of(entry));
+		assertThat(directory.resolveRosterParticipant(profile)).contains(entry);
+
+		when(approvals.employee(id)).thenReturn(Optional.of(new NominationApprovalDirectory.Employee(
+				"other@example.test", "nt", entry.getDisplayName(), entry.getOrganizationalUnit(), "HoD", "hod",
+				"hod@example.test", false)));
+		assertThat(directory.resolveRosterParticipant(profile)).isEmpty();
+
+		when(approvals.employee(id)).thenReturn(Optional.of(new NominationApprovalDirectory.Employee(
+				profile.getEmail(), "nt", entry.getDisplayName(), entry.getOrganizationalUnit(), "HoD", "hod",
+				"hod@example.test", false)));
+		when(participants.findAllByDisplayNameAndOrganizationalUnit(entry.getDisplayName(), entry.getOrganizationalUnit()))
+				.thenReturn(List.of(entry, new VotingParticipant("2", "BD/DPA-SRE3", "WANG Alex", "alexwang")));
+		assertThat(directory.resolveRosterParticipant(profile)).isEmpty();
 	}
 	@Test
 	void persists_authoritative_name_and_org_and_keeps_storage_key() {

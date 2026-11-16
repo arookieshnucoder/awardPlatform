@@ -20,7 +20,8 @@ class VoteIdeaUseCaseTest {
 	ProfileRepository profiles = mock(ProfileRepository.class);
 	VotingParticipantRepository roster = mock(VotingParticipantRepository.class);
 	IdeaMutationLock lock = mock(IdeaMutationLock.class);
-	VoteIdeaUseCase useCase = new VoteIdeaUseCase(ideas, votes, profiles, new NomineeDirectory(profiles, roster), lock);
+	VoteIdeaUseCase useCase = new VoteIdeaUseCase(ideas, votes, profiles,
+			new NomineeDirectory(profiles, roster, mock(NominationApprovalDirectory.class)), lock);
 	UUID voter, award = UUID.randomUUID();
 	Map<UUID, Idea> nominations = new HashMap<>();
 	Map<UUID, Profile> people = new HashMap<>();

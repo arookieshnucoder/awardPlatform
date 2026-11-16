@@ -26,7 +26,7 @@ class NominationApprovalServiceTest {
 	private final NominationApprovalDirectory approvals = mock(NominationApprovalDirectory.class);
 	private final NominationApprovalService service = new NominationApprovalService(approvals,
 			mock(IdeaRepository.class), profiles, mock(IdeaMutationLock.class), mock(JdbcTemplate.class),
-			new NomineeDirectory(profiles, roster));
+			new NomineeDirectory(profiles, roster, approvals));
 
 	@Test
 	void outside_roster_manager_cannot_nominate_but_keeps_assigned_review_access() {

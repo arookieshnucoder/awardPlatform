@@ -18,9 +18,12 @@ public class NomineeDirectory {
 	private static final Pattern NAME_TOKEN = Pattern.compile("[a-z0-9]+");
 	private final ProfileRepository profileRepository;
 	private final VotingParticipantRepository participantRepository;
-	public NomineeDirectory(ProfileRepository profiles, VotingParticipantRepository participants) {
+	private final NominationApprovalDirectory approvalDirectory;
+	public NomineeDirectory(ProfileRepository profiles, VotingParticipantRepository participants,
+			NominationApprovalDirectory approvalDirectory) {
 		profileRepository = profiles;
 		participantRepository = participants;
+		this.approvalDirectory = approvalDirectory;
 	}
 	public String enrichLegacy(String attachments, UUID creatorId) {
 		try {
@@ -139,13 +142,19 @@ public class NomineeDirectory {
 		if (byName.isPresent())
 			return byName;
 
-		return Optional.empty();
+		return approvalDirectory.employee(profile.getId())
+				.filter(employee -> employee.email().equalsIgnoreCase(profile.getEmail()))
+				.flatMap(employee -> uniqueParticipant(
+						participantRepository.findAllByDisplayNameAndOrganizationalUnit(employee.name(), employee.orgUnit())));
 	}
 
 	private Optional<VotingParticipant> uniqueParticipant(String normalizedName) {
 		if (normalizedName.isBlank())
 			return Optional.empty();
-		List<VotingParticipant> matches = participantRepository.findAllByNormalizedName(normalizedName);
+		return uniqueParticipant(participantRepository.findAllByNormalizedName(normalizedName));
+	}
+
+	private static Optional<VotingParticipant> uniqueParticipant(List<VotingParticipant> matches) {
 		return matches.size() == 1 && matches.get(0).getOrganizationalUnit() != null
 				&& !matches.get(0).getOrganizationalUnit().isBlank() ? Optional.of(matches.get(0)) : Optional.empty();
 	}

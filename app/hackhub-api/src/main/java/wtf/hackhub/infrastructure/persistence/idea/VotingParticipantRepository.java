@@ -8,4 +8,6 @@ import java.util.List;
 public interface VotingParticipantRepository extends JpaRepository<VotingParticipant, String> {
 
 	List<VotingParticipant> findAllByNormalizedName(String normalizedName);
+
+	List<VotingParticipant> findAllByDisplayNameAndOrganizationalUnit(String displayName, String organizationalUnit);
 }
