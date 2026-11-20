@@ -38,9 +38,27 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Build and push image
+        id: publish
         uses: docker/build-push-action@v7
         with:
           context: ${{ matrix.context }}
           platforms: linux/amd64
           push: true
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/hackhub:${{ matrix.component }}-${{ github.sha }}
+
+      - name: Package published frontend for offline deployment
+        if: matrix.component == 'app'
+        env:
+          IMAGE_REPO: ${{ secrets.DOCKERHUB_USERNAME }}/hackhub
+          IMAGE_DIGEST: ${{ steps.publish.outputs.digest }}
+        run: bash offline-release/package-frontend.sh
+
+      - name: Upload frontend deployment package
+        if: matrix.component == 'app'
+        uses: actions/upload-artifact@v4
+        with:
+          name: website-frontend-${{ github.sha }}
+          path: dist-offline/*
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 7

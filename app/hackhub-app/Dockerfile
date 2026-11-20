@@ -42,7 +42,7 @@ RUN --mount=type=secret,id=corporate-ca,required=false \
 COPY . .
 RUN npm run build
 
-FROM nginx:1.27-alpine
+FROM nginx:1.31.9-alpine
 
 COPY --from=builder /app/dist /usr/share/nginx/html
 # nginx.conf lives alongside this Dockerfile in the app/ build context
