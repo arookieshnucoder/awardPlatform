@@ -24,10 +24,18 @@ for attempt in {1..10}; do
 done
 
 docker image save -o "$package/app.tar" "$image"
-docker image inspect --format '{{.Id}}' "$image" >"$package/image.id"
+# Docker's classic and containerd image stores report different IDs for the same image.
+{
+  echo "$IMAGE_DIGEST"
+  docker buildx imagetools inspect --raw "$published" | jq -r \
+    '.manifests[]? | select(.platform.os == "linux" and .platform.architecture == "amd64") | .digest'
+  tar -xOf "$package/app.tar" manifest.json | jq -er --arg tag "$image" \
+    '.[] | select(.RepoTags | index($tag)) | .Config | split("/") | last | sub("\\.json$"; "") | "sha256:" + .'
+} | sort -u >"$package/image.ids"
+grep -Fxq "$(docker image inspect --format '{{.Id}}' "$image")" "$package/image.ids"
 printf '%s\n' "$GITHUB_SHA" >"$package/commit.sha"
 printf '%s\n' "$published" >"$package/published-image.txt"
 cp offline-release/deploy-frontend.sh "$package/deploy.sh"
-(cd "$package" && sha256sum app.tar image.id commit.sha published-image.txt > SHA256SUMS)
+(cd "$package" && sha256sum app.tar image.ids commit.sha published-image.txt > SHA256SUMS)
 tar -C "$stage" -czf "dist-offline/$release.tar.gz" "$release"
 (cd dist-offline && sha256sum "$release.tar.gz" > "$release.tar.gz.sha256")

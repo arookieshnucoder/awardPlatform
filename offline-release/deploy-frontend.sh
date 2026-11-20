@@ -22,8 +22,16 @@ set_app_image() {
     mv -- "$temporary" "$runtime/images.env"
 }
 
+running_matches() {
+  local container_id
+  [[ $(docker inspect --format '{{.Config.Image}}' hackhub-app) == "$1" ]] || return 1
+  if [[ $(docker inspect --format '{{.Image}}' hackhub-app) == "$(image_id "$1")" ]]; then return 0; fi
+  container_id=$(docker inspect --format '{{.Id}}' hackhub-app) && [[ -n $container_id ]] &&
+    [[ $(docker ps --no-trunc -q --filter "ancestor=$1" --filter 'name=^/hackhub-app$') == "$container_id" ]]
+}
+
 check_app() {
-  [[ $(docker inspect --format '{{.Image}}' hackhub-app) == "$1" ]] &&
+  running_matches "$1" &&
     compose exec -T app wget -qO /dev/null http://127.0.0.1/ &&
     compose exec -T app wget -qO /dev/null http://127.0.0.1/api/v1/public/awards
 }
@@ -31,7 +39,7 @@ check_app() {
 switch_to() {
   set_app_image "$1" && compose config --quiet &&
     compose up -d --no-deps --no-build --pull never --wait --wait-timeout 180 app &&
-    check_app "$2"
+    check_app "$1"
 }
 
 rollback() {
@@ -39,7 +47,7 @@ rollback() {
   previous=$(cat "$1/app.previous-image") &&
     previous_id=$(cat "$1/app.previous-id") &&
     [[ $(image_id "$previous") == "$previous_id" ]] &&
-    switch_to "$previous" "$previous_id" &&
+    switch_to "$previous" &&
     printf 'Frontend rollback complete. APP_IMAGE=%s\n' "$previous"
 }
 
@@ -64,25 +72,24 @@ if [[ ${1:-} == rollback ]]; then
 fi
 
 (cd "$package" && sha256sum -c SHA256SUMS)
-expected_id=$(cat "$package/image.id")
-[[ $expected_id =~ ^sha256:[a-f0-9]{64}$ ]] || die "Invalid image ID"
-running=$(docker inspect --format '{{.Config.Image}}' hackhub-app)
-running_id=$(docker inspect --format '{{.Image}}' hackhub-app)
-[[ "$running" == "$configured" && "$(image_id "$running")" == "$running_id" ]] ||
+running=$configured
+running_matches "$running" ||
   die "Running frontend differs from images.env or its local image tag"
+running_id=$(image_id "$running")
 if [[ "$running" == "$new_image" ]]; then
-  check_app "$expected_id" || die "Existing frontend failed its health check"
+  grep -Fxq "$running_id" "$package/image.ids" && check_app "$new_image" ||
+    die "Existing frontend failed its image or health check"
   echo "Frontend already deployed and healthy."
   exit
 fi
 
 docker load --input "$package/app.tar"
-[[ $(image_id "$new_image") == "$expected_id" ]] || die "Loaded frontend image ID mismatch"
+grep -Fxq "$(image_id "$new_image")" "$package/image.ids" || die "Loaded frontend image ID mismatch"
 backup_dir=$(mktemp -d "$backups/before-$release.XXXXXX")
 printf '%s\n' "$running" >"$backup_dir/app.previous-image"
 printf '%s\n' "$running_id" >"$backup_dir/app.previous-id"
 printf 'BACKUP=%s\nRollback command: bash %q rollback %q\n' "$backup_dir" "$package/deploy.sh" "$backup_dir"
-if switch_to "$new_image" "$expected_id"; then
+if switch_to "$new_image"; then
   printf 'Frontend deployed. APP_IMAGE=%s\n' "$new_image"
 else
   echo 'Frontend switch failed. Restoring previous image.' >&2
