@@ -7,11 +7,10 @@ stage=$(mktemp -d)
 package="$stage/$release"
 network="$release-smoke"
 postgres="$network-postgres"
-minio="$network-minio"
 api="$network-api"
 app="$network-app"
 cleanup() {
-  docker rm -fv "$app" "$api" "$minio" "$postgres" >/dev/null 2>&1 || true
+  docker rm -fv "$app" "$api" "$postgres" >/dev/null 2>&1 || true
   docker network rm "$network" >/dev/null 2>&1 || true
   rm -rf -- "$stage"
 }
@@ -63,16 +62,16 @@ docker run -d --name "$postgres" --network "$network" --network-alias postgres \
   --tmpfs /var/lib/postgresql/data -e POSTGRES_USER=hackhub -e POSTGRES_PASSWORD=hackhub \
   -v "$PWD/app/infra/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro" postgres:16-alpine
 wait_for "$postgres" pg_isready -h 127.0.0.1 -U hackhub
-docker run -d --name "$minio" --network "$network" --network-alias minio --tmpfs /data \
-  -e MINIO_ROOT_USER=hackhub -e MINIO_ROOT_PASSWORD=hackhub_secret minio/minio:latest server /data
 
 openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out "$stage/private.pem" 2>/dev/null
 openssl pkey -in "$stage/private.pem" -pubout -out "$stage/public.pem"
-docker run -d --name "$api" --network "$network" --network-alias api \
+# Only API startup, Flyway and HTTP routing are exercised here. The existing frontend
+# config still needs the minio hostname to resolve, so point it at an unused loopback port.
+docker run -d --name "$api" --network "$network" --network-alias api --add-host minio:127.0.0.1 \
   -e SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/hackhub -e MINIO_ENDPOINT=http://minio:9000 \
   -e "JWT_PRIVATE_KEY=$(cat "$stage/private.pem")" -e "JWT_PUBLIC_KEY=$(cat "$stage/public.pem")" "$api_image"
 wait_for "$api" sh -c 'wget -qO- http://127.0.0.1:8081/actuator/health | grep -q '\''"status":"UP"'\'''
-docker run -d --name "$app" --network "$network" "$app_image"
+docker run -d --name "$app" --network "$network" --add-host minio:127.0.0.1 "$app_image"
 wait_for "$app" wget -qO /dev/null http://127.0.0.1/
 wait_for "$app" wget -qO /dev/null http://127.0.0.1/api/v1/public/awards
 
