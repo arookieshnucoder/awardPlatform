@@ -57,11 +57,12 @@ export function CoreTeamMembersInput({ value, onChange, disabled }: Props) {
     const profile = results.find((result) => result.id === id)
     if (!profile) return
     // 仅替换光标所在成员，保留原有分号格式及其他已填成员。
-    const next = `${value.slice(0, token.start)}${profile.name}${value.slice(token.end)}`
+    const name = profile.selectionLabel ?? profile.name
+    const next = `${value.slice(0, token.start)}${name}${value.slice(token.end)}`
     onChange(next)
     combobox.closeDropdown()
     input.current?.focus()
-    requestAnimationFrame(() => input.current?.setSelectionRange(token.start + profile.name.length, token.start + profile.name.length))
+    requestAnimationFrame(() => input.current?.setSelectionRange(token.start + name.length, token.start + name.length))
   }
 
   return <Combobox store={combobox} onOptionSubmit={chooseMember}>

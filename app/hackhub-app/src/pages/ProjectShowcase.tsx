@@ -32,7 +32,6 @@ import {
   IconThumbUpFilled,
   IconBrandGithub,
   IconWorldWww,
-  IconSearch,
   IconUser,
   IconExternalLink,
   IconUpload,
@@ -62,6 +61,8 @@ import { NominationReview } from '../components/DigitalPioneer/NominationReview'
 import { isNomineeDepartmentWarning, isTeamNomination, nominationGatewayError, nominationState, occupiesNominationSlot } from '../lib/nominationStatus'
 import { answerText, formattedAnswers, individualAnswerHeadings as nominationHeadings, type AnswerFormats, type FormattedAnswers } from '../lib/nominationFormatting'
 import { validateNominationPdf } from '../services/storageService'
+import { NominationFilters, NominationTypeSwitch, type NominationFilterValues } from '../components/DigitalPioneer/NominationFilters'
+import { parseNominationDescription } from '../lib/nominationDescription'
 import { NominationEvidence } from '../components/DigitalPioneer/NominationEvidence'
 import { LocalNominationAttachment } from '../components/DigitalPioneer/LocalNominationAttachment'
 import { NominationDraftStore, nominationDraftKey, type NominationDraft } from '../services/nominationDraftStore'
@@ -112,13 +113,6 @@ interface Project {
   created_at: string
   submission_date: string
 }
-
-interface ProjectFilters {
-  search: string
-  category: string
-  department: string
-}
-
 const nominationStateZh = { approved: '审核通过', pending: '审核中', rejected: '审核未通过' }
 
 interface ProjectUploadForm {
@@ -155,36 +149,6 @@ const parseNominationTags = (value: string, separators = /[,，、;；]/): strin
 const tagHint = 'Add up to 5 tags. Use 、 , ， ; or ； to separate them.'
 
 const individualAnswerFields = ['executiveSummary', 'achievementImpact', 'cultureDemonstration'] as const
-
-function parseNominationDescription(description: string, nominationType: 'individual' | 'team' = 'individual') {
-  const sections: Array<{ heading: string; body: string }> = []
-  let heading = ''
-  let lines: string[] = []
-  for (const line of description.split(/\r?\n/)) {
-    const label = line.trim().replace(/^\*\*|\*\*$/g, '')
-    const index = /^Executive Summary(?: \(The Elevator Pitch\))?$/i.test(label) ? 0
-      : label.toLowerCase() === nominationHeadings[1].toLowerCase() ? 1
-      : /^How you demonstrate (?:Bosch|BD) China culture \(especially (?:in your|on you) applied category\)\s*\??$/i.test(label) ? 2
-      : undefined
-    // 团队历史提交使用不同的固定标题，仅在详情中规范显示，不改写保存的正文。
-    const teamHeading = nominationType === 'team'
-      ? /^Achievement Summary$/i.test(label) ? 'Achievement Summary'
-        : /^Details of Your Team Achievement in 2026 and Business Impact$/i.test(label) ? 'Details of Your Team Achievement in 2026 and Business Impact'
-        : /^How you demonstrate (?:Bosch|BD) China culture(?: \(especially (?:in your|on you) applied category\))?\s*\??$/i.test(label) ? 'How You Demonstrate BD China Culture'
-        : ''
-      : ''
-    const individualHeading = index === undefined ? '' : nominationHeadings[index]
-    if (teamHeading || individualHeading) {
-      if (heading || lines.join('\n').trim()) sections.push({ heading, body: lines.join('\n').trim() })
-      heading = teamHeading || individualHeading
-      lines = []
-    } else {
-      lines.push(line)
-    }
-  }
-  if (heading || lines.join('\n').trim()) sections.push({ heading, body: lines.join('\n').trim() })
-  return sections
-}
 
 function nominationSummary(description: string) {
   const sections = parseNominationDescription(description)
@@ -643,7 +607,7 @@ export function ProjectShowcase({ nominationMode = false, managementMode = false
     return () => { active = false }
   }, [editId, user, canStartNomination])
   const [assignedJudgeHackathons, setAssignedJudgeHackathons] = useState<Set<string>>(new Set())
-  const [filters, setFilters] = useState<ProjectFilters>({
+  const [filters, setFilters] = useState<NominationFilterValues>({
     search: '',
     category: '',
     department: '',
@@ -1410,8 +1374,8 @@ export function ProjectShowcase({ nominationMode = false, managementMode = false
             <div>
               <h1 className="dp-section-title dp-selection-title">{canDelete ? (language === 'zh' ? '提名管理' : 'Manage Nominees') : <>Meet This Year&apos;s Nominees</>}</h1>
             </div>
-            {!canDelete && <Button.Group className="dp-type-switch" aria-label="Voting nomination type">{(['team', 'individual'] as const).map((type) => <Button key={type} radius="xl" variant={votingType === type ? 'filled' : 'outline'} aria-pressed={votingType === type}
-              onClick={() => { setVotingType(type); setFilters((current) => ({ ...current, department: '' })) }}>{type === 'team' ? 'Team' : 'Individual'}</Button>)}</Button.Group>}
+            {!canDelete && <NominationTypeSwitch label="Voting nomination type" value={votingType}
+              onChange={(type) => { setVotingType(type); setFilters((current) => ({ ...current, department: '' })) }} />}
           </div>
         </div>
 
@@ -1424,54 +1388,7 @@ export function ProjectShowcase({ nominationMode = false, managementMode = false
           </ol>
         </section>}
 
-        <div className="dp-category-tabs" role="group" aria-label="Filter by award category">
-          <UnstyledButton
-            className="dp-category-tab"
-            data-active={filters.category === ''}
-            aria-pressed={filters.category === ''}
-            onClick={() => setFilters((current) => ({ ...current, category: '' }))}
-          >
-            <span>All nominees</span>
-            <span className="dp-category-tab__count">{typeProjects.length}</span>
-          </UnstyledButton>
-          {DIGITAL_PIONEER_TRACKS.map((track) => (
-            <UnstyledButton
-              key={track.value}
-              className="dp-category-tab"
-              data-active={filters.category === track.value}
-              aria-pressed={filters.category === track.value}
-              onClick={() => setFilters((current) => ({ ...current, category: track.value }))}
-            >
-              <span>{track.label}</span>
-              <span className="dp-category-tab__count">
-                {typeProjects.filter((project) => project.category === track.value).length}
-              </span>
-            </UnstyledButton>
-          ))}
-        </div>
-
-        {!nominationMode && (
-        <>
-        <Card className="dp-filter-shell" p="sm">
-          <SimpleGrid cols={{ base: 1, sm: 3 }} spacing="sm">
-              <TextInput
-                placeholder="Search nominees"
-                leftSection={<IconSearch size={16} />}
-                value={filters.search}
-                onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
-              />
-              <Select
-                placeholder="Filter by department"
-                aria-label="Filter by department"
-                data={departments}
-                value={filters.department || null}
-                onChange={(value) => setFilters(prev => ({ ...prev, department: value || '' }))}
-                searchable
-                clearable
-              />
-          </SimpleGrid>
-        </Card>
-
+        <NominationFilters filters={filters} onChange={setFilters} nominations={typeProjects} departments={departments} />
         {canDelete && <Stack gap="sm">
           <Group justify="space-between">
             <Checkbox
@@ -1642,8 +1559,6 @@ export function ProjectShowcase({ nominationMode = false, managementMode = false
             </div>
           )}
         </SimpleGrid>
-        </>
-        )}
 
         <Portal>
         {!canDelete && <Button

@@ -4,6 +4,7 @@ export interface TeamMemberMatch {
   id: string
   name: string
   orgUnit: string
+  selectionLabel?: string
 }
 
 export class TeamMemberService {

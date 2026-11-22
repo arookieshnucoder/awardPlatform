@@ -1550,6 +1550,20 @@
   background: #fff;
 }
 
+.dp-judge-material {
+  position: absolute;
+  inset: 0;
+  overflow-y: auto;
+  overflow-wrap: anywhere;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: #a5abb7 #eef0f4;
+  border-inline-end: 1px solid #e3e6eb;
+  padding-inline-end: 12px;
+}
+
+.dp-judge-material > * { flex-shrink: 0; }
+
 
 /* A non-modal vote basket keeps the candidate list interactive. */
 .dp-vote-cart-panel {
@@ -1743,25 +1757,25 @@
 
 /* Overview and voting controls: show the event background without a glass fill. */
 .dp-timeline, .dp-timeline-item,
-.dp-voting-page .dp-category-tabs,
-.dp-voting-page .dp-category-tab,
-.dp-voting-page .dp-category-tab[data-active='true'],
-.dp-voting-page .dp-category-tab__count,
-.dp-voting-page .dp-category-tab[data-active='true'] .dp-category-tab__count,
-.dp-voting-page .dp-filter-shell,
-.dp-voting-page .dp-filter-shell .mantine-Input-input {
+:is(.dp-voting-page, .dp-committee-page) .dp-category-tabs,
+:is(.dp-voting-page, .dp-committee-page) .dp-category-tab,
+:is(.dp-voting-page, .dp-committee-page) .dp-category-tab[data-active='true'],
+:is(.dp-voting-page, .dp-committee-page) .dp-category-tab__count,
+:is(.dp-voting-page, .dp-committee-page) .dp-category-tab[data-active='true'] .dp-category-tab__count,
+:is(.dp-voting-page, .dp-committee-page) .dp-filter-shell,
+:is(.dp-voting-page, .dp-committee-page) .dp-filter-shell .mantine-Input-input {
   background: transparent;
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
   box-shadow: none;
   color: #fff;
 }
-.dp-voting-page .dp-category-tab[data-active='true'] { box-shadow: inset 0 -2px #87dcff; color: #b4e8ff; }
-.dp-voting-page .dp-category-tab:hover,
-.dp-voting-page .dp-category-tab:focus-visible { color: #b4e8ff; outline: 1px solid #87dcff; outline-offset: -1px; }
-.dp-voting-page .dp-filter-shell .mantine-Input-input { border-color: rgb(255 255 255 / 40%); }
-.dp-voting-page .dp-filter-shell .mantine-Input-input::placeholder { color: #c9d8ee; opacity: 1; }
-.dp-voting-page .dp-filter-shell .mantine-Input-section { color: #c9d8ee; }
+:is(.dp-voting-page, .dp-committee-page) .dp-category-tab[data-active='true'] { box-shadow: inset 0 -2px #87dcff; color: #b4e8ff; }
+:is(.dp-voting-page, .dp-committee-page) .dp-category-tab:hover,
+:is(.dp-voting-page, .dp-committee-page) .dp-category-tab:focus-visible { color: #b4e8ff; outline: 1px solid #87dcff; outline-offset: -1px; }
+:is(.dp-voting-page, .dp-committee-page) .dp-filter-shell .mantine-Input-input { border-color: rgb(255 255 255 / 40%); }
+:is(.dp-voting-page, .dp-committee-page) .dp-filter-shell .mantine-Input-input::placeholder { color: #c9d8ee; opacity: 1; }
+:is(.dp-voting-page, .dp-committee-page) .dp-filter-shell .mantine-Input-section { color: #c9d8ee; }
 
 .dp-ballot-summary { padding: 12px; border: 1px solid rgb(255 255 255 / 25%); border-radius: 12px; }
 
@@ -1898,3 +1912,6 @@
   .dp-submit-check { stroke-dashoffset: 0; }
   .dp-submit-animation[data-state='success'] { transition: none; }
 }
+
+.dp-judge-answers .mantine-Title-root { color: #23252b; margin-bottom: 4px; }
+.dp-judge-answers section { color: #50545e; }

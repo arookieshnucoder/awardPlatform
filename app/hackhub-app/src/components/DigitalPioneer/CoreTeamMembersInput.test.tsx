@@ -30,6 +30,18 @@ describe('Core team member lookup', () => {
     expect(input).toHaveValue('Existing Member;Alice Zhang')
   })
 
+  it('preserves the department of the selected member when two roster names match', async () => {
+    vi.mocked(TeamMemberService.search).mockResolvedValue([
+      { ...alice, selectionLabel: 'Alice Zhang (BD/IT)' },
+      { id: 'alice-hr', name: 'Alice Zhang', orgUnit: 'BD/HR', selectionLabel: 'Alice Zhang (BD/HR)' },
+    ])
+    render(<Field />)
+    const input = screen.getByRole('textbox', { name: /Core Team Member/ })
+    fireEvent.change(input, { target: { value: '@Alice' } })
+    fireEvent.click(await screen.findByRole('option', { name: /Alice Zhang.*BD\/HR/ }))
+    expect(input).toHaveValue('Alice Zhang (BD/HR)')
+  })
+
   it('supports keyboard selection by name and keeps following members when replacing a middle token', async () => {
     render(<Field initial="First Member;@Ali;Last Member" />)
     const input = screen.getByRole('textbox', { name: /Core Team Member/ }) as HTMLTextAreaElement

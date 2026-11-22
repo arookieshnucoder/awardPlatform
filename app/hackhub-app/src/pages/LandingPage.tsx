@@ -22,7 +22,7 @@ const landingVideoSrc = '/media/tech-blue-loop.mp4'
 const landingPosterSrc = '/media/tech-blue-poster.jpg'
 
 export function LandingPage({ children }: { children?: ReactNode }) {
-  const { user, logout } = useAuthStore()
+  const { user } = useAuthStore()
   const { language, t } = useLanguage()
   const { canReview, canManage } = useAwardAccess()
   const nominationEligibility = useNominationEligibility()
@@ -125,13 +125,11 @@ export function LandingPage({ children }: { children?: ReactNode }) {
             </Menu.Target>
             <Menu.Dropdown>
               <Menu.Item component={Link} to="/my-nominations">My nominations</Menu.Item>
+              <Menu.Item component={Link} to="/projects?view=voting-records" onClick={checkVotingEntry}>My voting records</Menu.Item>
               {nominationEligibility.data?.canReview && <Menu.Item component={Link} to="/nomination-approvals">HoD approvals</Menu.Item>}
               {canReview && <Menu.Item component={Link} to="/awards">{canManage ? (language === 'zh' ? '评选管理' : 'Award management') : (language === 'zh' ? '组委会评分' : 'Committee scoring')}</Menu.Item>}
               {user.role === 'admin' && <Menu.Item component={Link} to="/admin/nominees">{language === 'zh' ? '提名管理' : 'Manage nominees'}</Menu.Item>}
               {canManage && <Menu.Item component={Link} to="/admin/users">{t('sidebar.manageUsers')}</Menu.Item>}
-              <Menu.Item component={Link} to="/projects?view=voting-records" onClick={checkVotingEntry}>My voting records</Menu.Item>
-              <Menu.Item component={Link} to="/profile">{t('header.profile')}</Menu.Item>
-              <Menu.Item color="red" onClick={() => void logout()}>{t('header.logout')}</Menu.Item>
             </Menu.Dropdown>
           </Menu>}
         </Group>

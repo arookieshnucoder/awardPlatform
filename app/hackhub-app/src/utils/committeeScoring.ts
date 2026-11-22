@@ -4,6 +4,20 @@ import type { JudgeScore, ScoreSummary } from '../services/judgingService'
 import type { VotingCriteria } from '../services/votingService'
 import { IdeaService } from '../services/ideaService'
 import { getAllPages } from '../services/pagination'
+import { isTeamNomination } from '../lib/nominationStatus'
+import type { NominationFilterValues } from '../components/DigitalPioneer/NominationFilters'
+
+export function nominationDepartment(idea: Idea): string {
+  return idea.projectAttachments?.find((attachment) => attachment.type === 'nomination')?.nomineeOrgCode?.split('-')[0] ?? ''
+}
+
+export function matchesNominationFilters(idea: Idea, filters: NominationFilterValues): boolean {
+  if (filters.category && filters.category !== idea.category) return false
+  if (filters.department && filters.department !== nominationDepartment(idea)) return false
+  const name = idea.projectAttachments?.find((attachment) => attachment.type === 'nomination')?.name
+  const search = filters.search.toLowerCase()
+  return [idea.title, idea.description, name, nominationDepartment(idea)].some((value) => value?.toLowerCase().includes(search))
+}
 
 export function officialCriteria(criteria: VotingCriteria[]): boolean {
   return criteria.length === 3 && [1, 2, 3].every((slot) => criteria.some((item) => item.name === `DPA track criterion ${slot}`))
@@ -33,7 +47,7 @@ export function savedEvaluation(scores: JudgeScore[]) {
 }
 
 export function criteriaForNomination(criteria: VotingCriteria[], idea: Idea): VotingCriteria[] {
-  const type = idea.teamId ? 'team' : 'individual'
+  const type = isTeamNomination(idea) ? 'team' : 'individual'
   const track = getDigitalPioneerTracks(type).find((item) => item.value === normalizeDigitalPioneerTrack(idea.category, idea.tags ?? []))
   if (!track || !officialCriteria(criteria)) return criteria
   return [...criteria].sort((a, b) => a.name.localeCompare(b.name)).map((criterion, index) => {

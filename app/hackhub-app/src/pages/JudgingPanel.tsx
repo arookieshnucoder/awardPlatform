@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useId, useState } from 'react'
 import type { ReactElement } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import {
   ActionIcon,
   Alert,
@@ -14,9 +14,9 @@ import {
   Group,
   Loader,
   Modal,
-  Progress,
-  Select,
-  NumberInput,
+  Popover,
+  Input,
+  NativeSelect,
   Stack,
   Text,
   Textarea,
@@ -24,22 +24,25 @@ import {
   Title,
   Tooltip,
   UnstyledButton,
+  VisuallyHidden,
 } from '@mantine/core'
 import {
   IconAlertCircle,
   IconArrowLeft,
-  IconCheck,
+  IconChevronDown,
+  IconChevronUp,
   IconClipboardCheck,
   IconExternalLink,
-  IconScale,
+  IconInfoCircle,
   IconTrophy,
 } from '@tabler/icons-react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { notifications } from '@mantine/notifications'
-import { DIGITAL_PIONEER_RECOMMENDATIONS, DIGITAL_PIONEER_TRACKS, normalizeDigitalPioneerTrack } from '../config/digitalPioneer'
+import { DIGITAL_PIONEER_TRACKS, normalizeDigitalPioneerTrack } from '../config/digitalPioneer'
+import type { NominationType } from '../config/digitalPioneer'
 import { useNominationEligibility } from '../hooks/useNominationEligibility'
 import { useAuthStore } from '../store/authStore'
-import { loadAllNominations, officialCriteria, savedEvaluation, criteriaForNomination } from '../utils/committeeScoring'
+import { loadAllNominations, officialCriteria, savedEvaluation, criteriaForNomination, nominationDepartment, matchesNominationFilters } from '../utils/committeeScoring'
 import type { JudgeScore } from '../services/judgingService'
 import type { Idea, ProjectAttachment } from '../services/ideaService'
 import { StorageService } from '../services/storageService'
@@ -47,21 +50,25 @@ import { JudgingService } from '../services/judgingService'
 import { VotingService } from '../services/votingService'
 import type { VotingCriteria } from '../services/votingService'
 import { PermissionService } from '../utils/permissions'
-import { useLanguage } from '../contexts/LanguageContext'
-import { translateUiText } from '../contexts/uiTranslations'
+import { parseNominationDescription } from '../lib/nominationDescription'
+import { isTeamNomination } from '../lib/nominationStatus'
+import { NominationAnswerDetails } from '../components/DigitalPioneer/NominationAnswer'
+import { NominationFilters, NominationTypeSwitch, type NominationFilterValues } from '../components/DigitalPioneer/NominationFilters'
 import { NominationEvidence } from '../components/DigitalPioneer/NominationEvidence'
 import './DigitalPioneer.css'
 
 interface IdeaScores {
-  [criteriaId: string]: number | string
+  [criteriaId: string]: number | ''
 }
 
 interface ScoreSubmission {
   ideaId: string
   scores: IdeaScores
-  recommendation: string
   comment: string
 }
+
+const scoreOptions = [{ value: '', label: 'Select score', disabled: true },
+  ...Array.from({ length: 10 }, (_, index) => String(index + 1))]
 
 function getScoreTone(score: number): string {
   if (score >= 9) return 'grape'
@@ -120,8 +127,8 @@ function JudgingImage({ attachment }: { attachment: ProjectAttachment }) {
 interface IdeaJudgingCardProps {
   idea: Idea
   criteria: VotingCriteria[]
-  onDelete: () => void
   onSubmit: (submission: ScoreSubmission) => void
+  onCollapse?: () => void
   isSubmitting: boolean
   alreadyScored: boolean
   savedScores: JudgeScore[]
@@ -132,22 +139,20 @@ function IdeaJudgingCard({
   idea,
   criteria,
   onSubmit,
-  onDelete,
+  onCollapse,
   isSubmitting,
   alreadyScored,
   savedScores,
   canSubmitRating,
 }: IdeaJudgingCardProps): ReactElement {
-  const { language } = useLanguage()
+  const scoreId = useId()
   const nominee = idea.projectAttachments?.find((attachment) => attachment.type === 'nomination')
   const images = (idea.projectAttachments ?? []).filter(isImageAttachment)
   const saved = savedEvaluation(savedScores)
   const [scores, setScores] = useState<IdeaScores>(() =>
     Object.fromEntries(criteria.map((criterion) => [criterion.id, saved.scores[criterion.id] ?? '']))
   )
-  const [recommendation, setRecommendation] = useState<string | null>(saved.recommendation)
   const [comment, setComment] = useState(saved.comment)
-  const [confirmDelete, setConfirmDelete] = useState(false)
 
   const weightedScore = criteria.reduce(
     (total, criterion) => total + Number(scores[criterion.id] || 0) * (criterion.weight / 100),
@@ -155,43 +160,40 @@ function IdeaJudgingCard({
   )
   const canSubmit = canSubmitRating && criteria.length > 0
     && criteria.every((criterion) => Number.isInteger(scores[criterion.id]) && Number(scores[criterion.id]) >= 1 && Number(scores[criterion.id]) <= 10)
-    && recommendation !== null
 
   return (
-    <Card className="dp-judge-shell" p={{ base: 'lg', md: 32 }}>
-      <Grid gutter={{ base: 24, md: 38 }}>
+    <Card className="dp-judge-shell" p={{ base: 'lg', md: 32 }} pos="relative">
+      {onCollapse && <ActionIcon variant="subtle" disabled={isSubmitting} aria-expanded
+        pos="absolute" top={24} right={24} style={{ zIndex: 1 }}
+        aria-label={`Collapse rating for ${idea.title}`} onClick={onCollapse}>
+        <IconChevronUp size={18} />
+      </ActionIcon>}
+      <Grid gutter={{ base: 24, md: 38 }} mt={onCollapse ? { base: 'xl', lg: 0 } : undefined}>
         <Grid.Col span={{ base: 12, lg: 4 }} style={{ display: 'flex', minWidth: 0 }}>
           <Box pos="relative" w="100%" mih={{ base: 540, lg: 0 }}>
-            <Stack gap="md" pos="absolute" top={0} bottom={0} left={0} right={0}>
-              <Group align="flex-start" wrap="nowrap" gap="sm" style={{ flexShrink: 0 }}>
-                <Stack gap="md" style={{ flex: 1, minWidth: 0, maxHeight: images.length ? 112 : undefined, overflowY: 'auto', overflowWrap: 'anywhere' }}>
+            <Stack gap="md" className="dp-judge-material" role="region" aria-label="Nomination details" tabIndex={0}>
+              <Group align="flex-start" wrap="nowrap" gap="sm">
+                <Stack gap="md" style={{ flex: 1, minWidth: 0 }}>
                   <Group gap="xs">
                     <Badge variant="light" color="grape">{idea.category}</Badge>
-                    {alreadyScored ? (
-                      <Badge color="teal" variant="light" leftSection={<IconCheck size={12} />}>Recorded</Badge>
-                    ) : null}
                   </Group>
                   <Title order={3}>{idea.title}</Title>
                 </Stack>
-                {images.length > 0 && <Stack gap="xs" w={96} h={112} style={{ flexShrink: 0, overflowY: 'auto' }}>
+                {images.length > 0 && <Stack gap="xs" w={96} style={{ flexShrink: 0 }}>
                   {images.map((attachment) => <JudgingImage key={attachment.storageKey || attachment.url} attachment={attachment} />)}
                 </Stack>}
               </Group>
-              <Stack gap="md" tabIndex={0} aria-label="Nomination details"
-                style={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowWrap: 'anywhere', paddingRight: 8 }}>
-                <Text size="sm" c="dimmed" style={{ whiteSpace: 'pre-line' }}>
-                  {idea.description}
-                </Text>
-                <div className="dp-fieldset">
-                  <Text size="sm"><b>Nominee:</b> {nominee?.name ?? 'Not provided'}</Text>
-                  <Text size="sm"><b>Org. code:</b> {nominee?.nomineeOrgCode ?? 'Not provided'}</Text>
-                  <Text size="sm"><b>Position:</b> {nominee?.nomineePosition ?? 'Not provided'}</Text>
-                  <Text size="sm"><b>Nominating HoD:</b> {nominee?.nominatingHead ?? 'Not provided'}</Text>
-                </div>
-                <Group gap="xs">
-                  {idea.tags.slice(0, 4).map((tag) => <Badge key={tag} size="sm" variant="outline">{tag}</Badge>)}
-                </Group>
-                <Stack gap="xs" mt="auto">
+              <Stack gap="md">
+                <Stack gap="md" className="dp-judge-answers">
+                  {nominee?.formattedAnswers ? <NominationAnswerDetails answers={nominee.formattedAnswers} team={isTeamNomination(idea)} />
+                    : parseNominationDescription(idea.description, isTeamNomination(idea) ? 'team' : 'individual').map(({ heading, body }, index) => (
+                      <section key={index}>
+                        {heading && <Title order={4}>{heading}</Title>}
+                        <Text size="sm" style={{ whiteSpace: 'pre-wrap' }}>{body}</Text>
+                      </section>
+                    ))}
+                </Stack>
+                <Stack gap="xs">
                   {(idea.projectAttachments ?? []).filter((attachment) => attachment.type !== 'nomination' && !isImageAttachment(attachment)).map((attachment) => (
                     <NominationEvidence key={attachment.storageKey || attachment.url} attachment={attachment} />
                   ))}
@@ -206,6 +208,15 @@ function IdeaJudgingCard({
                     </Button>
                   ) : null}
                 </Stack>
+                <div className="dp-fieldset">
+                  <Text size="sm"><b>Nominee:</b> {nominee?.name ?? 'Not provided'}</Text>
+                  <Text size="sm"><b>Org. code:</b> {nominee?.nomineeOrgCode ?? 'Not provided'}</Text>
+                  <Text size="sm"><b>Position:</b> {nominee?.nomineePosition ?? 'Not provided'}</Text>
+                  <Text size="sm"><b>Nominating HoD:</b> {nominee?.nominatingHead ?? 'Not provided'}</Text>
+                </div>
+                <Group gap="xs">
+                  {idea.tags.slice(0, 4).map((tag) => <Badge key={tag} size="sm" variant="outline">{tag}</Badge>)}
+                </Group>
               </Stack>
             </Stack>
           </Box>
@@ -213,99 +224,53 @@ function IdeaJudgingCard({
 
         <Grid.Col span={{ base: 12, lg: 8 }}>
           <Stack gap="xl">
-            <Group justify="space-between" align="flex-end">
-              <div>
-                <Title order={3}>Score the Evidence</Title>
-              </div>
-              <div style={{ textAlign: 'right' }}>
-                <Text className="dp-utility" size="sm" c="dimmed">Weighted total</Text>
-                <Text className="dp-field-number" fw={700}>{criteria.every((criterion) => scores[criterion.id] !== '') ? weightedScore.toFixed(1) : '—'}</Text>
-              </div>
-            </Group>
+            <Title order={3}>Score the Evidence</Title>
 
-            {criteria.map((criterion) => {
+            {criteria.map((criterion, index) => {
               const score = scores[criterion.id] ?? ''
               const numericScore = Number(score)
+              const inputId = `${scoreId}-${criterion.id}`
               return (
-                <div className="dp-fieldset" key={criterion.id}>
+                <div className={index === 0 ? undefined : 'dp-fieldset'} key={criterion.id}>
                   <Group justify="space-between" align="flex-start" mb="lg">
                     <div>
                       <Group gap="xs">
                         <Text fw={800}>{criterion.name}</Text>
                         <Badge variant="filled" color="dark">{criterion.weight}%</Badge>
                       </Group>
-                      <Text size="sm" c="dimmed" mt={5}>{criterion.description}</Text>
                     </div>
                     <Badge key={String(score)} color={getScoreTone(numericScore)} variant="light" size="lg">
                       {score === '' ? <span>Not scored</span> : <><span>{score} · </span><span>{'/ 10'}</span></>}
                     </Badge>
                   </Group>
-                  <NumberInput
-                    label={`${criterion.name} score`}
-                    description="Enter a whole number from 1 to 10."
-                    placeholder="Enter score"
-                    required
-                    value={score}
-                    onChange={(value) => setScores((current) => ({ ...current, [criterion.id]: value }))}
-                    min={1}
-                    max={10}
-                    allowDecimal={false}
-                    allowNegative={false}
-                    disabled={!canSubmitRating || isSubmitting}
-                    size="md"
-                    maw={320}
-                  />
-
+                  <Group gap={4} mb={4}>
+                    <Input.Label htmlFor={inputId} required>{criterion.name} score</Input.Label>
+                    {criterion.description && <Popover width={300} position="bottom-start" withArrow>
+                      <Popover.Target>
+                        <ActionIcon variant="subtle" size="sm" color="gray" aria-label={`About ${criterion.name}`} aria-describedby={`${inputId}-help`}>
+                          <IconInfoCircle size={16} />
+                        </ActionIcon>
+                      </Popover.Target>
+                      <Popover.Dropdown><Text size="sm">{criterion.description}</Text></Popover.Dropdown>
+                    </Popover>}
+                  </Group>
+                  {criterion.description && <VisuallyHidden id={`${inputId}-help`}>{criterion.description}</VisuallyHidden>}
+                  <NativeSelect id={inputId} required value={score} data={scoreOptions}
+                    onChange={(event) => {
+                      const value = Number(event.currentTarget.value)
+                      setScores((current) => ({ ...current, [criterion.id]: value }))
+                    }}
+                    disabled={!canSubmitRating || isSubmitting} size="md" maw={320} />
                 </div>
               )
             })}
 
-            <div className="dp-fieldset">
-              <Grid gutter="md">
-                <Grid.Col span={{ base: 12, sm: 5 }}>
-                  <Select
-                    label="Recommendation"
-                   
-                    required
-                    disabled={!canSubmitRating || isSubmitting}
-                    placeholder="Select a recommendation"
-                    data={DIGITAL_PIONEER_RECOMMENDATIONS.map(({ value, label }) => ({ value, label: language === 'zh' ? translateUiText(label) : label }))}
-                    value={recommendation}
-                    onChange={setRecommendation}
-                  />
-                </Grid.Col>
-                <Grid.Col span={{ base: 12, sm: 7 }}>
-                  <Textarea
-                    label="Comments, if any"
-                   
-                    disabled={!canSubmitRating || isSubmitting}
-                    minRows={3}
-                    maxLength={1200}
-                    value={comment}
-                    onChange={(event) => setComment(event.target.value)}
-                  />
-                </Grid.Col>
-              </Grid>
-            </div>
-
-            {alreadyScored ? (
-              <Alert color="teal" icon={<IconCheck size={18} />}>
-                A rating from you is already recorded. Submit again only if you intend to update it.
-              </Alert>
-            ) : null}
-
-            {savedScores.length > 0 && canSubmitRating && (
-              <Group justify="flex-end">
-                {confirmDelete ? <>
-                  <Text size="sm">Remove your rating and comments?</Text>
-                  <Button variant="subtle" disabled={isSubmitting} onClick={() => setConfirmDelete(false)}>Cancel</Button>
-                  <Button color="red" loading={isSubmitting} onClick={onDelete}>Confirm deletion</Button>
-                </> : <Button color="red" variant="subtle" disabled={isSubmitting} onClick={() => setConfirmDelete(true)}>Delete rating</Button>}
-              </Group>
-            )}
+            <Textarea label="Comments, if any" disabled={!canSubmitRating || isSubmitting} minRows={3}
+              maxLength={1200} value={comment} onChange={(event) => setComment(event.currentTarget.value)} />
             <Group justify="space-between" align="center">
-              <div style={{ flex: 1, maxWidth: 260 }}>
-                <Progress value={weightedScore * 10} color={getScoreTone(weightedScore)} size="sm" />
+              <div>
+                <Text className="dp-utility" size="sm" c="dimmed">Weighted total</Text>
+                <Text className="dp-field-number" fw={700}>{criteria.every((criterion) => scores[criterion.id] !== '') ? weightedScore.toFixed(2) : '—'}</Text>
               </div>
               <Button
                 className="dp-primary-button"
@@ -315,7 +280,6 @@ function IdeaJudgingCard({
                 onClick={() => onSubmit({
                   ideaId: idea.id,
                   scores,
-                  recommendation: recommendation ?? '',
                   comment,
                 })}
               >
@@ -332,8 +296,12 @@ function IdeaJudgingCard({
 export function JudgingPanel(): ReactElement {
   const { hackathonId } = useParams<{ hackathonId: string }>()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const { user } = useAuthStore()
   const queryClient = useQueryClient()
+  const [nominationType, setNominationType] = useState<NominationType>(() => searchParams.get('type') === 'individual' ? 'individual' : 'team')
+  const [filters, setFilters] = useState<NominationFilterValues>({ search: '', category: '', department: '' })
+  const [expandedIdeas, setExpandedIdeas] = useState<Set<string>>(() => new Set())
   const [confirmTemplate, setConfirmTemplate] = useState(false)
   const [submittingIdea, setSubmittingIdea] = useState<string | null>(null)
   const eligibility = useNominationEligibility()
@@ -346,8 +314,9 @@ export function JudgingPanel(): ReactElement {
     staleTime: 60 * 1000,
   })
   const isAssignedJudge = (judges ?? []).some((judge) => judge.userId === user?.id)
-  const canScore = isAssignedJudge || eligibility.data?.canReview === true
-  const canJudge = canManageJudging || canScore
+  const canReview = isAssignedJudge || eligibility.data?.canReview === true
+  const canJudge = canManageJudging || canReview
+  const isHoDView = !canManageJudging && eligibility.data?.canReview === true
 
   const { data: criteria, isLoading: criteriaLoading, error: criteriaError } = useQuery({
     queryKey: ['voting-criteria', hackathonId],
@@ -362,11 +331,17 @@ export function JudgingPanel(): ReactElement {
     staleTime: 2 * 60 * 1000,
   })
   const { data: myScores, isLoading: scoresLoading, error: scoresError } = useQuery({
-    queryKey: ['my-judge-scores', hackathonId],
+    queryKey: ['my-judge-scores', hackathonId, user?.id],
     queryFn: () => JudgingService.getMyScores(hackathonId!),
-    enabled: Boolean(hackathonId && canScore),
+    enabled: Boolean(hackathonId && canReview),
     staleTime: 60 * 1000,
   })
+  const { data: eligibleNominations, isLoading: permissionsLoading, error: permissionsError } = useQuery({
+    queryKey: ['eligible-scoring-nominations', hackathonId, user?.id],
+    queryFn: () => JudgingService.getEligibleNominations(hackathonId!),
+    enabled: Boolean(hackathonId && canJudge),
+  })
+  const eligibleIds = new Set(eligibleNominations ?? [])
 
   const templateMutation = useMutation({
     mutationFn: () => VotingService.applyAwardTemplate(hackathonId!),
@@ -379,25 +354,23 @@ export function JudgingPanel(): ReactElement {
   })
 
   const ownScores = (myScores ?? []).filter((score) => score.judgeId === user?.id)
-  const scoredIdeaIds = new Set(ownScores.filter((score) =>
-    (criteria?.length ?? 0) > 0 && criteria!.every((criterion) => ownScores.some((entry) => entry.ideaId === score.ideaId && entry.criterionId === criterion.id))
-  ).map((score) => score.ideaId))
-
   const scoreIdeaMutation = useMutation({
     mutationFn: async (submission: ScoreSubmission) => {
-      const note = [`Recommendation: ${submission.recommendation}`, submission.comment.trim()]
-        .filter(Boolean)
-        .join('\n\n')
       const saved = await JudgingService.submitEvaluation(hackathonId!, {
         ideaId: submission.ideaId,
         scores: Object.entries(submission.scores).map(([criterionId, score]) => ({ criterionId, score: Number(score) })),
-        comment: note,
+        comment: submission.comment.trim(),
       })
       return { ideaId: submission.ideaId, saved }
     },
     onSuccess: ({ ideaId, saved }) => {
-      queryClient.setQueryData<JudgeScore[]>(['my-judge-scores', hackathonId], (current = []) =>
+      queryClient.setQueryData<JudgeScore[]>(['my-judge-scores', hackathonId, user?.id], (current = []) =>
         [...current.filter((score) => score.ideaId !== ideaId), ...saved])
+      setExpandedIdeas((current) => {
+        const next = new Set(current)
+        next.delete(ideaId)
+        return next
+      })
       setSubmittingIdea(null)
       void Promise.all(['score-summary', 'all-judge-scores'].map((key) =>
         queryClient.invalidateQueries({ queryKey: [key, hackathonId] })))
@@ -414,22 +387,6 @@ export function JudgingPanel(): ReactElement {
         message: error instanceof Error ? error.message : 'Please try again.',
         color: 'red',
       })
-    },
-  })
-
-  const deleteRatingMutation = useMutation({
-    mutationFn: (ideaId: string) => JudgingService.deleteEvaluation(hackathonId!, ideaId),
-    onSuccess: (_, ideaId) => {
-      queryClient.setQueryData<JudgeScore[]>(['my-judge-scores', hackathonId], (current = []) =>
-        current.filter((score) => score.ideaId !== ideaId))
-      void Promise.all(['score-summary', 'all-judge-scores'].map((key) =>
-        queryClient.invalidateQueries({ queryKey: [key, hackathonId] })))
-      setSubmittingIdea(null)
-      notifications.show({ title: 'Rating deleted', message: 'The weighted total and committee ranking have been updated.', color: 'teal' })
-    },
-    onError: () => {
-      setSubmittingIdea(null)
-      notifications.show({ title: 'Error', message: 'Unable to save changes. Please try again.', color: 'red' })
     },
   })
 
@@ -454,19 +411,24 @@ export function JudgingPanel(): ReactElement {
     )
   }
 
-  const isLoading = criteriaLoading || ideasLoading || scoresLoading
-  const error = criteriaError ?? ideasError ?? scoresError
+  const isLoading = criteriaLoading || ideasLoading || scoresLoading || permissionsLoading
+  const error = criteriaError ?? ideasError ?? scoresError ?? permissionsError
   const ideas: Idea[] = nominations ?? []
-  const submittedIdeas = ideas.filter((idea) => ['submitted', 'in-progress', 'completed'].includes(idea.status))
+  const submittedIdeas = ideas
+    .filter((idea) => ['submitted', 'in-progress', 'completed'].includes(idea.status)
+      && (!isHoDView || eligibleIds.has(idea.id)))
     .map((idea) => ({ ...idea, category: normalizeDigitalPioneerTrack(idea.category, idea.tags ?? []) }))
-  const tracks = DIGITAL_PIONEER_TRACKS.map((track) => ({
+  const typeIdeas = submittedIdeas.filter((idea) => isTeamNomination(idea) === (nominationType === 'team'))
+  const filteredIdeas = typeIdeas.filter((idea) => matchesNominationFilters(idea, filters))
+  const departments = [...new Set(typeIdeas.map(nominationDepartment).filter(Boolean))].sort()
+  const tracks = DIGITAL_PIONEER_TRACKS.filter((track) => !filters.category || filters.category === track.value).map((track) => ({
     ...track,
-    ideas: submittedIdeas.filter((idea) => idea.category === track.value),
+    ideas: filteredIdeas.filter((idea) => idea.category === track.value),
   }))
   const criteriaReady = officialCriteria(criteria ?? [])
 
   return (
-    <Container size={1240} py={{ base: 'md', md: 'xl' }} className="dp-page">
+    <Container size={1240} py={{ base: 'md', md: 'xl' }} className="dp-page dp-committee-page">
       <Stack gap="xl">
         <Group justify="space-between" align="flex-end">
           <div>
@@ -477,6 +439,12 @@ export function JudgingPanel(): ReactElement {
               <Text className="dp-section-label" style={{ marginBottom: 0 }}>2026 Digital Pioneer · Committee</Text>
             </Group>
             <h1 className="dp-section-title">Committee Scoring</h1>
+            {!isLoading && !error && criteriaReady && <Box mt="sm">
+              <NominationTypeSwitch label="Scoring nomination type" value={nominationType} onChange={(type) => {
+                setNominationType(type)
+                setFilters((current) => ({ ...current, department: '' }))
+              }} />
+            </Box>}
           </div>
           {canManageJudging ? <Tooltip label="Open committee ranking">
             <Button
@@ -490,20 +458,12 @@ export function JudgingPanel(): ReactElement {
           </Tooltip> : null}
         </Group>
 
-        {!canScore ? <Alert styles={{ root: { backgroundColor: 'rgba(255, 255, 255, 0.12)' }, message: { color: '#fff' } }}>You have manager access to review nominations. Assign yourself as a committee member in award settings to submit ratings.</Alert> : null}
-        <Card className="dp-rules-panel" p="lg">
-          <Grid align="center">
-            <Grid.Col span={{ base: 12, sm: 4 }}>
-              <Group gap="sm"><IconScale size={20} /><Text fw={800}>Official weighting</Text></Group>
-            </Grid.Col>
-            <Grid.Col span={{ base: 12, sm: 6 }}><Text>Customer Values / Innovation: 40% · 30% · 30%. Collaboration: 30% · 35% · 35%. Each nomination uses its Individual or Team criteria.</Text></Grid.Col>
-            <Grid.Col span={{ base: 12, sm: 2 }}>
-              <Badge key={criteriaReady ? 'ready' : 'pending'} color={criteriaReady ? 'teal' : 'orange'} variant="light">
-                {criteriaReady ? 'Ready' : 'Check setup'}
-              </Badge>
-            </Grid.Col>
-          </Grid>
-        </Card>
+        {!isLoading && !error && eligibleIds.size === 0 ? <Alert styles={{ root: { backgroundColor: 'rgba(255, 255, 255, 0.12)' }, message: { color: '#fff' } }}>
+          {isHoDView ? 'No nominations are assigned to you for scoring.'
+            : 'You can review published nominations. Scoring is limited to the HoDs associated with each nomination.'}
+        </Alert> : null}
+        {!isLoading && !error && criteriaReady &&
+          <NominationFilters filters={filters} onChange={setFilters} nominations={typeIdeas} departments={departments} />}
 
         {isLoading ? (
           <Center py={80}><Stack align="center"><Loader /><Text c="dimmed">Loading nominations…</Text></Stack></Center>
@@ -524,22 +484,51 @@ export function JudgingPanel(): ReactElement {
             <Text component="h2" size="xl" fw={800} m={0} c="white">{track.label}</Text>
             {track.ideas.length === 0 ? (
               <Text c="white">No nominations in this category yet.</Text>
-            ) : track.ideas.map((idea) => (
-              <IdeaJudgingCard
-                key={`${idea.id}-${ownScores.filter((score) => score.ideaId === idea.id).map((score) => `${score.id}:${score.score}:${score.comment}`).join()} `}
-                savedScores={ownScores.filter((score) => score.ideaId === idea.id)}
-                canSubmitRating={canScore}
+            ) : track.ideas.map((idea) => {
+              const nominationCriteria = criteriaForNomination(criteria ?? [], idea)
+              const savedScores = ownScores.filter((score) => score.ideaId === idea.id)
+              const saved = savedEvaluation(savedScores)
+              const scored = nominationCriteria.every((criterion) => saved.scores[criterion.id] !== undefined)
+              const expanded = expandedIdeas.has(idea.id)
+              const total = nominationCriteria.reduce((sum, criterion) => sum + (saved.scores[criterion.id] ?? 0) * criterion.weight / 100, 0)
+              const toggle = () => setExpandedIdeas((current) => {
+                const next = new Set(current)
+                if (next.has(idea.id)) next.delete(idea.id)
+                else next.add(idea.id)
+                return next
+              })
+
+              if (scored && !expanded) {
+                return <Card key={idea.id} className="dp-judge-shell" p="md">
+                  <Group justify="space-between" wrap="nowrap">
+                    <Group gap="sm" style={{ minWidth: 0, overflowWrap: 'anywhere' }}>
+                      <Badge color="grape" variant="light">{idea.category}</Badge>
+                      <Text fw={700}>{idea.title}</Text>
+                    </Group>
+                    <Group gap="xs" wrap="nowrap">
+                      <Text fw={700}>{total.toFixed(2)} / 10</Text>
+                      <ActionIcon variant="subtle" aria-expanded={false} aria-label={`Expand rating for ${idea.title}`} onClick={toggle}>
+                        <IconChevronDown size={18} />
+                      </ActionIcon>
+                    </Group>
+                  </Group>
+                </Card>
+              }
+              return <IdeaJudgingCard
+                key={`${idea.id}-${JSON.stringify(savedScores)}`}
+                savedScores={savedScores}
+                canSubmitRating={eligibleIds.has(idea.id) && (!submittingIdea || submittingIdea === idea.id)}
                 idea={idea}
-                criteria={criteriaForNomination(criteria ?? [], idea)}
-                alreadyScored={scoredIdeaIds.has(idea.id)}
+                criteria={nominationCriteria}
+                alreadyScored={scored}
                 isSubmitting={submittingIdea === idea.id}
-                onDelete={() => { setSubmittingIdea(idea.id); deleteRatingMutation.mutate(idea.id) }}
+                onCollapse={scored ? toggle : undefined}
                 onSubmit={(submission) => {
                   setSubmittingIdea(idea.id)
                   scoreIdeaMutation.mutate(submission)
                 }}
               />
-            ))}
+            })}
           </Stack>
         )) : null}
       </Stack>

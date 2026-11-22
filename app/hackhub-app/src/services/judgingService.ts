@@ -108,6 +108,10 @@ export class JudgingService {
     return api.get(`/api/v1/hackathons/${hackathonId}/judging/scores`)
   }
 
+  static async getEligibleNominations(hackathonId: string): Promise<string[]> {
+    return api.get(`/api/v1/hackathons/${hackathonId}/judging/eligible-nominations`)
+  }
+
   static async getScoreSummary(hackathonId: string): Promise<ScoreSummary[]> {
     return api.get(`/api/v1/hackathons/${hackathonId}/judging/scores/summary`)
   }

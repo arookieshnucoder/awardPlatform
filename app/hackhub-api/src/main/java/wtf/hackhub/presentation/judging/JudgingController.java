@@ -112,6 +112,12 @@ public class JudgingController {
 				.toList();
 	}
 
+	@GetMapping("/eligible-nominations")
+	@PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER') or @hackathonSecurity.isJudgeOrOrgManager(#hackathonId, authentication)")
+	public List<UUID> getEligibleNominations(@PathVariable UUID hackathonId, @AuthenticationPrincipal UUID userId) {
+		return submitScoreUseCase.eligibleNominations(hackathonId, userId);
+	}
+
 	@Operation(summary = "Get blended score summary per idea (leaderboard view)")
 	@ApiResponse(responseCode = "200", description = "Success")
 	@GetMapping("/scores/summary")

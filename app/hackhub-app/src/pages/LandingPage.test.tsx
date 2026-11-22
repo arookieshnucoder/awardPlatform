@@ -103,7 +103,9 @@ describe('LandingPage', () => {
     expect(screen.queryByText(state.user.email!)).not.toBeInTheDocument()
     fireEvent.click(menu)
     expect(await screen.findByRole('menuitem', { name: 'My nominations' })).toHaveAttribute('href', '/my-nominations')
-    expect(screen.getByRole('menuitem', { name: 'Profile' })).toHaveAttribute('href', '/profile')
+    expect(screen.getAllByRole('menuitem')[1]).toHaveTextContent('My voting records')
+    expect(screen.queryByRole('menuitem', { name: 'Profile' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('menuitem', { name: /log out|logout/i })).not.toBeInTheDocument()
   })
 
   it.each([

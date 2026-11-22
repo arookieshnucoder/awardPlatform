@@ -26,7 +26,6 @@ vi.mock('../services/hackathonService', () => ({ HackathonService: { transitionS
   { id: 'award-2', title: 'Other award', startDate: '2026-10-19', endDate: '2026-11-30', status: 'running' },
 ] }) } }))
 vi.mock('../services/judgingService', () => ({ JudgingService: { inviteJudge: vi.fn(), removeJudge: vi.fn().mockResolvedValue(undefined), getScoreSummary: vi.fn().mockResolvedValue([{ ideaId: 'value-1', ideaTitle: 'Value nominee', panelScore: 8, judgeCount: 1, voteCount: 3 }]), getJudges: vi.fn(async (id: string) => id === 'award-1' ? [{ id: 'assignment-1', userId: 'judge-1', name: 'Assigned Judge' }] : []) } }))
-vi.mock('../services/ideaService', () => ({ IdeaService: { getIdeas: vi.fn().mockResolvedValue({ content: [{ id: 'value-1', category: 'Customer Values', tags: [] }], totalPages: 1 }) } }))
 vi.mock('../lib/apiClient', () => ({ api: { get: vi.fn(async (path: string) => path.endsWith('/judge-assignments') ? ['award-1'] : { content: [] }) } }))
 vi.mock('../components/VotingCriteriaManager', () => ({ VotingCriteriaManager: () => <div>Official evaluation criteria</div> }))
 
@@ -55,34 +54,25 @@ describe('AwardManagement', () => {
       expect(await screen.findByRole('link', { name: 'Assigned award' })).toHaveAttribute('href', '/awards/award-1')
       expect(screen.queryByText('Campaign settings')).not.toBeInTheDocument()
       expect(screen.getByRole('link', { name: 'Other award' })).toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: 'Delete award' })).not.toBeInTheDocument()
+      expect(screen.queryByText('Voting Results by Category')).not.toBeInTheDocument()
       expect(JudgingService.getJudges).not.toHaveBeenCalled()
       expect(api.get).not.toHaveBeenCalledWith('/api/v1/profiles/me/judge-assignments')
     } finally { user.role = 'participant' }
   })
 
-  it('searches awards and deletes only the confirmed campaign, retaining it on failure', async () => {
+  it('keeps award search usable without an accidental deletion entry point', async () => {
     user.role = 'admin'
     try {
-      const actor = userEvent.setup()
-      const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
-      show('/awards', client)
+      show('/awards')
       await screen.findByRole('link', { name: 'Assigned award' })
-      await actor.type(screen.getByRole('textbox', { name: 'Search awards' }), 'Other')
+      const search = screen.getByRole('textbox', { name: 'Search awards' })
+      await userEvent.type(search, 'Other')
       expect(screen.queryByRole('link', { name: 'Assigned award' })).not.toBeInTheDocument()
-      expect(screen.queryByRole('link', { name: 'Edit campaign & dates' })).not.toBeInTheDocument()
-      await actor.click(screen.getByRole('button', { name: 'Delete award' }))
-      const dialog = screen.getByRole('dialog')
-      expect(within(dialog).getByText('Other award')).toBeInTheDocument()
-      expect(HackathonService.deleteHackathon).not.toHaveBeenCalled()
-      vi.mocked(HackathonService.deleteHackathon).mockRejectedValueOnce(new Error('Deletion failed'))
-      await actor.click(within(dialog).getByRole('button', { name: 'Confirm deletion' }))
-      expect(await within(dialog).findByRole('alert')).toHaveTextContent('Deletion failed')
       expect(screen.getByRole('link', { name: 'Other award' })).toBeInTheDocument()
-      await actor.click(within(dialog).getByRole('button', { name: 'Confirm deletion' }))
-      await waitFor(() => expect(screen.queryByRole('link', { name: 'Other award' })).not.toBeInTheDocument())
-      expect(HackathonService.deleteHackathon).toHaveBeenCalledWith('award-2')
-      expect(client.getQueryData<Hackathon[]>(['award-management-campaigns', user.id, user.role])?.map((item) => item.id)).toEqual(['award-1'])
-      await actor.clear(screen.getByRole('textbox', { name: 'Search awards' }))
+      expect(screen.queryByRole('button', { name: 'Delete award' })).not.toBeInTheDocument()
+      expect(HackathonService.deleteHackathon).not.toHaveBeenCalled()
+      await userEvent.clear(search)
       expect(screen.getByRole('link', { name: 'Assigned award' })).toBeInTheDocument()
     } finally { user.role = 'participant' }
   })
@@ -94,15 +84,9 @@ describe('AwardManagement', () => {
       expect(await screen.findByRole('heading', { name: 'Committee Members' })).toBeInTheDocument()
       expect(JudgingService.getJudges).toHaveBeenCalledExactlyOnceWith('award-1')
       expect(screen.queryByRole('link', { name: 'Edit campaign & dates' })).not.toBeInTheDocument()
-      const values = await screen.findByRole('region', { name: 'Customer Values voting results' })
-      expect(within(values).getByText('Value nominee')).toBeInTheDocument()
-      expect(within(values).getByText('3')).toBeInTheDocument()
-      expect(within(values).getByText('8.00')).toBeInTheDocument()
-      for (const track of ['Innovation Breakthrough', 'Collaboration to Win']) {
-        const results = screen.getByRole('region', { name: `${track} voting results` })
-        expect(within(results).queryByText('Value nominee')).not.toBeInTheDocument()
-        expect(within(results).getByText('No nominations in this category yet.')).toBeInTheDocument()
-      }
+      expect(screen.queryByRole('button', { name: 'Delete award' })).not.toBeInTheDocument()
+      expect(screen.queryByText('Voting Results by Category')).not.toBeInTheDocument()
+      expect(JudgingService.getScoreSummary).not.toHaveBeenCalled()
       expect(screen.getByRole('link', { name: 'Scores & rankings' })).toHaveAttribute('href', '/hackathons/award-1/leaderboard')
       expect(screen.getByText(/BD\/DPA-SRE3 → BD\/DPA/)).toBeInTheDocument()
       expect(screen.queryByText(/Maximum Team Size/)).not.toBeInTheDocument()
@@ -117,37 +101,6 @@ describe('AwardManagement', () => {
     expect(screen.queryByText('Other award')).not.toBeInTheDocument()
   })
 
-})
-
-it('defers offscreen voting results and reuses them after filtering awards', async () => {
-  const original = globalThis.IntersectionObserver
-  const notify: Array<() => void> = []
-  vi.stubGlobal('IntersectionObserver', class {
-    observe() {}
-    disconnect() {}
-    constructor(callback: IntersectionObserverCallback) {
-      notify.push(() => callback([{ isIntersecting: true } as IntersectionObserverEntry], this as unknown as IntersectionObserver))
-    }
-  })
-  user.role = 'admin'
-  const view = show('/awards')
-  try {
-    await screen.findByRole('link', { name: 'Assigned award' })
-    expect(JudgingService.getScoreSummary).not.toHaveBeenCalled()
-    act(() => notify[0]())
-    await screen.findByText('Value nominee')
-    expect(JudgingService.getScoreSummary).toHaveBeenCalledExactlyOnceWith('award-1')
-    const search = screen.getByRole('textbox', { name: 'Search awards' })
-    await userEvent.type(search, 'Other')
-    await userEvent.clear(search)
-    act(() => notify.at(-1)!())
-    await screen.findByText('Value nominee')
-    expect(JudgingService.getScoreSummary).toHaveBeenCalledTimes(1)
-  } finally {
-    view.unmount()
-    user.role = 'participant'
-    vi.stubGlobal('IntersectionObserver', original)
-  }
 })
 
 it('loads committee candidates only when the associate selector opens', async () => {
