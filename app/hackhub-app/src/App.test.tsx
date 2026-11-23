@@ -5,9 +5,11 @@ import { MemoryRouter, useLocation } from 'react-router-dom'
 import { beforeEach, expect, it, vi } from 'vitest'
 import App from './App'
 
-const { auth, moduleLoaded, eligibility } = vi.hoisted(() => ({
+const { auth, moduleLoaded, committeeLoaded, campaignAccess, eligibility } = vi.hoisted(() => ({
   auth: { user: null as { id: string; role: string } | null, initialized: false, loading: true, initialize: vi.fn() },
   moduleLoaded: vi.fn(),
+  committeeLoaded: vi.fn(),
+  campaignAccess: { allowed: false },
   eligibility: { data: undefined as { canStartNomination: boolean } | undefined, isPending: true },
 }))
 vi.mock('./store/authStore', () => ({ useAuthStore: () => auth }))
@@ -15,6 +17,17 @@ vi.mock('./pages/AwardManagement', () => {
   moduleLoaded()
   return { AwardManagement: () => <div>Award page content</div> }
 })
+vi.mock('./pages/JudgingPanel', () => {
+  committeeLoaded('judge')
+  return { JudgingPanel: () => <div>Committee scoring content</div> }
+})
+vi.mock('./pages/Leaderboard', () => {
+  committeeLoaded('leaderboard')
+  return { Leaderboard: () => <div>Committee ranking content</div> }
+})
+vi.mock('./components/HackathonAccess', () => ({
+  HackathonAccess: ({ children }: { children: ReactNode }) => campaignAccess.allowed ? children : <div>Checking campaign access</div>,
+}))
 vi.mock('./pages/Login', () => ({ Login: () => <div>Employee SSO sign-in</div> }))
 vi.mock('./pages/LandingPage', () => ({ LandingPage: ({ children }: { children: ReactNode }) => children }))
 vi.mock('./pages/DigitalPioneerOverview', () => ({ DigitalPioneerOverview: () => <div>CN Award overview</div> }))
@@ -52,6 +65,28 @@ beforeEach(() => {
   auth.initialize.mockClear()
   eligibility.data = undefined
   eligibility.isPending = true
+  campaignAccess.allowed = false
+})
+
+it.each([
+  ['judge', 'Committee scoring content'],
+  ['leaderboard', 'Committee ranking content'],
+])('downloads the %s page early and mounts it only after campaign access is granted', async (route, content) => {
+  const view = () => <MantineProvider env="test"><MemoryRouter initialEntries={[`/hackathons/award-1/${route}`]}><App /></MemoryRouter></MantineProvider>
+  const rendered = render(view())
+  await waitFor(() => expect(committeeLoaded).toHaveBeenCalledWith(route))
+  expect(screen.queryByText(content)).not.toBeInTheDocument()
+
+  auth.user = { id: 'reviewer-1', role: 'participant' }
+  auth.initialized = true
+  auth.loading = false
+  rendered.rerender(view())
+  expect(screen.getByText('Checking campaign access')).toBeInTheDocument()
+  expect(screen.queryByText(content)).not.toBeInTheDocument()
+
+  campaignAccess.allowed = true
+  rendered.rerender(view())
+  expect(await screen.findByText(content)).toBeInTheDocument()
 })
 
 it.each(['/projects', '/projects/?view=voting-records'])('protects direct access to %s until the voting roster is confirmed', async (path) => {

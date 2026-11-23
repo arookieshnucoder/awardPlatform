@@ -18,7 +18,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        component: ${{ fromJSON(startsWith(github.event.head_commit.message || '', 'release(api):') && '["api"]' || '["app","api"]') }}
+        component: >-
+          ${{ fromJSON(
+            (startsWith(github.event.head_commit.message || '', 'release(api):') && '["api"]') ||
+            (startsWith(github.event.head_commit.message || '', 'release(app):') && '["app"]') ||
+            '["app","api"]'
+          ) }}
 
     steps:
       - name: Check out source
@@ -61,6 +66,7 @@ jobs:
 
   package:
     name: Package published images for offline deployment
+    if: ${{ !startsWith(github.event.head_commit.message || '', 'release(app):') }}
     needs: build
     runs-on: ubuntu-latest
     steps:

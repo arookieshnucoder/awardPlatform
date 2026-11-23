@@ -35,9 +35,32 @@ const Profile = lazy(() => import('./pages/Profile').then((module) => ({ default
 const Login = lazy(() => import('./pages/Login').then((module) => ({ default: module.Login })))
 const Register = lazy(() => import('./pages/Register').then((module) => ({ default: module.Register })))
 const AdminUsers = lazy(() => import('./pages/AdminUsers').then((module) => ({ default: module.AdminUsers })))
-const JudgingPanel = lazy(() => import('./pages/JudgingPanel').then((module) => ({ default: module.JudgingPanel })))
-const Leaderboard = lazy(() => import('./pages/Leaderboard').then((module) => ({ default: module.Leaderboard })))
+const committeeLoaders = {
+  judge: () => import('./pages/JudgingPanel').then((module) => ({ default: module.JudgingPanel })),
+  leaderboard: () => import('./pages/Leaderboard').then((module) => ({ default: module.Leaderboard })),
+}
 const AcceptInvitation = lazy(() => import('./pages/AcceptInvitation').then((module) => ({ default: module.AcceptInvitation })))
+
+function DeferredPage({ load }: { load: () => Promise<{ default: ComponentType }> }) {
+  const [Page, setPage] = useState<ComponentType>()
+  const [failed, setFailed] = useState(false)
+
+  useEffect(() => {
+    let active = true
+    void load().then(({ default: Component }) => {
+      if (active) setPage(() => Component)
+    }).catch(() => {
+      if (active) setFailed(true)
+    })
+    return () => { active = false }
+  }, [load])
+
+  // Mount as soon as the module and access are ready, without a Suspense reveal delay.
+  if (failed) return <Container className="dp-page" py="xl">
+    <Alert color="red" role="alert">Unable to load this page. Please refresh and try again.</Alert>
+  </Container>
+  return Page ? <Page /> : <LoadingOverlay visible />
+}
 
 function ReviewAccess({ children }: { children: ReactNode }) {
   const { hackathonId, id } = useParams()
@@ -77,12 +100,14 @@ function App() {
     }
   }, [initialized, initialize])
 
-  // Download the award page alongside session restoration; access checks still gate rendering.
+  // Download route modules alongside session restoration and access checks.
   useEffect(() => {
     if (/^\/(awards(?:\/[^/]+)?|committee|hackathons)$/.test(location.pathname)) {
       void loadAwardManagement().catch(() => { /* The lazy route handles import failures when rendered. */ })
     }
     if (/^\/(nominate|projects)\/?$/.test(location.pathname)) preloadProjectShowcase()
+    const committee = /^\/hackathons\/[^/]+\/(judge|leaderboard)\/?$/.exec(location.pathname)?.[1] as keyof typeof committeeLoaders | undefined
+    if (committee) void committeeLoaders[committee]().catch(() => { /* The route reports load failures. */ })
   }, [location.pathname])
 
   // Keep the login form mounted while submitting so failed attempts retain their input.
@@ -112,7 +137,7 @@ function App() {
     return <RealtimeProvider><LandingPage>
       <Suspense fallback={<LoadingOverlay visible />}>
         {location.pathname === '/nominate' ? <ProjectShowcase nominationMode />
-          : location.pathname === '/projects' ? <BrowseVotingAccess><ProjectShowcase /></BrowseVotingAccess>
+          : location.pathname === '/projects' ? <BrowseVotingAccess><DeferredPage load={loadProjectShowcase} /></BrowseVotingAccess>
           : <DigitalPioneerOverview />}
       </Suspense>
     </LandingPage></RealtimeProvider>
@@ -139,7 +164,7 @@ function App() {
             <Route path="/teams/:id" element={<Navigate to="/projects" replace />} />
             <Route path="/ideas" element={<Navigate to="/projects" replace />} />
             <Route path="/hackathons/:id/ideas" element={<Navigate to="/projects" replace />} />
-            <Route path="/projects" element={<BrowseVotingAccess><ProjectShowcase /></BrowseVotingAccess>} />
+            <Route path="/projects" element={<BrowseVotingAccess><DeferredPage load={loadProjectShowcase} /></BrowseVotingAccess>} />
             <Route path="/nominate" element={<ProjectShowcase nominationMode />} />
             <Route path="/my-nominations" element={<NominationApprovals />} />
             <Route path="/nomination-approvals" element={<NominationApprovals reviewMode />} />
@@ -151,8 +176,8 @@ function App() {
             <Route path="/admin/users" element={isParticipant ? <Navigate to="/overview" replace /> : <AdminUsers />} />
             <Route path="/admin/nominees" element={user.role === 'admin' ? <ProjectShowcase managementMode /> : <Navigate to="/projects" replace />} />
             <Route path="/admin/organizations" element={<Navigate to="/" replace />} />
-            <Route path="/hackathons/:hackathonId/judge" element={<ReviewAccess><JudgingPanel /></ReviewAccess>} />
-            <Route path="/hackathons/:hackathonId/leaderboard" element={<ReviewAccess><Leaderboard /></ReviewAccess>} />
+            <Route path="/hackathons/:hackathonId/judge" element={<ReviewAccess><DeferredPage key="judge" load={committeeLoaders.judge} /></ReviewAccess>} />
+            <Route path="/hackathons/:hackathonId/leaderboard" element={<ReviewAccess><DeferredPage key="leaderboard" load={committeeLoaders.leaderboard} /></ReviewAccess>} />
             <Route path="/invite/:token" element={<AcceptInvitation />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
