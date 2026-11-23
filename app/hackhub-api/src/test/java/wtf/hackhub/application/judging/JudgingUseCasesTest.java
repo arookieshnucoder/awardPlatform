@@ -2,11 +2,15 @@ package wtf.hackhub.application.judging;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 import wtf.hackhub.domain.Hackathon;
 import wtf.hackhub.domain.HackathonJudge;
+import wtf.hackhub.domain.Idea;
 import wtf.hackhub.domain.JudgeScore;
 import wtf.hackhub.domain.Profile;
 import wtf.hackhub.domain.Team;
@@ -21,6 +25,7 @@ import wtf.hackhub.infrastructure.persistence.team.TeamMemberRepository;
 import wtf.hackhub.infrastructure.persistence.team.TeamRepository;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -35,9 +40,6 @@ class JudgingUseCasesTest {
 
 	@Mock
 	private wtf.hackhub.application.idea.NominationApprovalDirectory approvalDirectory;
-
-	@org.mockito.Spy
-	private com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
 
 	// ── RemoveJudgeUseCase ────────────────────────────────────────────────────
 
@@ -358,68 +360,76 @@ class JudgingUseCasesTest {
 				.isInstanceOf(SubmitFinalPresentationUseCase.NotTeamMemberException.class);
 	}
 	@Test
-	void an_assigned_judge_cannot_score_another_hods_approved_nomination() {
+	void an_assigned_judge_can_score_an_approved_nomination() {
 		UUID campaign = UUID.randomUUID(), ideaId = UUID.randomUUID(), judge = UUID.randomUUID();
-		var idea = new wtf.hackhub.domain.Idea("Case", "Evidence", campaign, null, UUID.randomUUID(),
-				"Customer Values");
-		idea.update("Case", "Evidence", "Customer Values", List.of(), wtf.hackhub.domain.Idea.Status.SUBMITTED, null,
-				null, null);
-		idea.submitForApproval("owner-hod@example.test", "Owner HoD");
+		var idea = pendingNomination(campaign, false);
 		idea.decideApproval("approved", "", "Owner HoD");
 		when(judgeRepository.existsByHackathonIdAndUserId(campaign, judge)).thenReturn(true);
 		when(ideaRepository.findById(ideaId)).thenReturn(Optional.of(idea));
-		assertThatThrownBy(() -> submitScore.execute(campaign, ideaId, judge, null, 8, ""))
-				.isInstanceOf(SubmitJudgeScoreUseCase.NotAJudgeException.class);
-		verifyNoInteractions(scoreRepository);
+		when(scoreRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+		assertThat(submitScore.execute(campaign, ideaId, judge, null, 8, "").getJudgeId()).isEqualTo(judge);
 	}
 
-	@Test
-	void grants_individual_scoring_only_to_the_submitting_employees_hod() {
-		UUID award = UUID.randomUUID(), ideaId = UUID.randomUUID(), ownerHod = UUID.randomUUID(),
-				otherHod = UUID.randomUUID(), criterionId = UUID.randomUUID();
-		var idea = new wtf.hackhub.domain.Idea("Individual", "Evidence", award, null, UUID.randomUUID(),
-				"Customer Values");
-		idea.update("Individual", "Evidence", "Customer Values", List.of(), wtf.hackhub.domain.Idea.Status.SUBMITTED,
-				null, null, "[{\"type\":\"nomination\",\"coreTeamMembers\":\"Extra Member\"}]");
-		idea.submitForApproval("owner-hod@example.test", "Owner HoD");
+	@ParameterizedTest
+	@ValueSource(booleans = {false, true})
+	void multiple_hods_can_independently_score_the_same_nomination(boolean team) {
+		UUID award = UUID.randomUUID(), ideaId = UUID.randomUUID(), firstHod = UUID.randomUUID(),
+				secondHod = UUID.randomUUID();
+		var idea = pendingNomination(award, team);
 		idea.decideApproval("approved", "", "Owner HoD");
 		when(ideaRepository.findById(ideaId)).thenReturn(Optional.of(idea));
-		when(approvalDirectory.reviewerKey(otherHod)).thenReturn(Optional.of("other-hod@example.test"));
-		when(approvalDirectory.reviewerKey(ownerHod)).thenReturn(Optional.of("owner-hod@example.test"));
-		var criterion = new wtf.hackhub.domain.VotingCriteria(award, "Behavior", "", 70, 0);
-		org.springframework.test.util.ReflectionTestUtils.setField(criterion, "id", criterionId);
-		when(criteriaRepository.findAllByHackathonIdOrderByDisplayOrder(award)).thenReturn(List.of(criterion));
-		var scores = List.of(new SubmitJudgeScoreUseCase.CriterionScore(criterionId, 8));
-		assertThatThrownBy(() -> submitScore.submitEvaluation(award, ideaId, otherHod, scores, "Wrong HoD"))
-				.isInstanceOf(SubmitJudgeScoreUseCase.NotAJudgeException.class);
-		assertThatThrownBy(() -> submitScore.deleteEvaluation(award, ideaId, otherHod))
-				.isInstanceOf(SubmitJudgeScoreUseCase.NotAJudgeException.class);
-		verifyNoInteractions(scoreRepository);
+		when(approvalDirectory.reviewerKey(firstHod)).thenReturn(Optional.of("first-hod@example.test"));
+		when(approvalDirectory.reviewerKey(secondHod)).thenReturn(Optional.of("second-hod@example.test"));
+		var criteria = DigitalPioneerCriteria.template(award);
+		criteria.forEach(criterion -> ReflectionTestUtils.setField(criterion, "id", UUID.randomUUID()));
+		when(criteriaRepository.findAllByHackathonIdOrderByDisplayOrder(award)).thenReturn(criteria);
+		var scores = criteria.stream()
+				.map(criterion -> new SubmitJudgeScoreUseCase.CriterionScore(criterion.getId(), 8)).toList();
 		when(scoreRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
-		assertThat(submitScore.submitEvaluation(award, ideaId, ownerHod, scores, "Correct HoD")).hasSize(1);
-		verify(approvalDirectory, never()).memberHeadKey(anyString());
+		var firstEvaluation = submitScore.submitEvaluation(award, ideaId, firstHod, scores, "First HoD");
+		var secondEvaluation = submitScore.submitEvaluation(award, ideaId, secondHod, scores, "Second HoD");
+		assertThat(firstEvaluation).hasSize(3).extracting(JudgeScore::getJudgeId).containsOnly(firstHod);
+		assertThat(secondEvaluation).hasSize(3).extracting(JudgeScore::getJudgeId).containsOnly(secondHod);
+
+		var stored = new ArrayList<>(firstEvaluation);
+		stored.addAll(secondEvaluation);
+		when(scoreRepository.findAllByIdeaId(ideaId)).thenReturn(stored);
+		submitScore.deleteEvaluation(award, ideaId, secondHod);
+		verify(scoreRepository).deleteAll(secondEvaluation);
 	}
 
 	@Test
-	void team_access_combines_and_deduplicates_submitter_and_core_members_hods() {
-		UUID award = UUID.randomUUID(), ideaId = UUID.randomUUID(), coreHod = UUID.randomUUID();
-		var idea = new wtf.hackhub.domain.Idea("Team", "Evidence", award, UUID.randomUUID(), UUID.randomUUID(),
+	void lists_all_published_nominations_to_a_hod_outside_the_nominating_department() {
+		UUID award = UUID.randomUUID(), hod = UUID.randomUUID();
+		var individual = pendingNomination(award, false);
+		individual.decideApproval("approved", "", "Owner HoD");
+		var team = pendingNomination(award, true);
+		team.decideApproval("approved", "", "Owner HoD");
+		var pending = pendingNomination(award, false);
+		var rejected = pendingNomination(award, false);
+		rejected.decideApproval("rejected", "Revise", "Owner HoD");
+		var superseded = pendingNomination(award, true);
+		superseded.decideApproval("approved", "", "Owner HoD");
+		superseded.markSuperseded();
+		var draft = new Idea("Draft", "Evidence", award, null, UUID.randomUUID(), "Customer Values");
+		draft.update("Draft", "Evidence", "Customer Values", List.of(), Idea.Status.DRAFT, null, null, null);
+		var nominations = List.of(individual, team, pending, rejected, superseded, draft);
+		nominations.forEach(idea -> ReflectionTestUtils.setField(idea, "id", UUID.randomUUID()));
+		when(approvalDirectory.reviewerKey(hod)).thenReturn(Optional.of("other-hod@example.test"));
+		when(criteriaRepository.findAllByHackathonIdOrderByDisplayOrder(award))
+				.thenReturn(DigitalPioneerCriteria.template(award));
+		when(ideaRepository.findAllByHackathonId(award)).thenReturn(nominations);
+
+		assertThat(submitScore.eligibleNominations(award, hod)).containsExactly(individual.getId(), team.getId());
+		assertThat(submitScore.eligibleNominations(award, UUID.randomUUID())).isEmpty();
+	}
+
+	private static Idea pendingNomination(UUID award, boolean team) {
+		var idea = new Idea("Case", "Evidence", award, team ? UUID.randomUUID() : null, UUID.randomUUID(),
 				"Customer Values");
-		idea.update("Team", "Evidence", "Customer Values", List.of(), wtf.hackhub.domain.Idea.Status.SUBMITTED, null,
-				null,
-				"""
-						[{"type":"nomination","nominationType":"team","coreTeamMembers":"A Member;B Member;A Member;Unknown"}]
-						""");
-		idea.submitForApproval("OWNER-HOD@example.test", "Owner HoD");
-		idea.decideApproval("approved", "", "Owner HoD");
-		org.springframework.test.util.ReflectionTestUtils.setField(idea, "id", ideaId);
-		when(approvalDirectory.memberHeadKey("A Member")).thenReturn(Optional.of("owner-hod@example.test"));
-		when(approvalDirectory.memberHeadKey("B Member")).thenReturn(Optional.of("core-hod@example.test"));
-		when(approvalDirectory.reviewerKey(coreHod)).thenReturn(Optional.of("core-hod@example.test"));
-		when(ideaRepository.findAllByHackathonId(award)).thenReturn(List.of(idea));
-		assertThat(submitScore.scoringHeadKeys(idea)).containsExactlyInAnyOrder("owner-hod@example.test",
-				"core-hod@example.test");
-		assertThat(submitScore.eligibleNominations(award, coreHod)).containsExactly(ideaId);
+		idea.update("Case", "Evidence", "Customer Values", List.of(), Idea.Status.SUBMITTED, null, null, null);
+		idea.submitForApproval("owner-hod@example.test", "Owner HoD");
+		return idea;
 	}
 
 	@Test

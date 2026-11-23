@@ -9,12 +9,10 @@ import org.springframework.stereotype.Service;
 import java.io.IOException;
 import java.text.Normalizer;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -28,19 +26,11 @@ public class NominationApprovalDirectory {
 	}
 	private final JdbcTemplate jdbc;
 	private final List<Employee> employees;
-	private final Map<String, List<Employee>> byMemberName = new HashMap<>();
 	public NominationApprovalDirectory(JdbcTemplate jdbc, ObjectMapper mapper) throws IOException {
 		this.jdbc = jdbc;
 		try (var input = new ClassPathResource("nomination-roster.json").getInputStream()) {
 			employees = mapper.readValue(input, new TypeReference<List<Employee>>() {
 			});
-		}
-		for (var employee : employees) {
-			if (employee.name() == null || employee.name().isBlank())
-				continue;
-			Arrays.stream(employee.name().split("/")).map(NominationApprovalDirectory::memberNameKey)
-					.filter(key -> !key.isBlank()).distinct().forEach(key -> byMemberName
-							.computeIfAbsent(key, ignored -> new java.util.ArrayList<>()).add(employee));
 		}
 	}
 	public Optional<String> verifiedEmail(UUID profileId) {
@@ -76,24 +66,6 @@ public class NominationApprovalDirectory {
 	}
 	public String headKey(Employee employee) {
 		return employee.hodEmail().toLowerCase(Locale.ROOT);
-	}
-
-	/**
-	 * Matches a stored Core Team Member entry only when the roster identifies that
-	 * employee uniquely.
-	 */
-	public Optional<String> memberHeadKey(String entry) {
-		var matches = byMemberName.getOrDefault(memberNameKey(entry), List.of());
-		int suffix = entry.lastIndexOf(" (");
-		if (matches.isEmpty() && suffix >= 0 && entry.endsWith(")")) {
-			String department = entry.substring(suffix + 2, entry.length() - 1).strip();
-			matches = byMemberName.getOrDefault(memberNameKey(entry.substring(0, suffix)), List.of()).stream()
-					.filter(employee -> department.equalsIgnoreCase(employee.orgUnit())).toList();
-		}
-		return matches.size() == 1
-				? Optional.ofNullable(matches.getFirst().hodEmail()).filter(email -> !email.isBlank())
-						.map(email -> email.strip().toLowerCase(Locale.ROOT))
-				: Optional.empty();
 	}
 
 	public static String memberNameKey(String value) {

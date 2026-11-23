@@ -18,11 +18,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - component: app
-            context: ./app/hackhub-app
-          - component: api
-            context: ./app/hackhub-api
+        component: ${{ fromJSON(startsWith(github.event.head_commit.message || '', 'release(api):') && '["api"]' || '["app","api"]') }}
 
     steps:
       - name: Check out source
@@ -41,7 +37,7 @@ jobs:
         id: publish
         uses: docker/build-push-action@v7
         with:
-          context: ${{ matrix.context }}
+          context: ./app/hackhub-${{ matrix.component }}
           platforms: linux/amd64
           push: true
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/hackhub:${{ matrix.component }}-${{ github.sha }}
@@ -64,7 +60,7 @@ jobs:
           retention-days: 7
 
   package:
-    name: Package API and frontend for offline deployment
+    name: Package published images for offline deployment
     needs: build
     runs-on: ubuntu-latest
     steps:
@@ -80,12 +76,13 @@ jobs:
       - name: Verify published images and package the release
         env:
           IMAGE_REPO: ${{ secrets.DOCKERHUB_USERNAME }}/hackhub
-        run: bash offline-release/package-app-api.sh
+          RELEASE_SCOPE: ${{ startsWith(github.event.head_commit.message || '', 'release(api):') && 'api' || 'app-api' }}
+        run: bash offline-release/package-app-api.sh "$RELEASE_SCOPE"
 
-      - name: Upload combined deployment package
+      - name: Upload offline deployment package
         uses: actions/upload-artifact@v4
         with:
-          name: website-app-api-${{ github.sha }}
+          name: website-${{ startsWith(github.event.head_commit.message || '', 'release(api):') && 'api' || 'app-api' }}-${{ github.sha }}
           path: dist-offline/*
           if-no-files-found: error
           compression-level: 0

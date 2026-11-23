@@ -1,9 +1,5 @@
 package wtf.hackhub.application.judging;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.MissingNode;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import wtf.hackhub.application.idea.NominationApprovalDirectory;
@@ -18,9 +14,6 @@ import wtf.hackhub.infrastructure.persistence.judging.JudgeScoreRepository;
 
 import java.util.HashSet;
 import java.util.List;
-import java.util.Locale;
-import java.util.Optional;
-import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -28,7 +21,6 @@ import java.util.stream.Collectors;
 public class SubmitJudgeScoreUseCase {
 	private final IdeaMutationLock mutationLock;
 	private final NominationApprovalDirectory approvalDirectory;
-	private final ObjectMapper mapper;
 
 	private final JudgeScoreRepository scoreRepository;
 	private final HackathonJudgeRepository judgeRepository;
@@ -37,9 +29,8 @@ public class SubmitJudgeScoreUseCase {
 
 	public SubmitJudgeScoreUseCase(JudgeScoreRepository scoreRepository, HackathonJudgeRepository judgeRepository,
 			IdeaRepository ideaRepository, VotingCriteriaRepository criteriaRepository, IdeaMutationLock mutationLock,
-			NominationApprovalDirectory approvalDirectory, ObjectMapper mapper) {
+			NominationApprovalDirectory approvalDirectory) {
 		this.approvalDirectory = approvalDirectory;
-		this.mapper = mapper;
 		this.scoreRepository = scoreRepository;
 		this.judgeRepository = judgeRepository;
 		this.ideaRepository = ideaRepository;
@@ -47,72 +38,24 @@ public class SubmitJudgeScoreUseCase {
 		this.criteriaRepository = criteriaRepository;
 	}
 
-	private record Reviewer(Optional<String> hodKey, boolean assigned) {
-		boolean canOpenCommittee() {
-			return assigned || hodKey.isPresent();
-		}
+	private boolean canScoreCampaign(UUID campaignId, UUID userId) {
+		return judgeRepository.existsByHackathonIdAndUserId(campaignId, userId)
+				|| approvalDirectory.reviewerKey(userId).isPresent();
 	}
 
-	private Reviewer reviewer(UUID campaignId, UUID userId) {
-		var hodKey = approvalDirectory.reviewerKey(userId);
-		return new Reviewer(hodKey,
-				hodKey.isEmpty() && judgeRepository.existsByHackathonIdAndUserId(campaignId, userId));
-	}
-
-	private boolean mayScore(Idea idea, Reviewer reviewer, boolean awardRubric) {
+	private static boolean isOpenForScoring(Idea idea, boolean awardRubric) {
 		if (!awardRubric && idea.getApprovalStatus() == null)
-			return reviewer.canOpenCommittee();
-		return !idea.isSuperseded() && idea.getStatus() != Idea.Status.DRAFT
-				&& reviewer.hodKey().filter(key -> scoringHeadKeys(idea).contains(key)).isPresent();
-	}
-
-	Set<String> scoringHeadKeys(Idea idea) {
-		var heads = new HashSet<String>();
-		var headKey = idea.getApprovalHeadKey();
-		if (headKey != null && !headKey.isBlank() && !headKey.startsWith("admin:")) {
-			heads.add(headKey.strip().toLowerCase(Locale.ROOT));
-		} else {
-			approvalDirectory.employee(idea.getCreatedBy())
-					.filter(employee -> employee.hodEmail() != null && !employee.hodEmail().isBlank())
-					.map(approvalDirectory::headKey).ifPresent(heads::add);
-		}
-		JsonNode nomination = nominationDetails(idea);
-		if (idea.getTeamId() != null || "team".equals(nomination.path("nominationType").asText())) {
-			for (String entry : nomination.path("coreTeamMembers").asText().split("[;；]")) {
-				if (!entry.isBlank())
-					approvalDirectory.memberHeadKey(entry.strip()).ifPresent(heads::add);
-			}
-		}
-		return heads;
-	}
-
-	private JsonNode nominationDetails(Idea idea) {
-		String attachments = idea.getProjectAttachments();
-		if (attachments != null && !attachments.isBlank()) {
-			try {
-				var items = mapper.readTree(attachments);
-				if (items != null && items.isArray()) {
-					for (var item : items) {
-						if ("nomination".equals(item.path("type").asText()))
-							return item;
-					}
-				}
-			} catch (JsonProcessingException ignored) {
-				// Historical metadata cannot grant additional scoring access.
-			}
-		}
-		return MissingNode.getInstance();
+			return true;
+		return !idea.isSuperseded() && idea.getStatus() != Idea.Status.DRAFT;
 	}
 
 	@Transactional(readOnly = true)
 	public List<UUID> eligibleNominations(UUID hackathonId, UUID userId) {
-		var reviewer = reviewer(hackathonId, userId);
-		if (!reviewer.canOpenCommittee())
+		if (!canScoreCampaign(hackathonId, userId))
 			return List.of();
-		boolean awardRubric = criteriaRepository.findAllByHackathonIdOrderByDisplayOrder(hackathonId).stream()
-				.anyMatch(DigitalPioneerCriteria::official);
-		return ideaRepository.findAllByHackathonId(hackathonId).stream()
-				.filter(idea -> mayScore(idea, reviewer, awardRubric)).map(Idea::getId).toList();
+		boolean awardRubric = currentCriteria(hackathonId).stream().anyMatch(DigitalPioneerCriteria::official);
+		return ideaRepository.findAllByHackathonId(hackathonId).stream().filter(Idea::isApprovalPublished)
+				.filter(idea -> isOpenForScoring(idea, awardRubric)).map(Idea::getId).toList();
 	}
 
 	@Transactional
@@ -180,15 +123,14 @@ public class SubmitJudgeScoreUseCase {
 	}
 
 	private void requireScorableIdea(UUID hackathonId, UUID ideaId, UUID judgeId, List<VotingCriteria> criteria) {
-		var reviewer = reviewer(hackathonId, judgeId);
-		if (!reviewer.canOpenCommittee())
+		if (!canScoreCampaign(hackathonId, judgeId))
 			throw new NotAJudgeException(judgeId, hackathonId);
 		mutationLock.acquire(ideaId);
 		var idea = ideaRepository.findById(ideaId).orElseThrow(() -> new IllegalArgumentException("Case not found"));
 		idea.requireApprovalPublished();
 		if (!hackathonId.equals(idea.getHackathonId()))
 			throw new IllegalArgumentException("Case belongs to another award");
-		if (!mayScore(idea, reviewer, criteria.stream().anyMatch(DigitalPioneerCriteria::official)))
+		if (!isOpenForScoring(idea, criteria.stream().anyMatch(DigitalPioneerCriteria::official)))
 			throw new NotAJudgeException(judgeId, hackathonId);
 	}
 

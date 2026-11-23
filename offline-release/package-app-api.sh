@@ -2,7 +2,13 @@
 set -euo pipefail
 
 [[ ${GITHUB_SHA:?} =~ ^[a-f0-9]{40}$ ]]
-release=website-app-api-${GITHUB_SHA:0:12}
+scope=${1:-app-api}
+case "$scope" in
+  api) services=(api) ;;
+  app-api) services=(app api) ;;
+  *) echo "Unknown release scope: $scope" >&2; exit 1 ;;
+esac
+release=website-$scope-${GITHUB_SHA:0:12}
 stage=$(mktemp -d)
 package="$stage/$release"
 network="$release-smoke"
@@ -17,12 +23,16 @@ cleanup() {
 trap cleanup EXIT
 mkdir -p "$package" dist-offline
 
-for service in app api; do
+images=()
+image_metadata=()
+for service in "${services[@]}"; do
   tag="${IMAGE_REPO:?}:$service-$GITHUB_SHA"
   digest=$(docker buildx imagetools inspect "$tag" | awk '$1 == "Digest:" && !seen++ {print $2}')
   [[ $digest =~ ^sha256:[a-f0-9]{64}$ ]]
   published="$IMAGE_REPO@$digest"
   image="hackhub-offline/$service:$service-$GITHUB_SHA"
+  images+=("$image")
+  image_metadata+=("$service.image.ids" "$service.published-image")
   docker pull --platform linux/amd64 "$published"
   docker tag "$published" "$image"
   printf '%s\n' "$published" >"$package/$service.published-image"
@@ -36,9 +46,10 @@ done
 
 api_image="hackhub-offline/api:api-$GITHUB_SHA"
 app_image="hackhub-offline/app:app-$GITHUB_SHA"
-docker image save --output "$package/images.tar" "$api_image" "$app_image"
-for service in api app; do
-  image="hackhub-offline/$service:$service-$GITHUB_SHA"
+docker image save --output "$package/images.tar" "${images[@]}"
+for image in "${images[@]}"; do
+  service=${image#*/}
+  service=${service%%:*}
   config_id=$(tar -xOf "$package/images.tar" manifest.json | jq -er --arg tag "$image" \
     '.[] | select(.RepoTags | index($tag)) | .Config | split("/") | last | sub("\\.json$"; "") | "sha256:" + .')
   [[ $config_id =~ ^sha256:[a-f0-9]{64}$ ]]
@@ -71,9 +82,13 @@ docker run -d --name "$api" --network "$network" --network-alias api --add-host 
   -e SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/hackhub -e MINIO_ENDPOINT=http://minio:9000 \
   -e "JWT_PRIVATE_KEY=$(cat "$stage/private.pem")" -e "JWT_PUBLIC_KEY=$(cat "$stage/public.pem")" "$api_image"
 wait_for "$api" sh -c 'wget -qO- http://127.0.0.1:8081/actuator/health | grep -q '\''"status":"UP"'\'''
-docker run -d --name "$app" --network "$network" --add-host minio:127.0.0.1 "$app_image"
-wait_for "$app" wget -qO /dev/null http://127.0.0.1/
-wait_for "$app" wget -qO /dev/null http://127.0.0.1/api/v1/public/awards
+if [[ $scope == app-api ]]; then
+  docker run -d --name "$app" --network "$network" --add-host minio:127.0.0.1 "$app_image"
+  wait_for "$app" wget -qO /dev/null http://127.0.0.1/
+  wait_for "$app" wget -qO /dev/null http://127.0.0.1/api/v1/public/awards
+else
+  wait_for "$api" wget -qO /dev/null http://127.0.0.1:8080/api/v1/public/awards
+fi
 
 docker exec "$postgres" psql -X -w -At -v ON_ERROR_STOP=1 -U hackhub -d hackhub -c \
   "SELECT script, checksum FROM public.flyway_schema_history WHERE success AND type = 'SQL' AND version IS NOT NULL ORDER BY script" \
@@ -85,9 +100,10 @@ python3 offline-release/roster-checksums.py "$stage/api.jar" >"$package/api-rost
 (cd app/hackhub-api/src/main/resources && sha256sum -c "$package/api-rosters.sha256")
 
 printf '%s\n' "$GITHUB_SHA" >"$package/commit.sha"
+printf '%s\n' "$scope" >"$package/release.scope"
 cp offline-release/deploy-app-api.sh "$package/deploy.sh"
 cp offline-release/roster-checksums.py "$package/roster-checksums.py"
-(cd "$package" && sha256sum images.tar api.image.ids app.image.ids api.published-image app.published-image \
-  api-migrations.txt api-rosters.sha256 commit.sha deploy.sh roster-checksums.py > SHA256SUMS)
+(cd "$package" && sha256sum images.tar "${image_metadata[@]}" \
+  api-migrations.txt api-rosters.sha256 commit.sha release.scope deploy.sh roster-checksums.py > SHA256SUMS)
 tar -C "$stage" -czf "dist-offline/$release.tar.gz" "$release"
 (cd dist-offline && sha256sum "$release.tar.gz" > "$release.tar.gz.sha256")

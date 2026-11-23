@@ -8,7 +8,9 @@ runtime=${HACKHUB_RUNTIME_DIR:-/opt/hackhub/runtime}
 backups=${HACKHUB_BACKUP_DIR:-/opt/hackhub/backups}
 sha=$(cat "$package/commit.sha")
 [[ $sha =~ ^[a-f0-9]{40}$ ]] || die 'Invalid release commit'
-release=website-app-api-${sha:0:12}
+scope=$(cat "$package/release.scope")
+[[ $scope == api || $scope == app-api ]] || die 'Invalid release scope'
+release=website-$scope-${sha:0:12}
 new_api="hackhub-offline/api:api-$sha"
 new_app="hackhub-offline/app:app-$sha"
 unset API_IMAGE APP_IMAGE
@@ -26,9 +28,9 @@ running_matches() {
 set_images() {
   local temporary
   temporary=$(mktemp "$runtime/.images.env.XXXXXX") || return 1
-  awk -v api="$1" -v app="$2" '
+  awk -v api="$1" -v app="$2" -v scope="$scope" '
     /^API_IMAGE=/{print "API_IMAGE=" api; next}
-    /^APP_IMAGE=/{print "APP_IMAGE=" app; next}
+    scope == "app-api" && /^APP_IMAGE=/{print "APP_IMAGE=" app; next}
     {print}
   ' "$runtime/images.env" >"$temporary" &&
     chmod --reference="$runtime/images.env" "$temporary" &&
@@ -44,8 +46,18 @@ probe_services() {
 
 switch_to() {
   set_images "$1" "$2" && compose config --quiet &&
-    compose up -d --no-deps --no-build --pull never --wait --wait-timeout 300 api </dev/null &&
-    compose up -d --no-deps --no-build --pull never --wait --wait-timeout 180 --force-recreate app </dev/null &&
+    compose up -d --no-deps --no-build --pull never --wait --wait-timeout 300 api </dev/null || return 1
+  if [[ $scope == api ]]; then
+    # NGINX resolves the upstream hostname on load. Refresh it after the API IP can change.
+    compose exec -T app nginx -t </dev/null && compose exec -T app nginx -s reload </dev/null || return 1
+    local attempt
+    for attempt in {1..15}; do
+      if probe_services "$1" "$2"; then return 0; fi
+      sleep 1
+    done
+    return 1
+  fi
+  compose up -d --no-deps --no-build --pull never --wait --wait-timeout 180 --force-recreate app </dev/null &&
     probe_services "$1" "$2"
 }
 
@@ -110,10 +122,14 @@ compose config --quiet
   die 'Expected one API_IMAGE and one APP_IMAGE in images.env'
 old_api=$(sed -n 's/^API_IMAGE=//p' "$runtime/images.env")
 old_app=$(sed -n 's/^APP_IMAGE=//p' "$runtime/images.env")
+if [[ $scope == api ]]; then new_app=$old_app; fi
 
 if [[ ${1:-} == rollback ]]; then
   backup_dir=$(cd -- "$2" && pwd)
   [[ "$backup_dir" == "$backups"/before-"$release".* ]] || die 'Backup belongs to a different release'
+  if [[ $scope == api && "$old_app" != "$(cat "$backup_dir/app.previous-image")" ]]; then
+    die 'A different frontend release is configured'
+  fi
   [[ "$old_api" == "$new_api" || "$old_api" == "$(cat "$backup_dir/api.previous-image")" ]] &&
     [[ "$old_app" == "$new_app" || "$old_app" == "$(cat "$backup_dir/app.previous-image")" ]] ||
     die 'A different release is configured'
@@ -129,14 +145,16 @@ old_app_id=$(image_id "$old_app")
 check_production_data
 if [[ "$old_api" != "$new_api" || "$old_app" != "$new_app" ]]; then
   if [[ "$old_api" == "$new_api" ]]; then grep -Fxq "$old_api_id" "$package/api.image.ids"; fi
-  if [[ "$old_app" == "$new_app" ]]; then grep -Fxq "$old_app_id" "$package/app.image.ids"; fi
+  if [[ $scope == app-api && "$old_app" == "$new_app" ]]; then grep -Fxq "$old_app_id" "$package/app.image.ids"; fi
   docker load --input "$package/images.tar"
 fi
-grep -Fxq "$(image_id "$new_api")" "$package/api.image.ids" &&
-  grep -Fxq "$(image_id "$new_app")" "$package/app.image.ids" || die 'Loaded API or frontend image ID mismatch'
+grep -Fxq "$(image_id "$new_api")" "$package/api.image.ids" || die 'Loaded API image ID mismatch'
+if [[ $scope == app-api ]]; then
+  grep -Fxq "$(image_id "$new_app")" "$package/app.image.ids" || die 'Loaded frontend image ID mismatch'
+fi
 if [[ "$old_api" == "$new_api" && "$old_app" == "$new_app" ]]; then
   probe_services "$new_api" "$new_app" || die 'Existing release failed its health check'
-  echo 'API and frontend already deployed and healthy.'
+  echo 'Release already deployed and healthy.'
   exit
 fi
 
@@ -149,7 +167,7 @@ printf '%s\n' "$old_app_id" >"$backup_dir/app.previous-id"
 printf 'BACKUP=%s\nRollback command: bash %q rollback %q\n' "$backup_dir" "$package/deploy.sh" "$backup_dir"
 
 if switch_to "$new_api" "$new_app"; then
-  printf 'API and frontend deployed. RELEASE=%s BACKUP=%s\n' "$release" "$backup_dir"
+  printf 'Release deployed. SCOPE=%s RELEASE=%s BACKUP=%s\n' "$scope" "$release" "$backup_dir"
 else
   compose logs --no-color --tail=150 api app </dev/null >"$backup_dir/deployment-failure.log" 2>&1 || true
   printf 'Switch failed. Restoring previous images. Log: %s/deployment-failure.log\n' "$backup_dir" >&2
