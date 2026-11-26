@@ -21,6 +21,10 @@ import java.util.stream.Collectors;
  */
 @Service
 public class NominationApprovalDirectory {
+	private static final String VINOD_VERIFIED_EMAIL = "vinod.a@in.bosch.com";
+	// The deployed roster and existing nominations use this key for Vinod.
+	private static final String VINOD_APPROVAL_KEY = "vio2kor@bosch.com";
+
 	public record Employee(String email, String nt, String name, String orgUnit, String nominatingHead, String hodNt,
 			String hodEmail, boolean allowSelfApproval) {
 	}
@@ -46,8 +50,15 @@ public class NominationApprovalDirectory {
 		});
 	}
 	public Optional<String> reviewerKey(UUID profileId) {
-		return verifiedEmail(profileId).filter(email -> employees.stream()
-				.anyMatch(e -> e.hodEmail() != null && email.equalsIgnoreCase(e.hodEmail())));
+		return verifiedEmail(profileId).filter(this::isRosterHead);
+	}
+	Optional<String> nominationReviewerKey(UUID profileId) {
+		return verifiedEmail(profileId).filter(email -> !VINOD_APPROVAL_KEY.equals(email))
+				.map(email -> VINOD_VERIFIED_EMAIL.equals(email) ? VINOD_APPROVAL_KEY : email)
+				.filter(this::isRosterHead);
+	}
+	private boolean isRosterHead(String key) {
+		return employees.stream().anyMatch(e -> e.hodEmail() != null && key.equalsIgnoreCase(e.hodEmail()));
 	}
 	public Employee requireEmployee(UUID profileId) {
 		var employee = employee(profileId).orElseThrow(() -> new IllegalArgumentException(

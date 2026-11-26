@@ -47,7 +47,7 @@ public class NominationApprovalService {
 		if (profile.isPresent() && profile.get().getRole() == Profile.Role.ADMIN) {
 			return new Eligibility(true, true, profile.get().getName(), null, true);
 		}
-		boolean canReview = directory.reviewerKey(userId).isPresent();
+		boolean canReview = directory.nominationReviewerKey(userId).isPresent();
 		if (profile.filter(nominees::isRosterParticipant).isEmpty()) {
 			return new Eligibility(false, canReview, null, BD_NOMINATION_MESSAGE, false);
 		}
@@ -81,13 +81,13 @@ public class NominationApprovalService {
 	private Reviewer reviewer(UUID userId) {
 		var admin = profiles.findById(userId).filter(profile -> profile.getRole() == Profile.Role.ADMIN).orElse(null);
 		if (admin != null) return new Reviewer(userId, null, true, admin);
-		String rosterKey = directory.reviewerKey(userId).orElse(null);
+		String rosterKey = directory.nominationReviewerKey(userId).orElse(null);
 		if (rosterKey == null) throw new ResponseStatusException(HttpStatus.FORBIDDEN);
 		return new Reviewer(userId, rosterKey, directory.allowsSelfApproval(userId), null);
 	}
 	public boolean canRead(Idea idea, UUID userId) {
 		return idea.isApprovalPublished() || (userId != null && (idea.getCreatedBy().equals(userId)
-				|| directory.reviewerKey(userId).map(key -> key.equals(idea.getApprovalHeadKey())).orElse(false)));
+				|| directory.nominationReviewerKey(userId).map(key -> key.equals(idea.getApprovalHeadKey())).orElse(false)));
 	}
 	@Transactional
 	public List<Idea> decide(UUID userId, List<Selection> selections, String decision, String reason) {

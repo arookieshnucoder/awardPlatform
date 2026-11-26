@@ -33,7 +33,7 @@ class NominationApprovalServiceTest {
 		profile.changeRole(Profile.Role.MANAGER);
 		profile.syncSsoDepartment("BD/DPA");
 		when(profiles.findById(userId)).thenReturn(Optional.of(profile));
-		when(approvals.reviewerKey(userId)).thenReturn(Optional.of("hod@example.test"));
+		when(approvals.nominationReviewerKey(userId)).thenReturn(Optional.of("hod@example.test"));
 
 		assertThat(service.eligibility(userId)).isEqualTo(new NominationApprovalService.Eligibility(
 				false, true, null, NominationApprovalService.BD_NOMINATION_MESSAGE, false));
