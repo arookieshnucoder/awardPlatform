@@ -5,7 +5,6 @@ import {
   IconX,
 } from '@tabler/icons-react'
 import { Avatar, Group, Menu, Text, UnstyledButton } from '@mantine/core'
-import { notifications } from '@mantine/notifications'
 import { useAuthStore } from '../store/authStore'
 import { useLanguage } from '../contexts/LanguageContext'
 import { useAwardAccess } from '../hooks/useAwardAccess'
@@ -15,18 +14,12 @@ import { Link, useLocation } from 'react-router-dom'
 import { AwardBrand } from '../components/Layout/AwardBrand'
 import { useTechBackground } from '../hooks/useTechBackground'
 import { preloadProjectShowcase } from '../lib/preloadShowcase'
-import { nominationEntryNotice } from '../config/nominationWindow'
+import { checkNominationEntry, showEntryNotice } from '../lib/entryNotice'
 import { votingEntryNotice } from '../config/votingWindow'
 import './LandingPage.css'
 
 const landingVideoSrc = '/media/tech-blue-loop.mp4'
 const landingPosterSrc = '/media/tech-blue-poster.jpg'
-
-function showEntryNotice(event: MouseEvent<HTMLAnchorElement>, message: string | null) {
-  if (!message) return
-  event.preventDefault()
-  notifications.show({ message, color: 'orange', position: 'bottom-right', autoClose: 4000, className: 'dp-status-toast' })
-}
 
 export function LandingPage({ children }: { children?: ReactNode }) {
   const { user } = useAuthStore()
@@ -45,8 +38,7 @@ export function LandingPage({ children }: { children?: ReactNode }) {
     showEntryNotice(event, votingEntryNotice(user?.role, nominationEligibility))
   const entryPoints = [
     { label: t('sidebar.overview'), to: '/#overview', active: showHero },
-    { label: t('sidebar.nomination'), to: `/nominate?type=${nominationType}`, active: pathname === '/nominate',
-      onClick: (event: MouseEvent<HTMLAnchorElement>) => showEntryNotice(event, nominationEntryNotice()) },
+    { label: t('sidebar.nomination'), to: `/nominate?type=${nominationType}`, active: pathname === '/nominate', onClick: checkNominationEntry },
     { label: t('sidebar.projectOverview'), to: '/projects', active: pathname === '/projects', onClick: checkVotingEntry },
   ]
 

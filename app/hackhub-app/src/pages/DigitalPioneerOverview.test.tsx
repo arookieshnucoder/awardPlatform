@@ -17,6 +17,29 @@ afterEach(() => vi.restoreAllMocks())
 
 describe('DigitalPioneerOverview', () => {
   it.each([
+    ['2026-11-28T23:58:59.999+08:00', true],
+    ['2026-11-28T23:59:00+08:00', false],
+  ])('checks the bottom nomination entry at %s', (time, open) => {
+    vi.spyOn(Date, 'now').mockReturnValue(Date.parse(time))
+    const notify = vi.spyOn(notifications, 'show').mockReturnValue('nomination-window-test')
+    render(<MemoryRouter><MantineProvider env="test"><LanguageProvider><Routes>
+      <Route path="/" element={<DigitalPioneerOverview />} />
+      <Route path="/nominate" element={<p>Nomination form</p>} />
+    </Routes></LanguageProvider></MantineProvider></MemoryRouter>)
+    fireEvent.click(screen.getByRole('link', { name: 'Start a Nomination' }))
+    if (open) {
+      expect(screen.getByText('Nomination form')).toBeInTheDocument()
+      expect(notify).not.toHaveBeenCalled()
+    } else {
+      expect(screen.queryByText('Nomination form')).not.toBeInTheDocument()
+      expect(notify).toHaveBeenCalledWith(expect.objectContaining({
+        message: 'The Nomination Section is closed at 23 : 59, November 28.',
+        position: 'bottom-right',
+      }))
+    }
+  })
+
+  it.each([
     ['participant', true, '2026-12-01T08:59:59+08:00', 'The “Browse & Vote” section is coming soon'],
     ['participant', true, '2026-12-01T09:00:00+08:00', null],
     ['participant', true, '2026-12-12T00:00:00+08:00', 'The voting period has ended.'],
@@ -59,7 +82,7 @@ describe('DigitalPioneerOverview', () => {
     expect(screen.getAllByText('创新破局').length).toBeGreaterThan(0)
     expect(screen.getAllByText('协作共赢').length).toBeGreaterThan(0)
     expect(screen.getAllByRole('link', { name: 'Start a Nomination' }).length).toBeGreaterThan(0)
-    for (const period of ['Nov.16-28', 'Nov.30-Dec.11', 'Dec.14-25', 'Jan.']) {
+    for (const period of ['Nov.16-28', 'Dec.1–Dec.11', 'Dec.14-25', 'Jan.']) {
       expect(screen.getByText(period)).toBeInTheDocument()
     }
   })

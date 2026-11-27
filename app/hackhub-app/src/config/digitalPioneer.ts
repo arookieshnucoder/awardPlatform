@@ -99,7 +99,7 @@ export function getDigitalPioneerTracks(type: NominationType): readonly DigitalP
 
 export const DIGITAL_PIONEER_TIMELINE = [
   { phase: 'Self-Nomination', detail: 'Submit your individual nomination', period: 'Nov.16-28' },
-  { phase: 'Associate Voting', detail: 'Ten shortlisted nominees per category', period: 'Nov.30-Dec.11' },
+  { phase: 'Associate Voting', detail: 'Ten shortlisted nominees per category', period: 'Dec.1–Dec.11' },
   { phase: 'Committee Voting', detail: 'Five finalists per category', period: 'Dec.14-25' },
   { phase: 'Award Announcement & Ceremony', detail: 'Winners announced at Townhall', period: 'Jan.' },
 ] as const

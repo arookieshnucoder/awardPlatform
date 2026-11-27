@@ -9,6 +9,7 @@ import { useLanguage } from '../contexts/LanguageContext'
 import { DIGITAL_PIONEER_TIMELINE, getDigitalPioneerTracks } from '../config/digitalPioneer'
 import { useNominationType } from '../hooks/useNominationType'
 import { preloadProjectShowcase } from '../lib/preloadShowcase'
+import { checkNominationEntry } from '../lib/entryNotice'
 import { useAuthStore } from '../store/authStore'
 import { votingEntryNotice } from '../config/votingWindow'
 import { useNominationEligibility } from '../hooks/useNominationEligibility'
@@ -113,6 +114,7 @@ export function DigitalPioneerOverview(): ReactElement {
           <Button
             component={Link}
             to={`/nominate?type=${nominationType}`}
+            onClick={checkNominationEntry}
             onPointerEnter={preloadProjectShowcase}
             onFocus={preloadProjectShowcase}
             className="dp-primary-button"
