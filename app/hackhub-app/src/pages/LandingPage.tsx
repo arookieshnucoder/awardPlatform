@@ -15,11 +15,18 @@ import { Link, useLocation } from 'react-router-dom'
 import { AwardBrand } from '../components/Layout/AwardBrand'
 import { useTechBackground } from '../hooks/useTechBackground'
 import { preloadProjectShowcase } from '../lib/preloadShowcase'
+import { nominationEntryNotice } from '../config/nominationWindow'
 import { votingEntryNotice } from '../config/votingWindow'
 import './LandingPage.css'
 
 const landingVideoSrc = '/media/tech-blue-loop.mp4'
 const landingPosterSrc = '/media/tech-blue-poster.jpg'
+
+function showEntryNotice(event: MouseEvent<HTMLAnchorElement>, message: string | null) {
+  if (!message) return
+  event.preventDefault()
+  notifications.show({ message, color: 'orange', position: 'bottom-right', autoClose: 4000, className: 'dp-status-toast' })
+}
 
 export function LandingPage({ children }: { children?: ReactNode }) {
   const { user } = useAuthStore()
@@ -34,18 +41,14 @@ export function LandingPage({ children }: { children?: ReactNode }) {
   const [loadVideo, setLoadVideo] = useState(false)
   const backdropRef = useRef<HTMLDivElement>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
+  const checkVotingEntry = (event: MouseEvent<HTMLAnchorElement>) =>
+    showEntryNotice(event, votingEntryNotice(user?.role, nominationEligibility))
   const entryPoints = [
     { label: t('sidebar.overview'), to: '/#overview', active: showHero },
-    { label: t('sidebar.nomination'), to: `/nominate?type=${nominationType}`, active: pathname === '/nominate' },
-    { label: t('sidebar.projectOverview'), to: '/projects', active: pathname === '/projects' },
+    { label: t('sidebar.nomination'), to: `/nominate?type=${nominationType}`, active: pathname === '/nominate',
+      onClick: (event: MouseEvent<HTMLAnchorElement>) => showEntryNotice(event, nominationEntryNotice()) },
+    { label: t('sidebar.projectOverview'), to: '/projects', active: pathname === '/projects', onClick: checkVotingEntry },
   ]
-
-  const checkVotingEntry = (event: MouseEvent<HTMLAnchorElement>) => {
-    const message = votingEntryNotice(user?.role, nominationEligibility)
-    if (!message) return
-    event.preventDefault()
-    notifications.show({ message, color: 'orange', autoClose: 4000, className: 'dp-status-toast' })
-  }
 
   useEffect(() => {
     if (hash === '#overview' || pathname === '/overview') {
@@ -102,7 +105,7 @@ export function LandingPage({ children }: { children?: ReactNode }) {
             <Link
               className={item.active ? 'award-landing__nav-link is-active' : 'award-landing__nav-link'}
               to={item.to}
-              onClick={item.to === '/projects' ? checkVotingEntry : undefined}
+              onClick={item.onClick}
               onPointerEnter={item.to.startsWith('/nominate') || item.to === '/projects' ? preloadProjectShowcase : undefined}
               onFocus={item.to.startsWith('/nominate') || item.to === '/projects' ? preloadProjectShowcase : undefined}
               aria-current={item.active ? 'page' : undefined}
@@ -157,7 +160,7 @@ export function LandingPage({ children }: { children?: ReactNode }) {
           <nav className="award-landing__mobile-menu" id="award-mobile-menu" aria-label="Mobile navigation">
             {entryPoints.map((item) => (
               <Link to={item.to} key={item.label} onPointerEnter={item.to.startsWith('/nominate') || item.to === '/projects' ? preloadProjectShowcase : undefined} onFocus={item.to.startsWith('/nominate') || item.to === '/projects' ? preloadProjectShowcase : undefined} onClick={(event) => {
-                if (item.to === '/projects') checkVotingEntry(event)
+                item.onClick?.(event)
                 setMenuOpen(false)
               }}>
                 {item.label}

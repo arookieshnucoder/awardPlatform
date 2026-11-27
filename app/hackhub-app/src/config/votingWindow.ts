@@ -1,4 +1,4 @@
-const votingStartsAt = Date.parse('2026-11-30T00:00:00+08:00')
+const votingStartsAt = Date.parse('2026-12-01T09:00:00+08:00')
 const votingEndsAt = Date.parse('2026-12-12T00:00:00+08:00')
 const votingComingSoon = 'The “Browse & Vote” section is coming soon'
 

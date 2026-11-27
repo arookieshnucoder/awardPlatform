@@ -30,7 +30,8 @@ class NominationApprovalDirectoryTest {
 
 		assertThat(directory.nominationReviewerKey(vinodProfile)).contains("vio2kor@bosch.com");
 		assertThat(directory.nominationReviewerKey(otherProfile)).isEmpty();
-		assertThat(directory.reviewerKey(vinodProfile)).isEmpty();
+		assertThat(directory.reviewerKey(vinodProfile)).contains("vio2kor@bosch.com");
+		assertThat(directory.reviewerKey(otherProfile)).contains("vio2kor@bosch.com");
 	}
 
 	@Test

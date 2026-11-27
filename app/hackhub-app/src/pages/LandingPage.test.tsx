@@ -17,23 +17,58 @@ beforeEach(() => {
   state.user = null
   state.judge = false
   state.onVotingRoster = true
-  vi.spyOn(Date, 'now').mockReturnValue(Date.parse('2026-11-30T00:00:00+08:00'))
+  vi.spyOn(Date, 'now').mockReturnValue(Date.parse('2026-12-01T09:00:00+08:00'))
   window.scrollTo = vi.fn()
   Element.prototype.scrollIntoView = vi.fn()
 })
 afterEach(() => vi.restoreAllMocks())
 
 describe('LandingPage', () => {
-  it('shows the voting window reminder from the account menu without opening vote records', async () => {
+  it.each([
+    ['2026-12-01T08:59:59.999+08:00', false],
+    ['2026-12-01T09:00:00+08:00', true],
+  ])('checks the voting opening time from My voting records at %s', async (time, open) => {
     state.user = { id: 'employee', name: 'Associate', role: 'participant' }
-    vi.mocked(Date.now).mockReturnValue(Date.parse('2026-11-29T15:59:59Z'))
+    vi.mocked(Date.now).mockReturnValue(Date.parse(time))
     const notify = vi.spyOn(notifications, 'show').mockReturnValue('voting-menu-test')
-    function CurrentPage() { return <p>Page {useLocation().pathname}</p> }
+    function CurrentPage() {
+      const { pathname, search } = useLocation()
+      return <p>Page {pathname}{search}</p>
+    }
     render(<MantineProvider env="test"><MemoryRouter><LandingPage><CurrentPage /></LandingPage></MemoryRouter></MantineProvider>)
     fireEvent.click(screen.getByRole('button', { name: 'MENU' }))
     fireEvent.click(await screen.findByRole('menuitem', { name: 'My voting records' }))
-    expect(notify).toHaveBeenCalledWith(expect.objectContaining({ message: 'The “Browse & Vote” section is coming soon' }))
-    expect(screen.getByText('Page /')).toBeInTheDocument()
+    if (open) {
+      expect(notify).not.toHaveBeenCalled()
+      expect(screen.getByText('Page /projects?view=voting-records')).toBeInTheDocument()
+    } else {
+      expect(notify).toHaveBeenCalledWith(expect.objectContaining({ message: 'The “Browse & Vote” section is coming soon' }))
+      expect(screen.getByText('Page /')).toBeInTheDocument()
+    }
+  })
+
+  it.each([
+    ['Main navigation', 'participant', '2026-11-28T23:58:59.999+08:00', false],
+    ['Main navigation', 'participant', '2026-11-28T23:59:00+08:00', true],
+    ['Mobile navigation', 'admin', '2026-11-28T23:59:00+08:00', true],
+  ])('checks the Nomination link in %s for a %s at %s', (navigation, role, time, closed) => {
+    state.user = { id: 'u1', name: 'Associate', role }
+    vi.mocked(Date.now).mockReturnValue(Date.parse(time))
+    const notify = vi.spyOn(notifications, 'show').mockReturnValue('nomination-closed-test')
+    function CurrentPage() { return <p>Page {useLocation().pathname}</p> }
+    render(<MantineProvider env="test"><MemoryRouter><LandingPage><CurrentPage /></LandingPage></MemoryRouter></MantineProvider>)
+    if (navigation === 'Mobile navigation') fireEvent.click(screen.getByRole('button', { name: 'Open navigation menu' }))
+    fireEvent.click(within(screen.getByRole('navigation', { name: navigation })).getByRole('link', { name: 'Nomination' }))
+    if (closed) {
+      expect(notify).toHaveBeenCalledWith(expect.objectContaining({
+        message: 'The Nomination Section is closed at 23 : 59, November 28.',
+        position: 'bottom-right',
+      }))
+      expect(screen.getByText('Page /')).toBeInTheDocument()
+    } else {
+      expect(notify).not.toHaveBeenCalled()
+      expect(screen.getByText('Page /nominate')).toBeInTheDocument()
+    }
   })
 
   it.each(['Main navigation', 'Mobile navigation'])('blocks a roster outsider at the %s entry during voting', (navigation) => {
@@ -49,8 +84,8 @@ describe('LandingPage', () => {
   })
 
   it.each([
-    ['participant', '2026-11-29T15:59:59.999Z', 'The “Browse & Vote” section is coming soon'],
-    ['participant', '2026-11-29T16:00:00Z', null],
+    ['participant', '2026-12-01T00:59:59.999Z', 'The “Browse & Vote” section is coming soon'],
+    ['participant', '2026-12-01T01:00:00Z', null],
     ['manager', '2026-12-11T15:59:59.999Z', null],
     ['manager', '2026-12-11T16:00:00Z', 'The voting period has ended.'],
     ['admin', '2026-11-11T00:00:00Z', null],

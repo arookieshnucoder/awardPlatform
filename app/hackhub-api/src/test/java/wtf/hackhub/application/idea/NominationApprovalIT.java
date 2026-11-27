@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -15,12 +16,17 @@ import wtf.hackhub.infrastructure.persistence.idea.IdeaRepository;
 import wtf.hackhub.infrastructure.security.StorageSecurityService;
 import wtf.hackhub.support.PostgresIntegrationTest;
 
+import java.time.Clock;
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.*;
+import static org.mockito.Mockito.when;
 
 class NominationApprovalIT extends PostgresIntegrationTest {
+	@MockBean
+	Clock clock;
 	@Autowired SubmitIdeaUseCase submit;
 	@Autowired NominationApprovalService approvals;
 	@Autowired NominationApprovalDirectory directory;
@@ -35,6 +41,7 @@ class NominationApprovalIT extends PostgresIntegrationTest {
 
 	@BeforeEach
 	void identities() throws Exception {
+		when(clock.instant()).thenReturn(Instant.parse("2026-11-29T04:00:00Z"));
 		try (var input = new ClassPathResource("nomination-roster.json").getInputStream()) {
 			List<NominationApprovalDirectory.Employee> rows = new ObjectMapper().readValue(input, new TypeReference<>() { });
 			roster = rows.stream().filter(e -> e.email() != null && !e.email().isBlank() && e.hodEmail() != null

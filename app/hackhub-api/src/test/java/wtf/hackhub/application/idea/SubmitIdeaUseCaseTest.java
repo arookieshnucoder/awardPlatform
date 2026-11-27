@@ -2,17 +2,24 @@ package wtf.hackhub.application.idea;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.HttpStatus;
+import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.web.server.ResponseStatusException;
 import wtf.hackhub.domain.Idea;
 import wtf.hackhub.domain.Hackathon;
+import wtf.hackhub.domain.Profile;
 import wtf.hackhub.infrastructure.persistence.hackathon.HackathonRepository;
 import wtf.hackhub.infrastructure.persistence.idea.IdeaRepository;
 import wtf.hackhub.infrastructure.persistence.organization.OrganizationMemberRepository;
 import wtf.hackhub.infrastructure.persistence.team.TeamMemberRepository;
 import wtf.hackhub.infrastructure.persistence.team.TeamRepository;
 
+import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -21,11 +28,15 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class SubmitIdeaUseCaseTest {
+
+	@Mock
+	Clock clock;
 
 	@Mock
 	wtf.hackhub.infrastructure.persistence.IdeaMutationLock mutationLock;
@@ -87,6 +98,72 @@ class SubmitIdeaUseCaseTest {
 
 		Idea result = useCase.execute("title", "desc", HACKATHON_ID, null, USER_ID, "AI", List.of("ml"));
 		assertThat(result.getTitle()).isEqualTo("title");
+	}
+
+	@ParameterizedTest
+	@CsvSource({"PARTICIPANT, 2026-11-30T10:00:00Z", "ADMIN, 2026-11-30T10:00:00Z",
+			"MANAGER, 2026-11-30T10:00:00.001Z"})
+	void prevents_both_rejected_nomination_revisions_at_and_after_the_deadline(Profile.Role role, Instant now) {
+		stubValidSubmit();
+		var requester = new Profile("employee@example.test", "Employee", "hash");
+		requester.changeRole(role);
+		when(profileRepository.findById(USER_ID)).thenReturn(Optional.of(requester));
+		when(clock.instant()).thenReturn(now);
+		var rejected = new Idea("Original", "Evidence", HACKATHON_ID, null, USER_ID, "Customer Values");
+		ReflectionTestUtils.setField(rejected, "id", UUID.randomUUID());
+		rejected.submitForApproval("hod@example.test", "HoD");
+		rejected.decideApproval("rejected", "More evidence", "HoD");
+		when(ideaRepository.findById(rejected.getId())).thenReturn(Optional.of(rejected));
+		when(ideaRepository.findByCreatedByAndHackathonId(USER_ID, HACKATHON_ID)).thenReturn(List.of(rejected));
+
+		assertThatThrownBy(() -> useCase.update(rejected.getId(), USER_ID, "Revised", "Evidence", "Customer Values",
+				List.of(), Idea.Status.SUBMITTED, null, null, null, rejected.getApprovalVersion()))
+				.isInstanceOfSatisfying(ResponseStatusException.class, error -> {
+					assertThat(error.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+					assertThat(error.getReason()).startsWith("Nomination resubmissions closed");
+				});
+		assertThatThrownBy(() -> useCase.executeNomination("Revised", "Evidence", HACKATHON_ID, null, USER_ID,
+				"Innovation Breakthrough", List.of(), Idea.Status.SUBMITTED, null, null, null,
+				new SubmitIdeaUseCase.Replacement(rejected.getId(), rejected.getApprovalVersion())))
+				.isInstanceOfSatisfying(ResponseStatusException.class, error -> {
+					assertThat(error.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+					assertThat(error.getReason()).startsWith("Nomination resubmissions closed");
+				});
+		assertThat(rejected.getApprovalStatus()).isEqualTo("rejected");
+		assertThat(rejected.isSuperseded()).isFalse();
+		verify(ideaRepository, never()).save(any());
+	}
+
+	@Test
+	void accepts_revisions_just_before_the_deadline_while_preserving_the_nomination_limit() {
+		stubValidSubmit();
+		var admin = new Profile("admin@example.test", "Admin", "hash");
+		admin.changeRole(Profile.Role.ADMIN);
+		when(profileRepository.findById(USER_ID)).thenReturn(Optional.of(admin));
+		when(clock.instant()).thenReturn(Instant.parse("2026-11-30T09:59:59.999Z"));
+		var rejected = new Idea("Original", "Evidence", HACKATHON_ID, null, USER_ID, "Customer Values");
+		ReflectionTestUtils.setField(rejected, "id", UUID.randomUUID());
+		rejected.submitForApproval(NominationApprovalService.adminSelfReviewKey(USER_ID), "Admin");
+		rejected.decideApproval("rejected", "More evidence", "Admin");
+		when(ideaRepository.findById(rejected.getId())).thenReturn(Optional.of(rejected));
+		when(ideaRepository.findByCreatedByAndHackathonId(USER_ID, HACKATHON_ID)).thenReturn(List.of(rejected));
+		when(ideaRepository.save(any())).thenAnswer(call -> call.getArgument(0));
+
+		assertThatThrownBy(() -> useCase.execute("Duplicate", "Evidence", HACKATHON_ID, null, USER_ID,
+				"Innovation Breakthrough", List.of())).isInstanceOfSatisfying(ResponseStatusException.class,
+						error -> assertThat(error.getStatusCode()).isEqualTo(HttpStatus.CONFLICT));
+
+		var revised = useCase.update(rejected.getId(), USER_ID, "Revised", "Evidence", "Customer Values", List.of(),
+				Idea.Status.SUBMITTED, null, null, null, rejected.getApprovalVersion());
+		assertThat(revised.getApprovalStatus()).isEqualTo("pending");
+		assertThat(revised.getId()).isEqualTo(rejected.getId());
+
+		revised.decideApproval("rejected", "More evidence", "Admin");
+		var replacement = useCase.executeNomination("Revised track", "Evidence", HACKATHON_ID, null, USER_ID,
+				"Innovation Breakthrough", List.of(), Idea.Status.SUBMITTED, null, null, null,
+				new SubmitIdeaUseCase.Replacement(revised.getId(), revised.getApprovalVersion()));
+		assertThat(replacement.getApprovalStatus()).isEqualTo("pending");
+		assertThat(revised.isSuperseded()).isTrue();
 	}
 
 	@Test

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MantineProvider } from '@mantine/core'
@@ -28,10 +28,12 @@ function show(reviewMode = true, path = '/') {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  vi.spyOn(Date, 'now').mockReturnValue(Date.parse('2026-11-29T12:00:00+08:00'))
   mocks.canReview = true
   mocks.get.mockResolvedValue([nomination('one'), nomination('two'), nomination('done', 'approved')])
   mocks.review.mockResolvedValue(undefined)
 })
+afterEach(() => vi.mocked(Date.now).mockRestore())
 
 describe('Nominating HoD approval inbox', () => {
   it('selects pending rows only and sends their displayed versions for batch approval', async () => {
@@ -96,6 +98,21 @@ describe('Nominating HoD approval inbox', () => {
 })
 
 describe('My Nominations', () => {
+  it('disables the current resubmit link when the deadline arrives without a refresh', async () => {
+    const cutoff = Date.parse('2026-11-30T18:00:00+08:00')
+    vi.mocked(Date.now).mockReturnValue(cutoff - 20)
+    mocks.get.mockResolvedValue([nomination('rejected', 'rejected')])
+    show(false, '/my-nominations?id=rejected')
+    expect(await screen.findByRole('link', { name: 'Edit and resubmit' })).toBeVisible()
+
+    vi.mocked(Date.now).mockReturnValue(cutoff)
+
+    const button = await screen.findByRole('button', { name: 'Edit and resubmit' })
+    expect(button).toBeDisabled()
+    expect(button).not.toHaveAttribute('href')
+    expect(button).toHaveStyle({ cursor: 'default' })
+  })
+
   it('keeps the original rejection readable and disables its resubmit button after replacement', async () => {
     mocks.get.mockResolvedValue([{ ...nomination('old', 'rejected'), superseded: true }])
     show(false, '/my-nominations?id=old')

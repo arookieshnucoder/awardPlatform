@@ -50,7 +50,8 @@ public class NominationApprovalDirectory {
 		});
 	}
 	public Optional<String> reviewerKey(UUID profileId) {
-		return verifiedEmail(profileId).filter(this::isRosterHead);
+		return verifiedEmail(profileId).map(email -> VINOD_VERIFIED_EMAIL.equals(email) ? VINOD_APPROVAL_KEY : email)
+				.filter(this::isRosterHead);
 	}
 	Optional<String> nominationReviewerKey(UUID profileId) {
 		return verifiedEmail(profileId).filter(email -> !VINOD_APPROVAL_KEY.equals(email))

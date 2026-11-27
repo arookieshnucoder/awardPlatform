@@ -68,6 +68,8 @@ import { LocalNominationAttachment } from '../components/DigitalPioneer/LocalNom
 import { NominationDraftStore, nominationDraftKey, type NominationDraft } from '../services/nominationDraftStore'
 import { TeamNominationForm, type TeamNominationDraft } from '../components/DigitalPioneer/TeamNominationForm'
 import { useNominationType } from '../hooks/useNominationType'
+import { useNominationResubmissionClosed } from '../hooks/useNominationResubmissionClosed'
+import { nominationResubmissionClosedMessage } from '../config/nominationWindow'
 import { ProfileService } from '../services/profileService'
 import { StorageService, MAX_UPLOAD_BYTES, PHOTO_ACCEPT, validatePersonalPhoto } from '../services/storageService'
 import { TeamService } from '../services/teamService'
@@ -114,6 +116,16 @@ interface Project {
   submission_date: string
 }
 const nominationStateZh = { approved: '审核通过', pending: '审核中', rejected: '审核未通过' }
+
+function NominationTrackBadge({ project, language }: { project: Project; language: 'en' | 'zh' }) {
+  const category = normalizeDigitalPioneerTrack(project.category, project.technologies)
+  const track = DIGITAL_PIONEER_TRACKS.find((item) => item.value === category)
+  return (
+    <div className="dp-candidate-track">
+      <Badge variant="light" translate="no">{(language === 'zh' ? track?.labelZh : track?.label) ?? category}</Badge>
+    </div>
+  )
+}
 
 interface ProjectUploadForm {
   hackathonId: string
@@ -404,6 +416,7 @@ export function ProjectShowcase({ nominationMode = false, managementMode = false
     enabled: nominationMode && Boolean(user), staleTime: 0, retry: false,
   })
   const editId = nominationMode ? searchParams.get('edit') : null
+  const resubmissionClosed = useNominationResubmissionClosed(Boolean(editId))
   const [loadedRevision, setLoadedRevision] = useState<Idea | null>(null)
   const revisionSource = loadedRevision?.id === editId ? loadedRevision : null
   const [editError, setEditError] = useState<string | null>(null)
@@ -580,7 +593,7 @@ export function ProjectShowcase({ nominationMode = false, managementMode = false
     void ownNominations.refetch()
   }
   useEffect(() => {
-    if (!editId || !user || !canStartNomination) return
+    if (!editId || !user || !canStartNomination || resubmissionClosed) return
     let active = true
     setEditError(null)
     setLoadedRevision(null)
@@ -605,7 +618,7 @@ export function ProjectShowcase({ nominationMode = false, managementMode = false
       })
     }).catch((error) => { if (active) setEditError(error instanceof Error ? error.message : 'Unable to load your nomination.') })
     return () => { active = false }
-  }, [editId, user, canStartNomination])
+  }, [editId, user, canStartNomination, resubmissionClosed])
   const [assignedJudgeHackathons, setAssignedJudgeHackathons] = useState<Set<string>>(new Set())
   const [filters, setFilters] = useState<NominationFilterValues>({
     search: '',
@@ -1095,6 +1108,10 @@ export function ProjectShowcase({ nominationMode = false, managementMode = false
       {submittedNomination.approvalStatus && <Text>Your Nominating HoD will review the information you submitted. Check My nominations for the decision and any requested changes.</Text>}
       <Button variant="light" w="fit-content" onClick={() => navigate('/')}>Home</Button>
     </Stack></Card></Container>
+    if (resubmissionClosed) return <Container className="dp-page" py="xl">
+      <Alert color="orange" role="alert" styles={{ message: { color: 'white' } }}>{nominationResubmissionClosedMessage}</Alert>
+      <Button mt="md" onClick={() => navigate('/my-nominations')}>My Nominations</Button>
+    </Container>
     return (
       <Container size={1240} py={{ base: 'md', md: 'xl' }} className="dp-page dp-nomination-page">
         {photoToCrop && <PersonalPhotoCrop file={photoToCrop} language={language}
@@ -1379,13 +1396,21 @@ export function ProjectShowcase({ nominationMode = false, managementMode = false
           </div>
         </div>
 
-        {!canDelete && <section className="dp-voting-rules" aria-label="Voting rules" translate="no">
+        {!canDelete && <section className="dp-voting-rules" aria-label="Voting rules" lang="en" translate="no">
           <Text fw={700}>{votingType === 'team' ? 'Team Awards — Voting Rules' : 'Individual Awards — Voting Rules'}</Text>
           <ol style={{ paddingLeft: 22 }}>
             <li>Click &quot;Vote&quot; to submit; click &quot;Submitted&quot; again to withdraw your vote.</li>
             {votingType === 'team' ? <li>You may vote for up to 3 nominees per category.</li>
               : <li>You may vote for up to 2 nominees within your department and up to 2 nominees in other departments per category. These two quotas are counted separately.</li>}
           </ol>
+          <div lang="zh-CN">
+            <Text fw={700}>{votingType === 'team' ? '团队奖项投票规则' : '个人奖项投票规则'}</Text>
+            <ol style={{ paddingLeft: 22 }}>
+              <li>点击「Vote」提交投票。再次点击「Submitted」可撤回该票。</li>
+              {votingType === 'team' ? <li>每个赛道最多可为 3 个团队提名投票。</li>
+                : <li>每个赛道可为本部门最多 2 位候选人、其他部门合计最多 2 位候选人投票。两类名额分别计算。</li>}
+            </ol>
+          </div>
         </section>}
 
         <NominationFilters filters={filters} onChange={setFilters} nominations={typeProjects} departments={departments} />
@@ -1489,6 +1514,7 @@ export function ProjectShowcase({ nominationMode = false, managementMode = false
                   </Group>
 
                   </div>
+                  {!canDelete && <NominationTrackBadge project={project} language={language} />}
                   <Group className="dp-candidate-actions" justify="space-between" align="center" wrap="wrap">
                     <Group gap={6}>
                       {project.github_url && (

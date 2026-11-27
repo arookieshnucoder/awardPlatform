@@ -147,13 +147,14 @@ vi.mock('../services/teamMemberService', () => ({ TeamMemberService: { search: v
 describe('ProjectShowcase', () => {
   beforeEach(() => {
     localStorage.clear(); sessionStorage.clear(); vi.clearAllMocks()
+    vi.spyOn(Date, 'now').mockReturnValue(Date.parse('2026-11-29T12:00:00+08:00'))
     nominationEligibility.canStartNomination = true
     nominationEligibility.canSubmit = true
     listDrafts.mockResolvedValue({})
     saveDraft.mockImplementation(async (_key: string, data: unknown) => ({ version: 1, savedAt: '2026-11-09T00:00:00Z', data }))
     removeDraft.mockResolvedValue(undefined)
   })
-  afterEach(() => { currentUser.role = 'participant'; act(() => notifications.clean()) })
+  afterEach(() => { vi.mocked(Date.now).mockRestore(); currentUser.role = 'participant'; act(() => notifications.clean()) })
 
   it.each(['individual', 'team'])('blocks all %s tracks before revealing details for an account outside the voting roster', async (type) => {
     nominationEligibility.canStartNomination = false
@@ -655,6 +656,15 @@ describe('ProjectShowcase', () => {
     } finally {
       currentUser.role = 'participant'
     }
+  })
+
+  it.each(['participant', 'admin'])('blocks direct revision access for a %s at the deadline', (role) => {
+    currentUser.role = role
+    vi.mocked(Date.now).mockReturnValue(Date.parse('2026-11-30T18:00:00+08:00'))
+    render(<MantineProvider env="test"><MemoryRouter initialEntries={['/nominate?edit=rejected-1']}><ProjectShowcase nominationMode /></MemoryRouter></MantineProvider>)
+    expect(screen.getByRole('alert')).toHaveTextContent('Nomination resubmissions closed at 18:00 on November 30.')
+    expect(screen.queryByRole('radiogroup')).not.toBeInTheDocument()
+    expect(getIdea).not.toHaveBeenCalled()
   })
 
   it('resubmits the rejected employee record with its version and retained photo', async () => {

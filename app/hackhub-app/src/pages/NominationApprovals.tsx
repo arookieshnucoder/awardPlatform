@@ -6,6 +6,7 @@ import { IdeaService, type Idea } from '../services/ideaService'
 import { NominationEvidence } from '../components/DigitalPioneer/NominationEvidence'
 import { useAuthStore } from '../store/authStore'
 import { useNominationEligibility } from '../hooks/useNominationEligibility'
+import { useNominationResubmissionClosed } from '../hooks/useNominationResubmissionClosed'
 import { DIGITAL_PIONEER_TRACKS } from '../config/digitalPioneer'
 import { NominationProgress } from '../components/DigitalPioneer/NominationProgress'
 import { NominationAnswerDetails } from '../components/DigitalPioneer/NominationAnswer'
@@ -43,6 +44,7 @@ export function NominationApprovals({ reviewMode = false }: { reviewMode?: boole
   const current = ideas.find((idea) => idea.id === params.get('id'))
   const currentMetadata = current?.projectAttachments?.find((item) => item.type === 'nomination')
   const currentIsTeam = current ? isTeamNomination(current) : false
+  const resubmissionClosed = useNominationResubmissionClosed(!reviewMode && current?.approvalStatus === 'rejected')
   const resubmissionBlocked = current && (current.superseded || ideas.some((idea) => idea.id !== current.id
     && occupiesNominationSlot(idea, current.hackathonId, currentIsTeam)))
   const pending = ideas.filter((idea) => idea.approvalStatus === 'pending')
@@ -96,9 +98,9 @@ export function NominationApprovals({ reviewMode = false }: { reviewMode?: boole
               {current.approvalHeadName && <Text><strong>Nominating HoD: </strong>{current.approvalHeadName}</Text>}
               <NominationProgress idea={current} />
               {actions}
-              {!reviewMode && current.approvalStatus === 'rejected' && (resubmissionBlocked
-                ? <Button disabled w="fit-content" styles={{ root: { cursor: 'not-allowed', pointerEvents: 'auto', backgroundColor: 'var(--mantine-color-gray-3)', color: 'var(--mantine-color-gray-7)' } }}
-                  title="A newer nomination has replaced this submission.">Edit and resubmit</Button>
+              {!reviewMode && current.approvalStatus === 'rejected' && (resubmissionClosed || resubmissionBlocked
+                ? <Button disabled w="fit-content" styles={{ root: { cursor: resubmissionClosed ? 'default' : 'not-allowed', pointerEvents: 'auto', backgroundColor: 'var(--mantine-color-gray-3)', color: 'var(--mantine-color-gray-7)' } }}
+                  title={resubmissionClosed ? undefined : 'A newer nomination has replaced this submission.'}>Edit and resubmit</Button>
                 : <Button component={Link} to={`/nominate?edit=${encodeURIComponent(current.id)}`} w="fit-content">Edit and resubmit</Button>)}
               <Tabs defaultValue="details">
                 <Tabs.List><Tabs.Tab value="details">Details</Tabs.Tab><Tabs.Tab value="activity">Activity</Tabs.Tab><Tabs.Tab value="attachments">Attachments</Tabs.Tab></Tabs.List>

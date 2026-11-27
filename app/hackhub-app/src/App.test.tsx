@@ -90,7 +90,7 @@ it.each([
 })
 
 it.each(['/projects', '/projects/?view=voting-records'])('protects direct access to %s until the voting roster is confirmed', async (path) => {
-  const clock = vi.spyOn(Date, 'now').mockReturnValue(Date.parse('2026-11-30T00:00:00+08:00'))
+  const clock = vi.spyOn(Date, 'now').mockReturnValue(Date.parse('2026-12-01T09:00:00+08:00'))
   auth.user = { id: 'employee-1', role: 'participant' }
   auth.initialized = true
   auth.loading = false

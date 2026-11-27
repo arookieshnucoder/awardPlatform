@@ -23,6 +23,9 @@ import wtf.hackhub.infrastructure.persistence.organization.OrganizationMemberRep
 import wtf.hackhub.infrastructure.persistence.team.TeamMemberRepository;
 import wtf.hackhub.infrastructure.persistence.team.TeamRepository;
 
+import java.time.Clock;
+import java.time.Instant;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -31,6 +34,8 @@ public class SubmitIdeaUseCase {
 
 	private static final ObjectMapper ATTACHMENTS = new ObjectMapper();
 	private static final List<String> TRACKS = List.of("Customer Values", "Innovation Breakthrough", "Collaboration to Win");
+	private static final Instant RESUBMISSION_CLOSES_AT = OffsetDateTime.parse("2026-11-30T18:00:00+08:00").toInstant();
+	private final Clock clock;
 	private final IdeaMutationLock mutationLock;
 	private final wtf.hackhub.infrastructure.storage.NominationPdfValidator pdfValidator;
 	private final wtf.hackhub.application.team.CreateTeamUseCase createTeam;
@@ -54,7 +59,9 @@ public class SubmitIdeaUseCase {
 			NomineeDirectory nomineeDirectory, NominationApprovalDirectory approvalDirectory,
 			NominationApprovalService approvalService,
 			wtf.hackhub.infrastructure.storage.NominationPdfValidator pdfValidator,
-			wtf.hackhub.application.team.CreateTeamUseCase createTeam, NominationDraftGeneration draftGeneration) {
+			wtf.hackhub.application.team.CreateTeamUseCase createTeam, NominationDraftGeneration draftGeneration,
+			Clock clock) {
+		this.clock = clock;
 		this.pdfValidator = pdfValidator;
 		this.createTeam = createTeam;
 		this.approvalDirectory = approvalDirectory;
@@ -119,6 +126,7 @@ public class SubmitIdeaUseCase {
 					|| !TRACKS.contains(category) || AwardTrack.normalize(replaced.getCategory(), replaced.getTags()).equals(category)
 					|| status != Idea.Status.SUBMITTED)
 				throw new ResponseStatusException(HttpStatus.CONFLICT, "Select a different track to replace your current rejected nomination.");
+			requireResubmissionOpen();
 		} else if (!currentNominations.isEmpty())
 			throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.CONFLICT,
 					"You may submit only one " + (teamSubmission ? "team" : "individual") + " nomination per award. Edit your existing nomination.");
@@ -208,6 +216,9 @@ public class SubmitIdeaUseCase {
 				|| "approved".equals(idea.getApprovalStatus())))
 			throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.CONFLICT,
 					"The nomination changed or is already approved. Refresh before editing.");
+		if ("rejected".equals(idea.getApprovalStatus())) {
+			requireResubmissionOpen();
+		}
 		boolean adminSelfReview = NominationApprovalService.adminSelfReviewKey(requestingUserId)
 				.equals(idea.getApprovalHeadKey());
 		if (adminSelfReview && requester.getRole() != Profile.Role.ADMIN)
@@ -254,6 +265,13 @@ public class SubmitIdeaUseCase {
 			approvalService.record(idea, requestingUserId, "submitted", null);
 		}
 		return ideaRepository.save(idea);
+	}
+
+	private void requireResubmissionOpen() {
+		if (!clock.instant().isBefore(RESUBMISSION_CLOSES_AT)) {
+			throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+					"Nomination resubmissions closed at 18:00 on November 30.");
+		}
 	}
 
 	private void requireNominationAccess(Profile requester) {

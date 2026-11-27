@@ -1657,6 +1657,14 @@
 .dp-candidate-description { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.75; height: 7em; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: #94a3b8 transparent; }
 .dp-candidate-scroll .mantine-Title-root,
 .dp-candidate-summary-title { font-size: var(--dp-candidate-name-size); overflow-wrap: anywhere; }
+.dp-candidate-track { flex-shrink: 0; padding: 0 24px 10px; }
+.dp-candidate-track .mantine-Badge-root { height: auto; min-height: var(--badge-height); }
+.dp-candidate-track .mantine-Badge-label {
+  padding-block: 2px;
+  line-height: 1.2;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
 .dp-candidate-actions { flex-shrink: 0; padding: 12px 24px; border-top: 1px solid rgb(255 255 255 / 20%); }
 .dp-candidate-scroll .dp-nomination-tags { margin-top: 16px; }
 .dp-project-card .mantine-Text-root,
@@ -1742,6 +1750,7 @@
 @media (max-width: 600px) {
   .dp-candidate-layout { grid-template-columns: minmax(0, 34%) minmax(0, 1fr); height: 320px; }
   .dp-candidate-scroll { padding: 14px 12px 10px; }
+  .dp-candidate-track { padding-inline: 10px; }
   .dp-candidate-actions { padding: 10px; gap: 8px; }
   .dp-candidate-actions .mantine-Button-root { padding-inline: 8px; }
   .dp-candidate-layout .dp-vote-stamp { top: 8px; left: 8px; padding: 6px 8px; font-size: 0.7rem; }

@@ -3,7 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactElement } from 'react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
-import { render as renderView, screen, fireEvent } from '@testing-library/react'
+import { render as renderView, screen, fireEvent, within } from '@testing-library/react'
 import { MantineProvider } from '@mantine/core'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { ProjectShowcase } from './ProjectShowcase'
@@ -34,6 +34,44 @@ function page(nominationMode = false) {
   </Routes></MemoryRouter></MantineProvider>)
 }
 describe('Public award browsing', () => {
+  it('shows the matching English and Chinese voting rules when switching nomination types', async () => {
+    const user = userEvent.setup()
+    page()
+    const rules = within(await screen.findByRole('region', { name: 'Voting rules' }))
+    const [english, chinese] = rules.getAllByRole('list')
+    expect(rules.getByText('Individual Awards — Voting Rules')).toBeInTheDocument()
+    expect(rules.getByText('个人奖项投票规则')).toBeInTheDocument()
+    expect(english).toHaveTextContent('These two quotas are counted separately.')
+    expect(chinese).toHaveTextContent('本部门最多 2 位候选人、其他部门合计最多 2 位候选人投票。两类名额分别计算。')
+
+    await user.click(screen.getByRole('button', { name: 'Team', exact: true }))
+
+    expect(rules.getByText('Team Awards — Voting Rules')).toBeInTheDocument()
+    expect(rules.getByText('团队奖项投票规则')).toBeInTheDocument()
+    expect(english).toHaveTextContent('You may vote for up to 3 nominees per category.')
+    expect(chinese).toHaveTextContent('每个赛道最多可为 3 个团队提名投票。')
+    expect(chinese).not.toHaveTextContent('两类名额分别计算。')
+  })
+
+  it('shows one category badge per voting card for both nomination types', async () => {
+    const { content: [nomination] } = await getNominations()
+    const content = [
+      { ...nomination, id: 'individual', category: 'Innovation Breakthrough', nomination_type: 'individual' },
+      { ...nomination, id: 'team', category: 'Green & Sustainability', nomination_type: 'team' },
+    ]
+    getNominations.mockResolvedValueOnce({ content })
+    const user = userEvent.setup()
+    page()
+    const badgeLabel = '.dp-candidate-track .mantine-Badge-label'
+    expect(await screen.findByText('Innovation Breakthrough', { selector: badgeLabel })).toBeInTheDocument()
+    expect(screen.queryByText('Customer Values', { selector: badgeLabel })).not.toBeInTheDocument()
+    expect(screen.queryByText('Collaboration to Win', { selector: badgeLabel })).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Team', exact: true }))
+    expect(await screen.findByText('Collaboration to Win', { selector: badgeLabel })).toBeInTheDocument()
+    expect(screen.queryByText('Innovation Breakthrough', { selector: badgeLabel })).not.toBeInTheDocument()
+  })
+
   it('lets guests browse details and requires login only after clicking vote', async () => {
     page()
     expect(await screen.findByText('Public nomination')).toBeInTheDocument()
